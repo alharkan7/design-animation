@@ -1,5 +1,3 @@
-import './style.css';
-
 const canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
 const ctx = canvas.getContext('2d');
@@ -13,18 +11,21 @@ let provinceLangMap = new Map();
 let islandData = [];
 let provinceData = [];
 
-// Colors
-const COLOR_MAIN_1 = '#38bdf8'; // Sky blue
-const COLOR_MAIN_2 = '#818cf8'; // Indigo
-const COLOR_ACCENT = '#f472b6'; // Pink
-const COLOR_BG = '#0f172a'; // Dark slate
-const COLOR_TEXT = '#94a3b8'; // Slate 400
+// Colors - Dark Theme Data Art
+const COLOR_MAIN_1 = '#38bdf8'; // Sky 400
+const COLOR_MAIN_2 = '#818cf8'; // Indigo 400
+const COLOR_ACCENT = '#f472b6'; // Pink 400
+const COLOR_BG = '#0f172a'; // Slate 900
+const COLOR_TEXT = '#f1f5f9'; // Slate 100
 
 const tooltip = document.getElementById('tooltip');
+const resetBtn = document.getElementById('reset-btn');
+let canvasRect = { left: 0, top: 0 };
 
 // Global animation state
 let globalZoom = 2.0;
 let targetZoom = 1.0;
+let defaultZoom = 1.0; // Base zoom for the current scene
 let labels = []; // {x, y, text}
 
 let hoveredCircle = null;
@@ -50,9 +51,76 @@ let labelOccupancy = null;
 let languageLabelCount = 0;
 let treeView = null;
 let provinceLabelBoxes = null;
+let treeFrame = 0;
 
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 12.0;
+
+let barScrollable = false;
+let barMinPanX = 0;
+let barMaxPanX = 0;
+let barIsDragging = false;
+let barDragStartX = 0;
+let barDragStartPanX = 0;
+
+let sceneIndex = 0;
+const scenes = [
+  {
+    key: 'grid',
+    align: 'center',
+    title: 'Sebaran Bahasa Nusantara',
+    caption: 'Setiap titik mewakili satu bahasa. Pola ini memberi gambaran cepat tentang jumlah total dan ritmenya. Perhatikan bagaimana titik-titik membentuk struktur yang rapat.',
+    apply: () => layoutGrid()
+  },
+  {
+    key: 'island',
+    align: 'right',
+    title: 'Bahasa per Pulau',
+    caption: 'Tiap kolom menunjukkan jumlah bahasa pada satu wilayah pulau. Semakin tinggi kolom, semakin banyak ragam bahasa yang tercatat. Bandingkan puncak kolom di sisi kiri dengan ekor panjang di kanan.',
+    apply: () => layoutBarChart(islandData, 'wilayah')
+  },
+  {
+    key: 'province',
+    align: 'right',
+    title: 'Bahasa per Provinsi',
+    caption: 'Tiap kolom menunjukkan jumlah bahasa pada tingkat provinsi. Daftar yang panjang menandakan sebaran yang tidak merata. Geser untuk melihat provinsi lain dengan jumlah lebih kecil.',
+    apply: () => layoutBarChart(provinceData, 'provinsi')
+  },
+  {
+    key: 'tree',
+    align: 'center',
+    title: 'Pohon Kekerabatan Bahasa',
+    caption: 'Visual ini menata bahasa dalam struktur bertingkat. Garis menghubungkan kelompok yang berdekatan secara wilayah. Ketuk satu simpul untuk fokus dan zoom.',
+    apply: () => layoutTree()
+  }
+];
+let nextHitBox = null;
+let nextPointerId = null;
+
+function isCoarsePointer() {
+  return window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+}
+
+function uiScale() {
+  const s = (Math.min(width || 1, height || 1) / 720);
+  return clamp(s, 0.75, 1.05);
+}
+
+function pickBarPacking({ effectiveBarWidth, chartHeight, maxCount }) {
+  const maxR = 6.2;
+  const minR = 1.6;
+  for (let k = 0; k <= 46; k++) {
+    const r = maxR - (k * (maxR - minR)) / 46;
+    const diameter = r * 2.2;
+    const cols = Math.max(1, Math.floor(effectiveBarWidth / diameter));
+    const requiredHeight = Math.ceil((maxCount || 1) / cols) * diameter;
+    if (requiredHeight <= chartHeight) return { r, diameter, cols };
+  }
+  const r = minR;
+  const diameter = r * 2.2;
+  const cols = Math.max(1, Math.floor(effectiveBarWidth / diameter));
+  return { r, diameter, cols };
+}
 
 class Circle {
   constructor(id) {
@@ -101,7 +169,7 @@ class Node {
     this.label = label;
     this.tooltipText = tooltipText ?? label;
     this.hue = hue;
-    this.color = hsla(this.hue, 92, 64, 1);
+    this.color = hsla(this.hue, 85, 65, 1);
 
     this.x = width / 2;
     this.y = height / 2;
@@ -152,8 +220,12 @@ class Node {
     const pad = Math.max(6, this.r + 3);
 
     ctx.globalAlpha = labelAlpha;
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
-    ctx.font = this.kind === 'root' ? '16px Outfit' : (this.kind === 'province' ? '7px Outfit' : '10px Outfit');
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.9)';
+    const s = uiScale();
+    const rootPx = Math.round(16 * s);
+    const islandPx = Math.round(10 * s);
+    const provPx = Math.round(7 * s);
+    ctx.font = this.kind === 'root' ? `${rootPx}px Outfit` : (this.kind === 'province' ? `${provPx}px Outfit` : `${islandPx}px Outfit`);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
 
@@ -230,9 +302,12 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 function drawTreeLanguageLabelsScreenSpace() {
+  const minZoom = 2.6;
+  if (globalZoom < minZoom && treeFrame < 240) return;
+  if (globalZoom < minZoom) return;
+
   const centerX = width / 2 + panX;
   const centerY = height / 2 + panY;
-  const minZoom = 1.7;
 
   const items = [];
   for (const n of treeNodes) {
@@ -244,11 +319,15 @@ function drawTreeLanguageLabelsScreenSpace() {
   items.sort((a, b) => a.y - b.y);
 
   const placed = [];
-  const limit = Math.floor(clamp(120 + (globalZoom - 1.8) * 520, 120, 1800));
+  const limit = Math.floor(clamp(110 + (globalZoom - 2.6) * 720, 110, 1600));
   let count = 0;
+  ctx.font = `${Math.round(7 * uiScale())}px Outfit`;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(226, 232, 240, 0.7)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.shadowBlur = 6;
 
   for (const n of items) {
-    if (globalZoom < minZoom) continue;
     if (count >= limit) break;
 
     const sx = (n.x - width / 2) * globalZoom + centerX;
@@ -266,12 +345,7 @@ function drawTreeLanguageLabelsScreenSpace() {
     const textX = sx + dx * pad;
     const textY = sy + dy * pad;
 
-    ctx.font = '7px Outfit';
-    ctx.textBaseline = 'middle';
     ctx.textAlign = dx >= 0 ? 'left' : 'right';
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.70)';
-    ctx.shadowColor = 'rgba(2, 6, 23, 0.7)';
-    ctx.shadowBlur = 6;
 
     const text = ellipsize(n.label, 20);
     const w = ctx.measureText(text).width;
@@ -321,7 +395,7 @@ function drawTreeHoverChipScreenSpace() {
   const textX = sx + dx * pad;
   const textY = sy + dy * pad;
 
-  ctx.font = '12px Outfit';
+  ctx.font = `${Math.round(12 * uiScale())}px Outfit`;
   ctx.textBaseline = 'middle';
   ctx.textAlign = dx >= 0 ? 'left' : 'right';
   ctx.shadowBlur = 0;
@@ -337,14 +411,14 @@ function drawTreeHoverChipScreenSpace() {
   const y1 = textY - h / 2 - padY;
   const y2 = y1 + h + padY * 2;
 
-  ctx.fillStyle = 'rgba(2, 6, 23, 0.84)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
   roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 7);
   ctx.fill();
-  ctx.strokeStyle = hsla(n.hue, 96, 72, 0.65);
+  ctx.strokeStyle = hsla(n.hue, 96, 46, 0.55);
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
   ctx.fillText(text, textX, textY);
 }
 
@@ -439,11 +513,13 @@ function allocateCircles(data, totalCircles) {
 function resize() {
   width = window.innerWidth;
   height = window.innerHeight;
-  canvas.width = width * window.devicePixelRatio;
-  canvas.height = height * window.devicePixelRatio;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
   // We handle scaling in draw loop to support globalZoom
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
+  canvasRect = canvas.getBoundingClientRect();
 }
 
 window.addEventListener('resize', resize);
@@ -453,53 +529,168 @@ function init() {
   for (let i = 0; i < numCircles; i++) {
     circles.push(new Circle(i));
   }
-  
-  // Start with Grid Layout
-  layoutGrid();
-  
+
+  applyScene(0);
   loop();
+}
+
+function applyScene(nextIndex) {
+  const n = scenes.length || 1;
+  sceneIndex = ((nextIndex % n) + n) % n;
+  const scene = scenes[sceneIndex];
+  scene.apply();
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const words = (text ?? '').toString().trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const next = line ? `${line} ${words[i]}` : words[i];
+    if (ctx.measureText(next).width <= maxWidth || !line) {
+      line = next;
+    } else {
+      lines.push(line);
+      line = words[i];
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawStoryOverlayScreenSpace() {
+  const scene = scenes[sceneIndex];
+  if (!scene) return;
+
+  const s = uiScale();
+  const alignRight = scene.align === 'right';
+  
+  // Position text lower down and with more breathing room
+  const topMargin = Math.max(60, height * 0.12);
+  const sideMargin = Math.max(24, width * 0.08);
+  
+  const maxTextW = Math.min(Math.round(580 * s), width - sideMargin * 2);
+  
+  const textBoxX = alignRight 
+    ? (width - sideMargin - maxTextW) 
+    : (width - maxTextW) / 2;
+    
+  const textX = alignRight ? (textBoxX + maxTextW) : (textBoxX + maxTextW / 2);
+  
+  const titleSize = Math.round(32 * s);
+  const titleFont = `400 ${titleSize}px "Playfair Display", serif`;
+  
+  const bodySize = Math.round(15 * s);
+  const bodyFont = `300 ${bodySize}px Outfit, sans-serif`;
+  
+  const lineH = Math.round(bodySize * 1.5);
+  const gap = Math.round(16 * s);
+  const titleY = topMargin;
+  const captionY = titleY + titleSize + gap;
+  
+  const maxLines = width < 520 ? 4 : 5;
+
+  const nextText = (sceneIndex === scenes.length - 1) ? 'Kembali ↺' : 'Selanjutnya →';
+  
+  ctx.save();
+  ctx.font = bodyFont;
+  const capLines = wrapText(ctx, scene.caption, maxTextW);
+  const lines = capLines.slice(0, maxLines);
+  
+  // Draw Gradient Background
+  const fadeH = captionY + (lines.length + 1) * lineH + 60;
+  const grad = ctx.createLinearGradient(0, 0, 0, fadeH);
+  grad.addColorStop(0, 'rgba(15, 23, 42, 0.98)');
+  grad.addColorStop(0.7, 'rgba(15, 23, 42, 0.9)');
+  grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, fadeH);
+
+  // Text Rendering
+  ctx.textBaseline = 'top';
+  ctx.textAlign = alignRight ? 'right' : 'center';
+  
+  // Title
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#f8fafc'; // Light text
+  ctx.font = titleFont;
+  ctx.fillText(scene.title, textX, titleY);
+  
+  // Caption
+  ctx.shadowBlur = 4;
+  ctx.font = bodyFont;
+  ctx.fillStyle = '#cbd5e1'; // Slate 300
+  let y = captionY;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], textX, y);
+    y += lineH;
+  }
+  
+  // Next Button
+  const nextW = ctx.measureText(nextText).width;
+  const nextY = y + gap;
+  let nextX = alignRight ? (textX) : (textX); 
+  
+  // Next button hitbox
+  const nh = lineH;
+  nextHitBox = {
+    x1: canvasRect.left + (nextX - nextW/2 - 20),
+    y1: canvasRect.top + (nextY - 10),
+    x2: canvasRect.left + (nextX + nextW/2 + 20),
+    y2: canvasRect.top + (nextY + nh + 10)
+  };
+  
+  ctx.fillStyle = COLOR_MAIN_1;
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = COLOR_MAIN_1;
+  ctx.fillText(nextText, nextX, nextY);
+  
+  ctx.restore();
 }
 
 function layoutGrid() {
   mode = 'grid';
   labels = [];
   targetZoom = 1.0;
-  globalZoom = 3.0; // Start zoomed in
+  defaultZoom = 1.0;
+  globalZoom = width < 520 ? 1.6 : 1.2; 
   panX = 0;
   panY = 0;
   targetPanX = 0;
   targetPanY = 0;
   focusNode = null;
+  barScrollable = false;
 
-  const cols = Math.ceil(Math.sqrt(numCircles * (width / height)));
-  const rows = Math.ceil(numCircles / cols);
-  const gap = 20;
-  const offsetX = (width - cols * gap) / 2;
-  const offsetY = (height - rows * gap) / 2;
+  const cx = width / 2;
+  const cy = height / 2;
+  const s = uiScale();
+  // Phyllotaxis spiral layout
+  const cScale = Math.round(16 * s);
 
   circles.forEach((c, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
+    const angle = i * 2.399963; // Golden angle in radians
+    const r = cScale * Math.sqrt(i);
     
-    // Random start position near center for "explosion" or just center
-    c.x = width/2 + (Math.random() - 0.5) * 100;
-    c.y = height/2 + (Math.random() - 0.5) * 100;
+    c.tx = cx + r * Math.cos(angle);
+    c.ty = cy + r * Math.sin(angle);
+    c.tr = clamp(Math.round(5 * s), 3, 7);
     
-    c.tx = offsetX + col * gap;
-    c.ty = offsetY + row * gap;
-    c.tr = 6;
-    c.color = COLOR_MAIN_1;
+    // Colorful spiral gradient
+    const hue = (200 + i * 0.5) % 360;
+    c.color = hsla(hue, 85, 65, 1);
+    
     c.group = (langList[i]?.bahasa?.toString?.() ?? `Language ${i + 1}`);
     c.alpha = 0;
     c.tAlpha = 1;
-    // Cascade effect
-    c.delay = i * 0.5; // fast cascade
+    c.delay = i * 0.8; 
   });
 }
 
 function layoutBarChart(data, labelKey) {
   mode = 'bar';
   targetZoom = 1.0; // Reset zoom
+  defaultZoom = 1.0;
   labels = [];
   panX = 0;
   panY = 0;
@@ -507,31 +698,43 @@ function layoutBarChart(data, labelKey) {
   targetPanY = 0;
   focusNode = null;
   
-  const margin = 60;
-  const chartWidth = width - margin * 2;
-  const chartHeight = height * 0.6; // Max height of bars
-  const startY = height - 100; // Bottom of bars
+  const s = uiScale();
+  const margin = clamp(Math.round(width * 0.06), 14, 60);
+  const chartInnerWidth = width - margin * 2;
+  const minBarWidth = clamp(Math.round((width < 520 ? 52 : 36) * s), 26, 64);
+  const virtualChartWidth = Math.max(chartInnerWidth, data.length * minBarWidth);
+  const topInset = clamp(Math.round((width < 520 ? 108 : 92) * s), 72, 140);
+  const labelRotation = (data.length > 10 || width < 520) ? -45 : 0;
+  const labelFont = `${Math.round(11 * s)}px Outfit`;
+  ctx.save();
+  ctx.font = labelFont;
+  const maxLabelW = data.reduce((m, d) => Math.max(m, ctx.measureText((d?.[labelKey] ?? '').toString()).width), 0);
+  ctx.restore();
+  const isMobile = width < 520;
+  const extraBottom = (labelRotation && isMobile)
+    ? Math.round(Math.min(92, maxLabelW * 0.34))
+    : (labelRotation ? Math.round(Math.min(120, maxLabelW * 0.46)) : Math.round(Math.min(44, maxLabelW * 0.10)));
+  const bottomPad = (labelRotation && isMobile)
+    ? clamp(Math.round(92 * s) + extraBottom, 76, 190)
+    : clamp(Math.round(104 * s) + extraBottom, 88, 240);
+  const chartHeight = clamp(Math.round(height - bottomPad - topInset), 160, Math.round(height * 0.82));
+  const startY = height - bottomPad; // Bottom of bars
   
-  const barWidth = chartWidth / data.length;
-  const barGap = Math.max(2, barWidth * 0.1);
+  const barWidth = virtualChartWidth / data.length;
+  const barGap = clamp(Math.round(barWidth * 0.14), 2, 12);
   const effectiveBarWidth = barWidth - barGap;
 
-  // Calculate radius based on the dataset's max count
-  // to ensure consistency across all bars in this chart.
   const maxCount = Math.max(...data.map(d => d.circle_count ?? d.jumlah_bahasa));
-  
-  // Try to fit the largest bar into chartHeight
-  // maxCount * (2r)^2 <= effectiveBarWidth * chartHeight
-  let r = Math.sqrt((effectiveBarWidth * chartHeight) / maxCount) / 2.5;
-  
-  // Apply constraints
-  r = Math.min(r, effectiveBarWidth / 2.5); // At least 1 column
-  r = Math.min(r, 6); // Max radius
-  r = Math.max(r, 2); // Min radius (ensure visibility)
-  
-  const diameter = r * 2.2; 
-  const cols = Math.floor(effectiveBarWidth / diameter);
-  const actualCols = Math.max(1, cols);
+  const packing = pickBarPacking({ effectiveBarWidth, chartHeight, maxCount });
+  const r = packing.r;
+  const diameter = packing.diameter;
+  const actualCols = packing.cols;
+
+  barScrollable = virtualChartWidth > chartInnerWidth + 1;
+  barMinPanX = Math.min(0, chartInnerWidth - virtualChartWidth);
+  barMaxPanX = 0;
+  panX = clamp(panX, barMinPanX, barMaxPanX);
+  targetPanX = panX;
 
   let circleIndex = 0;
 
@@ -541,12 +744,27 @@ function layoutBarChart(data, labelKey) {
     const groupLabel = item[labelKey];
     const candidates = (labelKey === 'wilayah' ? islandLangMap : provinceLangMap).get(groupLabel) ?? [];
     
+    const totalCount = item.jumlah_bahasa ?? count;
+    const countY = startY + Math.round(12 * s);
+    const labelY = startY + Math.round(30 * s);
+
+    labels.push({
+      x: centerX,
+      y: countY,
+      text: `${totalCount}`,
+      rotation: 0,
+      font: labelFont,
+      fillStyle: 'rgba(203, 213, 225, 0.8)'
+    });
+
     // Add label
     labels.push({
       x: centerX,
-      y: startY + 20,
+      y: labelY,
       text: item[labelKey],
-      rotation: data.length > 10 ? -45 : 0 // Rotate labels if many
+      rotation: labelRotation, // Rotate labels if many
+      font: labelFont,
+      fillStyle: 'rgba(241, 245, 249, 0.9)'
     });
 
     // Assign circles
@@ -601,7 +819,7 @@ function drawCircleHoverChipScreenSpace() {
   const textX = sx + dx * pad;
   const textY = sy + dy * pad;
 
-  ctx.font = '12px Outfit';
+  ctx.font = `${Math.round(12 * uiScale())}px Outfit`;
   ctx.textBaseline = 'middle';
   ctx.textAlign = dx >= 0 ? 'left' : 'right';
   ctx.shadowBlur = 0;
@@ -617,14 +835,14 @@ function drawCircleHoverChipScreenSpace() {
   const y1 = textY - h / 2 - padY;
   const y2 = y1 + h + padY * 2;
 
-  ctx.fillStyle = 'rgba(2, 6, 23, 0.84)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
   roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 7);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.75)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
   ctx.fillText(text, textX, textY);
 }
 
@@ -637,9 +855,12 @@ function layoutTree() {
   targetPanY = 0;
   focusNode = null;
   targetZoom = 1.0;
-  globalZoom = 1.7;
+  globalZoom = width < 520 ? 1.35 : 1.7;
   targetZoom = globalZoom;
+  defaultZoom = globalZoom;
   tooltip.style.display = 'none';
+  barScrollable = false;
+  treeFrame = 0;
 
   for (const c of circles) {
     c.tAlpha = 0;
@@ -675,13 +896,15 @@ function layoutTree() {
 
   const cx = width / 2;
   const cy = height / 2;
-  const maxR = Math.min(width, height) / 2 - 90;
+  const inset = clamp(Math.round(Math.min(width, height) * 0.085), 40, 90);
+  const maxR = Math.min(width, height) / 2 - inset;
   const r3 = Math.max(0, maxR);
   const r2 = Math.max(0, r3 * 0.72);
   const r1 = Math.max(0, r3 * 0.44);
-  const LANG_ARC_SPACING = 10;
-  const LANG_RADIAL_STEP = 9;
-  const PROV_ARC_SPACING = 34;
+  const s = uiScale();
+  const LANG_ARC_SPACING = 10 * s;
+  const LANG_RADIAL_STEP = 9 * s;
+  const PROV_ARC_SPACING = 34 * s;
   const ISLAND_BASE_HUES = [196, 264, 322, 36, 86, 142, 170, 214, 292];
   const PROV_HUE_SPREAD = 26;
   const LANG_HUE_SPREAD = 16;
@@ -839,25 +1062,45 @@ function makeEdge(a, b, cx, cy) {
     a,
     b,
     cpx: mx + nx * bend + (cx - mx) * pullToCenter,
-    cpy: my + ny * bend + (cy - my) * pullToCenter
+    cpy: my + ny * bend + (cy - my) * pullToCenter,
+    stroke: hsla((a.hue + b.hue) / 2, 75, 55, 1)
   };
 }
 
 function loop() {
   globalZoom += (targetZoom - globalZoom) * 0.05;
-  if (mode === 'tree' && focusNode) {
+  if (mode === 'tree') treeFrame++;
+  else treeFrame = 0;
+  
+  // Center camera on focusNode if set (works for both Tree nodes and Circles now)
+  if (focusNode) {
     targetPanX = -(focusNode.x - width / 2) * globalZoom;
     targetPanY = -(focusNode.y - height / 2) * globalZoom;
+    // Smoothly interpolate panX/panY to target
+    panX += (targetPanX - panX) * 0.12;
+    panY += (targetPanY - panY) * 0.12;
+  } else {
+    // When NOT focusing, we are likely dragging or just sitting there.
+    // If we are dragging, panX/panY are set directly by pointer events.
+    // If we just released drag, targetPanX is set to last panX.
+    // So we should just interpolate to targetPanX normally.
+    panX += (targetPanX - panX) * 0.12;
+    panY += (targetPanY - panY) * 0.12;
   }
-  panX += (targetPanX - panX) * 0.12;
-  panY += (targetPanY - panY) * 0.12;
+
+  // Reset Button Visibility
+  if (resetBtn) {
+    const isZoomed = Math.abs(targetZoom - defaultZoom) > 0.05 || Math.abs(targetPanX) > 10 || Math.abs(targetPanY) > 10 || focusNode !== null;
+    if (isZoomed) resetBtn.classList.add('visible');
+    else resetBtn.classList.remove('visible');
+  }
 
   // Clear
   ctx.fillStyle = COLOR_BG;
   ctx.fillRect(0, 0, canvas.width, canvas.height); // use raw canvas size
 
   ctx.save();
-  const dpr = window.devicePixelRatio;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   ctx.scale(dpr, dpr);
   
   // Apply zoom centered
@@ -869,29 +1112,27 @@ function loop() {
     for (const n of treeNodes) n.update();
 
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = 'source-over';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     for (const e of treeEdges) {
       const a = e.a;
       const b = e.b;
-      const alpha = Math.min(a.alpha, b.alpha) * 0.55;
+      const alpha = Math.min(a.alpha, b.alpha) * 0.75;
       if (alpha <= 0.02) continue;
 
-      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-      grad.addColorStop(0, hsla(a.hue, 95, 68, alpha * 0.35));
-      grad.addColorStop(0.5, hsla((a.hue + b.hue) / 2, 98, 72, alpha * 0.55));
-      grad.addColorStop(1, hsla(b.hue, 95, 68, alpha * 0.35));
-
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 0.6;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = e.stroke;
+      const screenW = clamp(0.35 + 0.12 * globalZoom, 0.42, 1.05);
+      ctx.lineWidth = screenW / globalZoom;
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.quadraticCurveTo(e.cpx, e.cpy, b.x, b.y);
       ctx.stroke();
     }
 
+    ctx.globalAlpha = 1;
     ctx.restore();
 
     for (const n of treeNodes) n.drawDot();
@@ -903,6 +1144,7 @@ function loop() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawTreeLanguageLabelsScreenSpace();
     drawTreeHoverChipScreenSpace();
+    drawStoryOverlayScreenSpace();
     ctx.restore();
   } else {
     // Draw Circles
@@ -913,16 +1155,20 @@ function loop() {
 
     // Draw Labels
     ctx.fillStyle = COLOR_TEXT;
-    ctx.font = '12px Outfit';
+    ctx.font = `${Math.round(12 * uiScale())}px Outfit`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
     labels.forEach(l => {
       ctx.save();
       ctx.translate(l.x, l.y);
+      ctx.font = l.font ?? ctx.font;
+      ctx.fillStyle = l.fillStyle ?? ctx.fillStyle;
       if (l.rotation) {
         ctx.rotate(l.rotation * Math.PI / 180);
         ctx.textAlign = 'right';
+      } else {
+        ctx.textAlign = 'center';
       }
       ctx.fillText(l.text, 0, 0);
       ctx.restore();
@@ -931,6 +1177,7 @@ function loop() {
     ctx.save();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawCircleHoverChipScreenSpace();
+    drawStoryOverlayScreenSpace();
     ctx.restore();
   }
 
@@ -939,34 +1186,19 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Controls
-document.getElementById('btn-grid').addEventListener('click', layoutGrid);
-document.getElementById('btn-island').addEventListener('click', () => layoutBarChart(islandData, 'wilayah'));
-document.getElementById('btn-province').addEventListener('click', () => layoutBarChart(provinceData, 'provinsi'));
-document.getElementById('btn-tree').addEventListener('click', layoutTree);
-
-// Mouse Interaction needs to account for Zoom
-window.addEventListener('mousemove', (e) => {
-  if (mode === 'tree' && isDragging) {
-    const dx = e.clientX - dragStartX;
-    const dy = e.clientY - dragStartY;
-    if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
-    panX = dragStartPanX + dx;
-    panY = dragStartPanY + dy;
-    targetPanX = panX;
-    targetPanY = panY;
-    focusNode = null;
-  }
-
+function screenToWorld(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const rawX = e.clientX - rect.left;
-  const rawY = e.clientY - rect.top;
-  
-  // Transform mouse coordinates to world space
-  // worldX = (screenX - width/2) / zoom + width/2
-  const worldX = (rawX - width/2 - panX) / globalZoom + width/2;
-  const worldY = (rawY - height/2 - panY) / globalZoom + height/2;
-  
+  const rawX = clientX - rect.left;
+  const rawY = clientY - rect.top;
+  const worldX = (rawX - width / 2 - panX) / globalZoom + width / 2;
+  const worldY = (rawY - height / 2 - panY) / globalZoom + height / 2;
+  return { worldX, worldY };
+}
+
+function updateHoverAt(clientX, clientY, extraRadius) {
+  const { worldX, worldY } = screenToWorld(clientX, clientY);
+  const extra = extraRadius ?? 0;
+
   if (mode === 'tree') {
     let found = null;
     for (let i = treeNodes.length - 1; i >= 0; i--) {
@@ -974,49 +1206,228 @@ window.addEventListener('mousemove', (e) => {
       if (n.alpha < 0.4) continue;
       const dx = worldX - n.x;
       const dy = worldY - n.y;
-      if (dx * dx + dy * dy < (n.r + 3) * (n.r + 3)) {
+      const r = n.r + 3 + extra;
+      if (dx * dx + dy * dy < r * r) {
         found = n;
         break;
       }
     }
-
     hoveredNode = found;
     hoveredCircle = null;
     tooltip.style.display = 'none';
-  } else {
-    let found = null;
-    for (let c of circles) {
-      if (c.alpha < 0.5) continue;
-      const dx = worldX - c.x;
-      const dy = worldY - c.y;
-      if (dx*dx + dy*dy < c.r * c.r + 4) {
-        found = c;
-        break;
-      }
+    return;
+  }
+
+  let found = null;
+  for (let i = 0; i < circles.length; i++) {
+    const c = circles[i];
+    if (c.alpha < 0.5) continue;
+    const dx = worldX - c.x;
+    const dy = worldY - c.y;
+    const r = c.r + 2 + extra;
+    if (dx * dx + dy * dy < r * r + 4) {
+      found = c;
+      break;
     }
-    
-    hoveredCircle = found;
-    hoveredNode = null;
-    tooltip.style.display = 'none';
+  }
+  hoveredCircle = found;
+  hoveredNode = null;
+  tooltip.style.display = 'none';
+}
+
+function focusCircle(c) {
+  if (!c) return;
+  // Calculate target pan to center the circle
+  // We want: (c.x - width/2) * zoom + panX = 0 => panX = -(c.x - width/2) * zoom
+  // But we animate to targetPanX
+  const z = 4.0; // Zoom level for individual circle
+  targetZoom = z;
+  focusNode = { x: c.x, y: c.y }; // Reuse focusNode concept for centering logic in loop()
+}
+
+function focusHoveredNode() {
+  if (!hoveredNode) return;
+  focusNode = hoveredNode;
+  let z = targetZoom;
+  if (focusNode.kind === 'root') z = 2.0;
+  else if (focusNode.kind === 'island') z = 2.8;
+  else if (focusNode.kind === 'province') z = 4.2;
+  else z = 7.0;
+  targetZoom = clamp(z, ZOOM_MIN, ZOOM_MAX);
+}
+
+const pointers = new Map();
+let pinchStartDist = null;
+let pinchStartZoom = null;
+let hoverClearTimer = null;
+let navStartX = 0;
+let navStartY = 0;
+let navStartT = 0;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (nextHitBox && e.clientX >= nextHitBox.x1 && e.clientX <= nextHitBox.x2 && e.clientY >= nextHitBox.y1 && e.clientY <= nextHitBox.y2) {
+    nextPointerId = e.pointerId;
+    return;
+  }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  canvas.setPointerCapture?.(e.pointerId);
+
+  if (pointers.size === 1) {
+    navStartX = e.clientX;
+    navStartY = e.clientY;
+    navStartT = performance.now();
+  }
+
+  const extra = isCoarsePointer() ? 7 : 0;
+  updateHoverAt(e.clientX, e.clientY, extra);
+
+  if (mode === 'tree') {
+    isDragging = true;
+    dragMoved = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    focusNode = null;
+  } else if (mode === 'grid') {
+    isDragging = true;
+    dragMoved = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    focusNode = null;
+  } else if (mode === 'bar') {
+    isDragging = true;
+    dragMoved = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    focusNode = null;
+    barIsDragging = true;
+    barDragStartX = e.clientX;
+    barDragStartPanX = panX;
+  } else if (isCoarsePointer()) {
+    // Only if NOT dragging
+    if (hoverClearTimer) window.clearTimeout(hoverClearTimer);
+    hoverClearTimer = window.setTimeout(() => {
+      hoveredCircle = null;
+    }, 2200);
   }
 });
 
-canvas.addEventListener('mousedown', (e) => {
-  if (mode !== 'tree') return;
-  isDragging = true;
-  dragMoved = false;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  dragStartPanX = panX;
-  dragStartPanY = panY;
-  focusNode = null;
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  const extra = isCoarsePointer() ? 7 : 0;
+
+  if (mode === 'tree' && pointers.size >= 2) {
+    const pts = Array.from(pointers.values());
+    const dx = pts[0].x - pts[1].x;
+    const dy = pts[0].y - pts[1].y;
+    const dist = Math.hypot(dx, dy);
+    if (pinchStartDist == null) {
+      pinchStartDist = dist || 1;
+      pinchStartZoom = targetZoom;
+    } else {
+      const factor = (dist || 1) / pinchStartDist;
+      targetZoom = clamp((pinchStartZoom || targetZoom) * factor, ZOOM_MIN, ZOOM_MAX);
+      focusNode = null;
+    }
+    updateHoverAt(e.clientX, e.clientY, extra);
+    return;
+  }
+
+  pinchStartDist = null;
+  pinchStartZoom = null;
+
+  if ((mode === 'tree' || mode === 'grid') && isDragging) {
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
+    
+    // Direct manipulation of panX/panY
+    panX = dragStartPanX + dx;
+    panY = dragStartPanY + dy;
+    
+    // IMPORTANT: Sync targetPanX to current panX so that when we release, 
+    // it doesn't try to tween back to an old target or focus point.
+    targetPanX = panX;
+    targetPanY = panY;
+    
+    // Explicitly clear focusNode to stop the loop() from overriding our pan
+    focusNode = null; 
+  }
+
+  if (mode === 'bar' && isDragging) {
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
+    // Allow X panning
+    panX = dragStartPanX + dx;
+    panY = dragStartPanY + dy; 
+    
+    targetPanX = panX;
+    targetPanY = panY;
+    focusNode = null;
+  }
+
+  updateHoverAt(e.clientX, e.clientY, extra);
 });
 
-window.addEventListener('mouseup', () => {
-  isDragging = false;
-  suppressClick = dragMoved;
-  dragMoved = false;
-});
+function endPointerInteraction(e) {
+  if (nextPointerId === e.pointerId) {
+    if (nextHitBox && e.clientX >= nextHitBox.x1 && e.clientX <= nextHitBox.x2 && e.clientY >= nextHitBox.y1 && e.clientY <= nextHitBox.y2) {
+      applyScene(sceneIndex + 1);
+    }
+    nextPointerId = null;
+    return;
+  }
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) {
+    pinchStartDist = null;
+    pinchStartZoom = null;
+  }
+  if (mode === 'tree') {
+    isDragging = false;
+    suppressClick = dragMoved;
+    dragMoved = false;
+    if (!suppressClick) focusHoveredNode();
+    return;
+  }
+  
+  if (mode === 'grid' || mode === 'bar') {
+    isDragging = false;
+    suppressClick = dragMoved;
+    dragMoved = false;
+    barIsDragging = false;
+    if (!suppressClick && hoveredCircle) {
+      focusCircle(hoveredCircle);
+    }
+    return;
+  }
+
+  if (!isCoarsePointer()) return;
+  if (mode === 'tree') return;
+  if (mode === 'bar' && barScrollable && Math.abs((e.clientX ?? 0) - navStartX) > Math.abs((e.clientY ?? 0) - navStartY)) return;
+
+  const dt = performance.now() - (navStartT || 0);
+  const dx = (e.clientX ?? 0) - navStartX;
+  const dy = (e.clientY ?? 0) - navStartY;
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  if (dt > 900) return;
+  if (ady < 52) return;
+  if (ady < adx * 1.25) return;
+
+  if (dy < 0) applyScene(sceneIndex + 1);
+  else applyScene(sceneIndex - 1);
+}
+
+canvas.addEventListener('pointerup', endPointerInteraction);
+canvas.addEventListener('pointercancel', endPointerInteraction);
 
 window.addEventListener('wheel', (e) => {
   if (mode !== 'tree') return;
@@ -1026,21 +1437,20 @@ window.addEventListener('wheel', (e) => {
   focusNode = null;
 }, { passive: false });
 
-canvas.addEventListener('click', () => {
-  if (mode !== 'tree') return;
-  if (suppressClick) {
-    suppressClick = false;
-    return;
-  }
-  if (!hoveredNode) return;
-
-  focusNode = hoveredNode;
-  let z = targetZoom;
-  if (focusNode.kind === 'root') z = 2.0;
-  else if (focusNode.kind === 'island') z = 2.8;
-  else if (focusNode.kind === 'province') z = 4.2;
-  else z = 7.0;
-  targetZoom = clamp(z, ZOOM_MIN, ZOOM_MAX);
+window.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;
+  if (e.key === 'ArrowRight') applyScene(sceneIndex + 1);
+  else if (e.key === 'ArrowLeft') applyScene(sceneIndex - 1);
 });
+
+if (resetBtn) {
+  resetBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    targetZoom = defaultZoom;
+    targetPanX = 0;
+    targetPanY = 0;
+    focusNode = null;
+  });
+}
 
 loadData();

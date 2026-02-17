@@ -73,10 +73,15 @@ let textAnim = {
   // Outgoing
   prevScene: null,
   prevOpacity: 0,
-  prevYOffset: 0
+  prevYOffset: 0,
+  // Visibility
+  visible: true,
+  tVisible: 1
 };
 
 let sceneIndex = 0;
+let textHitBox = null;
+let textPointerId = null;
 const scenes = [
   {
     key: 'grid',
@@ -675,6 +680,16 @@ function drawSceneText(scene, opacity, yOffset) {
     y += lineH;
   }
   
+  // Update textHitBox for active scene
+  if (scene === scenes[sceneIndex]) {
+     textHitBox = {
+       x1: canvasRect.left + (alignRight ? (textX - maxTextW) : (textX - maxTextW/2)),
+       y1: canvasRect.top + titleY - 10,
+       x2: canvasRect.left + (alignRight ? (textX) : (textX + maxTextW/2)),
+       y2: canvasRect.top + y + 10
+     };
+  }
+  
   // Next Button
   const nextW = ctx.measureText(nextText).width;
   const nextY = y + gap;
@@ -702,13 +717,23 @@ function drawSceneText(scene, opacity, yOffset) {
 function drawStoryOverlayScreenSpace() {
   // Draw Outgoing
   if (textAnim.prevScene && textAnim.prevOpacity > 0.01) {
-      drawSceneText(textAnim.prevScene, textAnim.prevOpacity, textAnim.prevYOffset);
+      // Apply visibility to outgoing as well
+      const combinedPrevOpacity = textAnim.prevOpacity * textAnim.tVisible;
+      // We can also apply the hiding offset to the outgoing text for consistency, 
+      // but strictly speaking just opacity is enough to hide it.
+      // Let's keep it simple and just modulate opacity.
+      if (combinedPrevOpacity > 0.01) {
+          drawSceneText(textAnim.prevScene, combinedPrevOpacity, textAnim.prevYOffset);
+      }
   }
   
   // Draw Incoming
   const currentScene = scenes[sceneIndex];
   if (currentScene) {
-      drawSceneText(currentScene, textAnim.opacity, textAnim.yOffset);
+      // Modulate opacity by tVisible
+      const combinedOpacity = textAnim.opacity * textAnim.tVisible;
+      const combinedY = textAnim.yOffset + (1 - textAnim.tVisible) * -20;
+      drawSceneText(currentScene, combinedOpacity, combinedY);
   }
 }
 
@@ -1156,6 +1181,10 @@ function loop() {
   textAnim.opacity += (1 - textAnim.opacity) * 0.08;
   textAnim.yOffset += (0 - textAnim.yOffset) * 0.08;
   
+  // Visibility Animation
+  const targetVis = textAnim.visible ? 1 : 0;
+  textAnim.tVisible += (targetVis - textAnim.tVisible) * 0.12;
+
   if (textAnim.prevOpacity > 0) {
       textAnim.prevOpacity += (0 - textAnim.prevOpacity) * 0.15; // Fade out faster
       textAnim.prevYOffset += (-20 - textAnim.prevYOffset) * 0.1; // Move up
@@ -1342,6 +1371,13 @@ canvas.addEventListener('pointerdown', (e) => {
     nextPointerId = e.pointerId;
     return;
   }
+  
+  // Check if clicked on text box
+  if (textAnim.visible && textHitBox && e.clientX >= textHitBox.x1 && e.clientX <= textHitBox.x2 && e.clientY >= textHitBox.y1 && e.clientY <= textHitBox.y2) {
+     textPointerId = e.pointerId;
+     return;
+  }
+  
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture?.(e.pointerId);
 
@@ -1458,6 +1494,15 @@ function endPointerInteraction(e) {
     nextPointerId = null;
     return;
   }
+  
+  if (textPointerId === e.pointerId) {
+     if (textAnim.visible && textHitBox && e.clientX >= textHitBox.x1 && e.clientX <= textHitBox.x2 && e.clientY >= textHitBox.y1 && e.clientY <= textHitBox.y2) {
+         textAnim.visible = false;
+     }
+     textPointerId = null;
+     return;
+  }
+  
   pointers.delete(e.pointerId);
   if (pointers.size < 2) {
     pinchStartDist = null;
@@ -1529,7 +1574,11 @@ if (resetBtn) {
 if (infoBtn && infoModal) {
   infoBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    infoModal.classList.add('open');
+    if (!textAnim.visible) {
+       textAnim.visible = true;
+    } else {
+       infoModal.classList.add('open');
+    }
   });
 }
 

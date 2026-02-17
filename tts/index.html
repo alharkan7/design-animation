@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+  <style>
+    /* Specific styles for TTS page */
+    textarea {
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        border-radius: 12px;
+        padding: 1rem;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        width: 100%;
+        box-sizing: border-box;
+        resize: vertical;
+        transition: all 0.2s ease;
+    }
+    textarea:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+    .status-text {
+        text-align: center;
+        min-height: 1.5em; /* Prevent layout shift */
+    }
+  </style>
+  <title>ElevenLabs TTS</title>
+</head>
+<body>
+  <div id="app">
+    <div class="controls">
+      <h1>Text to Speech</h1>
+      <div class="control-group">
+        <label for="text-input">Enter Text</label>
+        <textarea id="text-input" rows="4" placeholder="Enter text to convert to speech...">The first move is what sets everything in motion.</textarea>
+      </div>
+      <div class="button-group">
+        <button id="speak-btn">Generate & Play</button>
+      </div>
+      <audio id="audio-player" controls class="hidden" style="width: 100%; margin-top: 1rem;"></audio>
+      <div id="status" class="status-text hidden"></div>
+    </div>
+  </div>
+  <script type="module" src="/src/tts.js"></script>
+</body>
+</html>

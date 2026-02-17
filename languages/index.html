@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Language Distribution Animation</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #0f172a; /* Dark background as requested for minimalist motion graphics */
+      font-family: 'Outfit', sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    .lang-controls {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    .lang-btn {
+      padding: 6px 16px;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.8);
+      border-radius: 99px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+    .tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      pointer-events: none;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="lang-controls">
+    <button id="btn-grid" class="lang-btn">Grid</button>
+    <button id="btn-island" class="lang-btn">By Island</button>
+    <button id="btn-province" class="lang-btn">By Province</button>
+    <button id="btn-tree" class="lang-btn">Tree</button>
+  </div>
+  <div id="tooltip" class="tooltip"></div>
+  <script type="module" src="/src/languages_animation.js"></script>
+</body>
+</html>

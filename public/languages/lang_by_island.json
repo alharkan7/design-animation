@@ -1,0 +1,13 @@
+{
+  "judul": "Penyebaran Bahasa di Indonesia Berdasarkan Wilayah Pulau",
+  "data": [
+    { "wilayah": "Sumatra", "jumlah_bahasa": 26 },
+    { "wilayah": "Jawa dan Bali", "jumlah_bahasa": 10 },
+    { "wilayah": "Kalimantan", "jumlah_bahasa": 58 },
+    { "wilayah": "Sulawesi", "jumlah_bahasa": 62 },
+    { "wilayah": "Papua", "jumlah_bahasa": 428 },
+    { "wilayah": "Nusa Tenggara Barat", "jumlah_bahasa": 11 },
+    { "wilayah": "Nusa Tenggara Timur", "jumlah_bahasa": 72 },
+    { "wilayah": "Maluku", "jumlah_bahasa": 80 }
+  ]
+}

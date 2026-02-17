@@ -1432,7 +1432,7 @@ canvas.addEventListener('pointermove', (e) => {
 
   const extra = isCoarsePointer() ? 7 : 0;
 
-  if (mode === 'tree' && pointers.size >= 2) {
+  if ((mode === 'tree' || mode === 'grid' || mode === 'bar') && pointers.size >= 2) {
     const pts = Array.from(pointers.values());
     const dx = pts[0].x - pts[1].x;
     const dy = pts[0].y - pts[1].y;
@@ -1548,7 +1548,7 @@ canvas.addEventListener('pointerup', endPointerInteraction);
 canvas.addEventListener('pointercancel', endPointerInteraction);
 
 window.addEventListener('wheel', (e) => {
-  if (mode !== 'tree') return;
+  // Allow zooming in all modes
   e.preventDefault();
   const factor = Math.exp((-e.deltaY) * 0.0015);
   targetZoom = clamp(targetZoom * factor, ZOOM_MIN, ZOOM_MAX);

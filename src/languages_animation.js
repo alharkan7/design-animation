@@ -20,6 +20,9 @@ const COLOR_TEXT = '#f1f5f9'; // Slate 100
 
 const tooltip = document.getElementById('tooltip');
 const resetBtn = document.getElementById('reset-btn');
+const infoBtn = document.getElementById('info-btn');
+const infoModal = document.getElementById('info-modal');
+const modalClose = document.getElementById('modal-close');
 let canvasRect = { left: 0, top: 0 };
 
 // Global animation state
@@ -63,34 +66,44 @@ let barIsDragging = false;
 let barDragStartX = 0;
 let barDragStartPanX = 0;
 
+let textAnim = {
+  // Incoming
+  opacity: 1,
+  yOffset: 0,
+  // Outgoing
+  prevScene: null,
+  prevOpacity: 0,
+  prevYOffset: 0
+};
+
 let sceneIndex = 0;
 const scenes = [
   {
     key: 'grid',
     align: 'center',
-    title: 'Sebaran Bahasa Nusantara',
-    caption: 'Setiap titik mewakili satu bahasa. Pola ini memberi gambaran cepat tentang jumlah total dan ritmenya. Perhatikan bagaimana titik-titik membentuk struktur yang rapat.',
+    title: '718 Bahasa Nusantara',
+    caption: 'Setiap titik di sini mewakili satu bahasa di Indonesia. Data ini dihimpun oleh Badan Pengembangan dan Pembinaan Bahasa, Kementerian Pendidikan Dasar dan Menengah, melalui riset yang dilakukan selama hampir 28 tahun (1991 - 2019) pada 2.560 daerah pengamatan. Tanpa menghitung dialek & subdialek, keragaman bahasa daerah di Indonesia mencapai 718 bahasa.',
     apply: () => layoutGrid()
   },
   {
     key: 'island',
     align: 'right',
-    title: 'Bahasa per Pulau',
-    caption: 'Tiap kolom menunjukkan jumlah bahasa pada satu wilayah pulau. Semakin tinggi kolom, semakin banyak ragam bahasa yang tercatat. Bandingkan puncak kolom di sisi kiri dengan ekor panjang di kanan.',
+    title: 'Pulau dan Bahasa',
+    caption: 'Meski Jawa adalah pulau terpadat, ia bukan pulau dengan kekayaan bahasa tertinggi. Predikat ini diemban oleh Papua, dengan 428 bahasa, melebihi setengah dari keragaman bahasa di Indonesia.',
     apply: () => layoutBarChart(islandData, 'wilayah')
   },
   {
     key: 'province',
     align: 'right',
-    title: 'Bahasa per Provinsi',
-    caption: 'Tiap kolom menunjukkan jumlah bahasa pada tingkat provinsi. Daftar yang panjang menandakan sebaran yang tidak merata. Geser untuk melihat provinsi lain dengan jumlah lebih kecil.',
+    title: 'Papua yang Terkaya',
+    caption: 'Di antara provinsi yang lain (tahun 2019), Papua adalah daerah dengan kekayaan bahasa tertinggi, mencapai 326 bahasa, atau hampir setengah dari seluruh keragaman bahasa di Indonesia.',
     apply: () => layoutBarChart(provinceData, 'provinsi')
   },
   {
     key: 'tree',
     align: 'center',
     title: 'Pohon Kekerabatan Bahasa',
-    caption: 'Visual ini menata bahasa dalam struktur bertingkat. Garis menghubungkan kelompok yang berdekatan secara wilayah. Ketuk satu simpul untuk fokus dan zoom.',
+    caption: 'Keragaman bahasa di Indonesia ini mewakili 10% dari keseluruhan bahasa yang ada di dunia, menjadikan Indonesia sebagai negara dengan keragaman bahasa terbanyak kedua di dunia (setelah Papua Nugini).',
     apply: () => layoutTree()
   }
 ];
@@ -435,7 +448,13 @@ async function loadData() {
       if (!bahasa) continue;
 
       const wilayahParts = splitParts(item?.wilayah?.toString?.() ?? '');
-      for (const w of wilayahParts) {
+      const uniqueWilayah = new Set();
+      for (let w of wilayahParts) {
+        if (w === 'Nusa Tenggara Barat' || w === 'Nusa Tenggara Timur') w = 'Nusa Tenggara';
+        uniqueWilayah.add(w);
+      }
+      
+      for (const w of uniqueWilayah) {
         if (!islandLangMap.has(w)) islandLangMap.set(w, []);
         islandLangMap.get(w).push(bahasa);
       }
@@ -447,7 +466,10 @@ async function loadData() {
       }
     }
 
-    const aggregatedIslands = aggregateCounts(list, 'wilayah', 'wilayah');
+    const aggregatedIslands = aggregateCounts(list, 'wilayah', 'wilayah', (w) => {
+      if (w === 'Nusa Tenggara Barat' || w === 'Nusa Tenggara Timur') return 'Nusa Tenggara';
+      return w;
+    });
     const aggregatedProvinces = aggregateCounts(list, 'provinsi', 'provinsi');
 
     islandData = allocateCircles(aggregatedIslands, numCircles);
@@ -459,14 +481,20 @@ async function loadData() {
   }
 }
 
-function aggregateCounts(list, field, outKey) {
+function aggregateCounts(list, field, outKey, normalizer) {
   const map = new Map();
 
   for (const item of list) {
     const raw = item?.[field];
     if (!raw || typeof raw !== 'string') continue;
     const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
-    for (const part of parts) {
+    const unique = new Set();
+    for (let part of parts) {
+      if (normalizer) part = normalizer(part);
+      unique.add(part);
+    }
+    
+    for (const part of unique) {
       map.set(part, (map.get(part) ?? 0) + 1);
     }
   }
@@ -536,7 +564,19 @@ function init() {
 
 function applyScene(nextIndex) {
   const n = scenes.length || 1;
+  const prevIndex = sceneIndex;
   sceneIndex = ((nextIndex % n) + n) % n;
+  
+  // Text Transition Animation
+  if (prevIndex !== sceneIndex) {
+     textAnim.prevScene = scenes[prevIndex];
+     textAnim.prevOpacity = 1;
+     textAnim.prevYOffset = 0;
+     
+     textAnim.opacity = 0;
+     textAnim.yOffset = 30; // Start from below
+  }
+
   const scene = scenes[sceneIndex];
   scene.apply();
 }
@@ -558,10 +598,9 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function drawStoryOverlayScreenSpace() {
-  const scene = scenes[sceneIndex];
-  if (!scene) return;
-
+function drawSceneText(scene, opacity, yOffset) {
+  if (opacity <= 0.01) return;
+  
   const s = uiScale();
   const alignRight = scene.align === 'right';
   
@@ -585,7 +624,7 @@ function drawStoryOverlayScreenSpace() {
   
   const lineH = Math.round(bodySize * 1.5);
   const gap = Math.round(16 * s);
-  const titleY = topMargin;
+  const titleY = topMargin + yOffset;
   const captionY = titleY + titleSize + gap;
   
   const maxLines = width < 520 ? 4 : 5;
@@ -593,34 +632,43 @@ function drawStoryOverlayScreenSpace() {
   const nextText = (sceneIndex === scenes.length - 1) ? 'Kembali ↺' : 'Selanjutnya →';
   
   ctx.save();
+  ctx.globalAlpha = opacity;
   ctx.font = bodyFont;
   const capLines = wrapText(ctx, scene.caption, maxTextW);
   const lines = capLines.slice(0, maxLines);
   
-  // Draw Gradient Background
-  const fadeH = captionY + (lines.length + 1) * lineH + 60;
-  const grad = ctx.createLinearGradient(0, 0, 0, fadeH);
-  grad.addColorStop(0, 'rgba(15, 23, 42, 0.98)');
-  grad.addColorStop(0.7, 'rgba(15, 23, 42, 0.9)');
-  grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+  // Only draw gradient bg for the main scene, or if we want transition to include bg?
+  // Let's draw BG only if opacity > 0.5 to avoid double dark overlay?
+  // Actually, we should probably separate BG from text.
+  // But for now let's draw it with alpha.
+  
+  const fadeH = (captionY - yOffset) + (lines.length + 1) * lineH + 60;
+  // Use fixed height for gradient based on layout, ignore offset for the gradient box?
+  // Or move gradient with text?
+  // Let's move gradient with text.
+  
+  const grad = ctx.createLinearGradient(0, yOffset, 0, fadeH + yOffset);
+  grad.addColorStop(0, `rgba(15, 23, 42, ${0.98 * opacity})`);
+  grad.addColorStop(0.7, `rgba(15, 23, 42, ${0.9 * opacity})`);
+  grad.addColorStop(1, `rgba(15, 23, 42, 0)`);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, fadeH);
+  ctx.fillRect(0, 0, width, fadeH + Math.abs(yOffset) + 100); // Fill large enough area
 
   // Text Rendering
   ctx.textBaseline = 'top';
   ctx.textAlign = alignRight ? 'right' : 'center';
   
   // Title
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowColor = `rgba(0, 0, 0, ${0.8 * opacity})`;
   ctx.shadowBlur = 12;
-  ctx.fillStyle = '#f8fafc'; // Light text
+  ctx.fillStyle = `rgba(248, 250, 252, ${opacity})`; // Light text
   ctx.font = titleFont;
   ctx.fillText(scene.title, textX, titleY);
   
   // Caption
   ctx.shadowBlur = 4;
   ctx.font = bodyFont;
-  ctx.fillStyle = '#cbd5e1'; // Slate 300
+  ctx.fillStyle = `rgba(203, 213, 225, ${opacity})`; // Slate 300
   let y = captionY;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], textX, y);
@@ -632,21 +680,36 @@ function drawStoryOverlayScreenSpace() {
   const nextY = y + gap;
   let nextX = alignRight ? (textX) : (textX); 
   
-  // Next button hitbox
-  const nh = lineH;
-  nextHitBox = {
-    x1: canvasRect.left + (nextX - nextW/2 - 20),
-    y1: canvasRect.top + (nextY - 10),
-    x2: canvasRect.left + (nextX + nextW/2 + 20),
-    y2: canvasRect.top + (nextY + nh + 10)
-  };
+  // Next button hitbox - Only update for the ACTIVE scene
+  if (scene === scenes[sceneIndex] && opacity > 0.8) {
+    const nh = lineH;
+    nextHitBox = {
+      x1: canvasRect.left + (nextX - nextW/2 - 20),
+      y1: canvasRect.top + (nextY - 10),
+      x2: canvasRect.left + (nextX + nextW/2 + 20),
+      y2: canvasRect.top + (nextY + nh + 10)
+    };
+  }
   
-  ctx.fillStyle = COLOR_MAIN_1;
+  ctx.fillStyle = COLOR_MAIN_1; // We can fade this too if we want, but it uses globalAlpha
   ctx.shadowBlur = 8;
   ctx.shadowColor = COLOR_MAIN_1;
   ctx.fillText(nextText, nextX, nextY);
   
   ctx.restore();
+}
+
+function drawStoryOverlayScreenSpace() {
+  // Draw Outgoing
+  if (textAnim.prevScene && textAnim.prevOpacity > 0.01) {
+      drawSceneText(textAnim.prevScene, textAnim.prevOpacity, textAnim.prevYOffset);
+  }
+  
+  // Draw Incoming
+  const currentScene = scenes[sceneIndex];
+  if (currentScene) {
+      drawSceneText(currentScene, textAnim.opacity, textAnim.yOffset);
+  }
 }
 
 function layoutGrid() {
@@ -878,7 +941,8 @@ function layoutTree() {
     const wilayahRaw = item?.wilayah?.toString?.() ?? '';
     const provRaw = item?.provinsi?.toString?.() ?? '';
 
-    const wilayah = splitParts(wilayahRaw)[0] ?? 'Unknown';
+    let wilayah = splitParts(wilayahRaw)[0] ?? 'Unknown';
+    if (wilayah === 'Nusa Tenggara Barat' || wilayah === 'Nusa Tenggara Timur') wilayah = 'Nusa Tenggara';
     const provinsi = splitParts(provRaw)[0] ?? 'Unknown';
 
     if (!islands.has(wilayah)) islands.set(wilayah, { name: wilayah, count: 0, provinces: new Map() });
@@ -1086,6 +1150,15 @@ function loop() {
     // So we should just interpolate to targetPanX normally.
     panX += (targetPanX - panX) * 0.12;
     panY += (targetPanY - panY) * 0.12;
+  }
+
+  // Animate text
+  textAnim.opacity += (1 - textAnim.opacity) * 0.08;
+  textAnim.yOffset += (0 - textAnim.yOffset) * 0.08;
+  
+  if (textAnim.prevOpacity > 0) {
+      textAnim.prevOpacity += (0 - textAnim.prevOpacity) * 0.15; // Fade out faster
+      textAnim.prevYOffset += (-20 - textAnim.prevYOffset) * 0.1; // Move up
   }
 
   // Reset Button Visibility
@@ -1450,6 +1523,28 @@ if (resetBtn) {
     targetPanX = 0;
     targetPanY = 0;
     focusNode = null;
+  });
+}
+
+if (infoBtn && infoModal) {
+  infoBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    infoModal.classList.add('open');
+  });
+}
+
+if (modalClose && infoModal) {
+  modalClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    infoModal.classList.remove('open');
+  });
+}
+
+if (infoModal) {
+  infoModal.addEventListener('click', (e) => {
+    if (e.target === infoModal) {
+      infoModal.classList.remove('open');
+    }
   });
 }
 

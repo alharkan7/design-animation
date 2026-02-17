@@ -8,6 +8,8 @@ let width, height;
 const circles = [];
 const numCircles = 718;
 let langList = [];
+let islandLangMap = new Map();
+let provinceLangMap = new Map();
 let islandData = [];
 let provinceData = [];
 
@@ -352,6 +354,25 @@ async function loadData() {
     const list = await resList.json();
     langList = Array.isArray(list) ? list : [];
 
+    islandLangMap = new Map();
+    provinceLangMap = new Map();
+    for (const item of langList) {
+      const bahasa = item?.bahasa?.toString?.() ?? '';
+      if (!bahasa) continue;
+
+      const wilayahParts = splitParts(item?.wilayah?.toString?.() ?? '');
+      for (const w of wilayahParts) {
+        if (!islandLangMap.has(w)) islandLangMap.set(w, []);
+        islandLangMap.get(w).push(bahasa);
+      }
+
+      const provParts = splitParts(item?.provinsi?.toString?.() ?? '');
+      for (const p of provParts) {
+        if (!provinceLangMap.has(p)) provinceLangMap.set(p, []);
+        provinceLangMap.get(p).push(bahasa);
+      }
+    }
+
     const aggregatedIslands = aggregateCounts(list, 'wilayah', 'wilayah');
     const aggregatedProvinces = aggregateCounts(list, 'provinsi', 'provinsi');
 
@@ -468,7 +489,7 @@ function layoutGrid() {
     c.ty = offsetY + row * gap;
     c.tr = 6;
     c.color = COLOR_MAIN_1;
-    c.group = `Language ${i + 1}`;
+    c.group = (langList[i]?.bahasa?.toString?.() ?? `Language ${i + 1}`);
     c.alpha = 0;
     c.tAlpha = 1;
     // Cascade effect
@@ -517,6 +538,8 @@ function layoutBarChart(data, labelKey) {
   data.forEach((item, i) => {
     const count = item.circle_count ?? item.jumlah_bahasa;
     const centerX = margin + i * barWidth + effectiveBarWidth / 2;
+    const groupLabel = item[labelKey];
+    const candidates = (labelKey === 'wilayah' ? islandLangMap : provinceLangMap).get(groupLabel) ?? [];
     
     // Add label
     labels.push({
@@ -538,7 +561,7 @@ function layoutBarChart(data, labelKey) {
       c.ty = startY - row * diameter - diameter/2;
       c.tr = r;
       c.color = (i % 2 === 0) ? COLOR_MAIN_1 : COLOR_MAIN_2;
-      c.group = `${item[labelKey]}: ${item.jumlah_bahasa} languages`;
+      c.group = candidates.length ? candidates[j % candidates.length] : `${groupLabel}`;
       c.delay = j * 0.2; // Ripple up effect? Or just 0
       c.tAlpha = 1;
       
@@ -556,6 +579,53 @@ function layoutBarChart(data, labelKey) {
 function splitParts(raw) {
   if (!raw || typeof raw !== 'string') return [];
   return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function drawCircleHoverChipScreenSpace() {
+  if (!hoveredCircle) return;
+  if (hoveredCircle.alpha < 0.25) return;
+
+  const c = hoveredCircle;
+  const centerX = width / 2 + panX;
+  const centerY = height / 2 + panY;
+  const sx = (c.x - width / 2) * globalZoom + centerX;
+  const sy = (c.y - height / 2) * globalZoom + centerY;
+
+  const vx = sx - centerX;
+  const vy = sy - centerY;
+  const vLen = Math.hypot(vx, vy) || 1;
+  const dx = vx / vLen;
+  const dy = vy / vLen;
+
+  const pad = (c.r * globalZoom) + 12;
+  const textX = sx + dx * pad;
+  const textY = sy + dy * pad;
+
+  ctx.font = '12px Outfit';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = dx >= 0 ? 'left' : 'right';
+  ctx.shadowBlur = 0;
+
+  const text = ellipsize(c.group ?? '', 96);
+  const w = ctx.measureText(text).width;
+  const h = 14;
+  const padX = 7;
+  const padY = 5;
+
+  const x1 = textX + (dx >= 0 ? 0 : -w) - padX;
+  const x2 = x1 + w + padX * 2;
+  const y1 = textY - h / 2 - padY;
+  const y2 = y1 + h + padY * 2;
+
+  ctx.fillStyle = 'rgba(2, 6, 23, 0.84)';
+  roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 7);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+  ctx.fillText(text, textX, textY);
 }
 
 function layoutTree() {
@@ -857,6 +927,11 @@ function loop() {
       ctx.fillText(l.text, 0, 0);
       ctx.restore();
     });
+
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawCircleHoverChipScreenSpace();
+    ctx.restore();
   }
 
   ctx.restore();
@@ -915,10 +990,6 @@ window.addEventListener('mousemove', (e) => {
       const dx = worldX - c.x;
       const dy = worldY - c.y;
       if (dx*dx + dy*dy < c.r * c.r + 4) {
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX + 15) + 'px';
-        tooltip.style.top = (e.clientY + 15) + 'px';
-        tooltip.innerText = c.group;
         found = c;
         break;
       }
@@ -926,8 +997,7 @@ window.addEventListener('mousemove', (e) => {
     
     hoveredCircle = found;
     hoveredNode = null;
-    
-    if (!found) tooltip.style.display = 'none';
+    tooltip.style.display = 'none';
   }
 });
 

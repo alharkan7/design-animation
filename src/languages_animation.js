@@ -11,12 +11,12 @@ let provinceLangMap = new Map();
 let islandData = [];
 let provinceData = [];
 
-// Colors - Dark Theme Data Art
-const COLOR_MAIN_1 = '#38bdf8'; // Sky 400
-const COLOR_MAIN_2 = '#818cf8'; // Indigo 400
-const COLOR_ACCENT = '#f472b6'; // Pink 400
-const COLOR_BG = '#0f172a'; // Slate 900
-const COLOR_TEXT = '#f1f5f9'; // Slate 100
+// Colors - Light Theme Data Art
+const COLOR_MAIN_1 = '#0ea5e9'; // Sky 500
+const COLOR_MAIN_2 = '#6366f1'; // Indigo 500
+const COLOR_ACCENT = '#ec4899'; // Pink 500
+const COLOR_BG = '#f8fafc'; // Slate 50
+const COLOR_TEXT = '#1e293b'; // Slate 800
 
 const tooltip = document.getElementById('tooltip');
 const resetBtn = document.getElementById('reset-btn');
@@ -187,7 +187,7 @@ class Node {
     this.label = label;
     this.tooltipText = tooltipText ?? label;
     this.hue = hue;
-    this.color = hsla(this.hue, 85, 65, 1);
+    this.color = hsla(this.hue, 80, 50, 1);
 
     this.x = width / 2;
     this.y = height / 2;
@@ -238,7 +238,7 @@ class Node {
     const pad = Math.max(6, this.r + 3);
 
     ctx.globalAlpha = labelAlpha;
-    ctx.fillStyle = 'rgba(241, 245, 249, 0.9)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
     const s = uiScale();
     const rootPx = Math.round(16 * s);
     const islandPx = Math.round(10 * s);
@@ -341,8 +341,8 @@ function drawTreeLanguageLabelsScreenSpace() {
   let count = 0;
   ctx.font = `${Math.round(7 * uiScale())}px Outfit`;
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(226, 232, 240, 0.7)';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.fillStyle = 'rgba(51, 65, 85, 0.7)';
+  ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
   ctx.shadowBlur = 6;
 
   for (const n of items) {
@@ -429,10 +429,10 @@ function drawTreeHoverChipScreenSpace() {
   const y1 = textY - h / 2 - padY;
   const y2 = y1 + h + padY * 2;
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
   roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 7);
   ctx.fill();
-  ctx.strokeStyle = hsla(n.hue, 96, 46, 0.55);
+  ctx.strokeStyle = hsla(n.hue, 80, 50, 0.55);
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -653,9 +653,9 @@ function drawSceneText(scene, opacity, yOffset) {
   // Let's move gradient with text.
   
   const grad = ctx.createLinearGradient(0, yOffset, 0, fadeH + yOffset);
-  grad.addColorStop(0, `rgba(15, 23, 42, ${0.98 * opacity})`);
-  grad.addColorStop(0.7, `rgba(15, 23, 42, ${0.9 * opacity})`);
-  grad.addColorStop(1, `rgba(15, 23, 42, 0)`);
+  grad.addColorStop(0, `rgba(248, 250, 252, ${0.98 * opacity})`);
+  grad.addColorStop(0.7, `rgba(248, 250, 252, ${0.9 * opacity})`);
+  grad.addColorStop(1, `rgba(248, 250, 252, 0)`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, width, fadeH + Math.abs(yOffset) + 100); // Fill large enough area
 
@@ -664,16 +664,16 @@ function drawSceneText(scene, opacity, yOffset) {
   ctx.textAlign = alignRight ? 'right' : 'center';
   
   // Title
-  ctx.shadowColor = `rgba(0, 0, 0, ${0.8 * opacity})`;
+  ctx.shadowColor = `rgba(255, 255, 255, ${0.8 * opacity})`;
   ctx.shadowBlur = 12;
-  ctx.fillStyle = `rgba(248, 250, 252, ${opacity})`; // Light text
+  ctx.fillStyle = `rgba(15, 23, 42, ${opacity})`; // Dark text
   ctx.font = titleFont;
   ctx.fillText(scene.title, textX, titleY);
   
   // Caption
   ctx.shadowBlur = 4;
   ctx.font = bodyFont;
-  ctx.fillStyle = `rgba(203, 213, 225, ${opacity})`; // Slate 300
+  ctx.fillStyle = `rgba(51, 65, 85, ${opacity})`; // Slate 700
   let y = captionY;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], textX, y);
@@ -690,26 +690,38 @@ function drawSceneText(scene, opacity, yOffset) {
      };
   }
   
-  // Next Button
+  // Next Button (Text Link)
+  ctx.font = `500 ${bodySize}px Outfit, sans-serif`;
   const nextW = ctx.measureText(nextText).width;
   const nextY = y + gap;
-  let nextX = alignRight ? (textX) : (textX); 
   
   // Next button hitbox - Only update for the ACTIVE scene
   if (scene === scenes[sceneIndex] && opacity > 0.8) {
-    const nh = lineH;
+    let hx1, hx2;
+    // Align relative to textX based on alignment
+    if (alignRight) {
+       hx1 = canvasRect.left + (textX - nextW - 10);
+       hx2 = canvasRect.left + (textX + 10);
+    } else {
+       hx1 = canvasRect.left + (textX - nextW/2 - 10);
+       hx2 = canvasRect.left + (textX + nextW/2 + 10);
+    }
+
     nextHitBox = {
-      x1: canvasRect.left + (nextX - nextW/2 - 20),
+      x1: hx1,
       y1: canvasRect.top + (nextY - 10),
-      x2: canvasRect.left + (nextX + nextW/2 + 20),
-      y2: canvasRect.top + (nextY + nh + 10)
+      x2: hx2,
+      y2: canvasRect.top + (nextY + lineH + 10)
     };
   }
   
-  ctx.fillStyle = COLOR_MAIN_1; // We can fade this too if we want, but it uses globalAlpha
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = COLOR_MAIN_1;
-  ctx.fillText(nextText, nextX, nextY);
+  // Draw Text
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = COLOR_MAIN_1;
+  // Reuse existing textAlign/textBaseline from earlier
+  ctx.fillText(nextText, textX, nextY);
   
   ctx.restore();
 }
@@ -742,7 +754,7 @@ function layoutGrid() {
   labels = [];
   targetZoom = 1.0;
   defaultZoom = 1.0;
-  globalZoom = width < 520 ? 1.6 : 1.2; 
+  globalZoom = width < 520 ? 0.9 : 0.8; 
   panX = 0;
   panY = 0;
   targetPanX = 0;
@@ -766,7 +778,7 @@ function layoutGrid() {
     
     // Colorful spiral gradient
     const hue = (200 + i * 0.5) % 360;
-    c.color = hsla(hue, 85, 65, 1);
+    c.color = hsla(hue, 80, 50, 1);
     
     c.group = (langList[i]?.bahasa?.toString?.() ?? `Language ${i + 1}`);
     c.alpha = 0;
@@ -842,7 +854,7 @@ function layoutBarChart(data, labelKey) {
       text: `${totalCount}`,
       rotation: 0,
       font: labelFont,
-      fillStyle: 'rgba(203, 213, 225, 0.8)'
+      fillStyle: 'rgba(100, 116, 139, 0.8)'
     });
 
     // Add label
@@ -852,7 +864,7 @@ function layoutBarChart(data, labelKey) {
       text: item[labelKey],
       rotation: labelRotation, // Rotate labels if many
       font: labelFont,
-      fillStyle: 'rgba(241, 245, 249, 0.9)'
+      fillStyle: 'rgba(15, 23, 42, 0.9)'
     });
 
     // Assign circles
@@ -923,10 +935,10 @@ function drawCircleHoverChipScreenSpace() {
   const y1 = textY - h / 2 - padY;
   const y2 = y1 + h + padY * 2;
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
   roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 7);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.75)';
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
@@ -943,7 +955,7 @@ function layoutTree() {
   targetPanY = 0;
   focusNode = null;
   targetZoom = 1.0;
-  globalZoom = width < 520 ? 1.35 : 1.7;
+  globalZoom = width < 520 ? 0.9 : 1.0;
   targetZoom = globalZoom;
   defaultZoom = globalZoom;
   tooltip.style.display = 'none';
@@ -1152,7 +1164,7 @@ function makeEdge(a, b, cx, cy) {
     b,
     cpx: mx + nx * bend + (cx - mx) * pullToCenter,
     cpy: my + ny * bend + (cy - my) * pullToCenter,
-    stroke: hsla((a.hue + b.hue) / 2, 75, 55, 1)
+    stroke: hsla((a.hue + b.hue) / 2, 70, 45, 1)
   };
 }
 

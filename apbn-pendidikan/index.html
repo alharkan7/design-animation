@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Education Budget Visualization</title>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-color: #38bdf8;
+      --font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    .back-link:hover {
+      opacity: 0.8;
+    }
+
+    .chart-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .canvas-wrapper {
+        position: relative;
+        height: 50vh;
+        min-height: 400px;
+        width: 100%;
+    }
+
+    .pie-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: auto;
+        min-height: 600px;
+    }
+
+    .year-label {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      color: var(--text-primary);
+    }
+    
+    .chart-desc {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <a href="/" class="back-link">← Back to Templates</a>
+    <h1>Education Budget Analysis (2005-2025)</h1>
+
+    <div class="chart-container">
+      <h2>Budget Growth & Allocation Percentage</h2>
+      <p class="chart-desc">The bars represent the Education Budget (in Trillions IDR), while the line shows the percentage of the total APBN allocated to education.</p>
+      <div class="canvas-wrapper">
+        <canvas id="comboChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h2>Education Budget vs Total APBN Portion</h2>
+      <p class="chart-desc">Visualizing the education budget as a share of the total national budget (APBN) over time.</p>
+      <div class="canvas-wrapper">
+        <canvas id="areaChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-container pie-container">
+        <h2>Yearly Composition</h2>
+        <div id="yearLabel" class="year-label">2005</div>
+        
+        <div class="controls">
+            <button id="playPauseBtn" class="btn">⏸ Pause</button>
+            <div class="speed-control">
+                <span>Speed:</span>
+                <button class="btn btn-sm" data-speed="3000">Slow</button>
+                <button class="btn btn-sm active" data-speed="2000">Normal</button>
+                <button class="btn btn-sm" data-speed="800">Fast</button>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper" style="max-width: 400px; height: 400px; min-height: 0;">
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+  </div>
+
+  <style>
+      .controls {
+          display: flex;
+          gap: 1.5rem;
+          margin-bottom: 1.5rem;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.05);
+          padding: 0.5rem 1rem;
+          border-radius: 99px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .btn {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-family: var(--font-family);
+          transition: all 0.2s;
+      }
+
+      .btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+      }
+
+      .btn.active {
+          background: var(--accent-color);
+          color: #0f172a;
+          border-color: var(--accent-color);
+          font-weight: 600;
+      }
+
+      .speed-control {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+      }
+
+      .speed-control span {
+          color: var(--text-secondary);
+          font-size: 0.9rem;
+          margin-right: 0.25rem;
+      }
+
+      .btn-sm {
+          padding: 0.25rem 0.75rem;
+          font-size: 0.85rem;
+      }
+  </style>
+
+  <script type="module" src="/src/apbn_charts.js"></script>
+</body>
+
+</html>

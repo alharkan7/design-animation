@@ -1,0 +1,593 @@
+/**
+ * Document to Slides Generator
+ * Handles file uploads, document parsing, and AI-powered slide generation
+ */
+
+class SlidesApp {
+  constructor() {
+    this.dropZone = document.getElementById('dropZone');
+    this.fileInput = document.getElementById('fileInput');
+    this.optionsSection = document.getElementById('optionsSection');
+    this.statusSection = document.getElementById('statusSection');
+    this.resultSection = document.getElementById('resultSection');
+    this.errorMessage = document.getElementById('errorMessage');
+    this.container = document.querySelector('.container');
+    this.previewContainer = document.getElementById('previewContainer');
+    this.previewFrame = document.getElementById('previewFrame');
+    this.slideCounter = document.getElementById('slideCounter');
+    this.selectedFile = null;
+    this.selectedStyle = 'midnight-executive';
+    this.generatedHtml = null;
+    this.currentSlide = 1;
+    this.totalSlides = 1;
+    this.isFullscreen = false;
+
+    this.init();
+  }
+
+  init() {
+    // Drop zone click
+    this.dropZone.addEventListener('click', () => this.fileInput.click());
+
+    // File input change
+    this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
+
+    // Drag and drop
+    this.dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.add('dragover');
+    });
+
+    this.dropZone.addEventListener('dragleave', () => {
+      this.dropZone.classList.remove('dragover');
+    });
+
+    this.dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      this.handleFileSelect(file);
+    });
+
+    // Remove file
+    document.getElementById('removeFile').addEventListener('click', () => this.reset());
+
+    // Cancel button
+    document.getElementById('cancelBtn').addEventListener('click', () => this.reset());
+
+    // Generate button
+    document.getElementById('generateBtn').addEventListener('click', () => this.generateSlides());
+
+    // Download buttons
+    document.getElementById('downloadPdfBtn').addEventListener('click', () => this.downloadPdf());
+    document.getElementById('downloadPptxBtn').addEventListener('click', () => this.downloadPptx());
+
+    // Navigation buttons
+    document.getElementById('prevSlideBtn').addEventListener('click', () => this.prevSlide());
+    document.getElementById('nextSlideBtn').addEventListener('click', () => this.nextSlide());
+    document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (!this.resultSection.classList.contains('visible')) return;
+      if (e.key === 'ArrowLeft') this.prevSlide();
+      if (e.key === 'ArrowRight') this.nextSlide();
+      if (e.key === 'f' || e.key === 'F') this.toggleFullscreen();
+      if (e.key === 'Escape' && this.isFullscreen) this.exitFullscreen();
+    });
+
+    // Listen for messages from iframe
+    window.addEventListener('message', (e) => this.handleIframeMessage(e));
+
+    // Style selection
+    document.querySelectorAll('.style-option').forEach(option => {
+      option.addEventListener('click', () => {
+        document.querySelectorAll('.style-option').forEach(o => o.classList.remove('selected'));
+        option.classList.add('selected');
+        this.selectedStyle = option.dataset.style;
+      });
+    });
+
+    // New file button
+    document.getElementById('newFileBtn').addEventListener('click', () => this.reset());
+  }
+
+  async handleFileSelect(file) {
+    if (!file) return;
+
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const validExtensions = ['.pdf', '.docx'];
+    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+
+    if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+      this.showError('Please upload a PDF or DOCX file.');
+      return;
+    }
+
+    this.selectedFile = file;
+    document.getElementById('fileName').textContent = file.name;
+    this.optionsSection.classList.add('visible');
+    this.dropZone.style.display = 'none';
+    this.hideError();
+  }
+
+  reset() {
+    this.selectedFile = null;
+    this.generatedHtml = null;
+    this.fileInput.value = '';
+    this.optionsSection.classList.remove('visible');
+    this.statusSection.classList.remove('visible');
+    this.resultSection.classList.remove('visible');
+    this.container.classList.remove('wide');
+    this.exitFullscreen();
+    this.dropZone.style.display = 'block';
+    this.hideError();
+    // Remove debug button if exists
+    const debugBtn = this.errorMessage.querySelector('.debug-btn');
+    if (debugBtn) debugBtn.remove();
+    document.getElementById('additionalPrompt').value = '';
+    this.currentSlide = 1;
+    this.totalSlides = 1;
+  }
+
+  showStatus(message, progress = null) {
+    this.statusSection.classList.add('visible');
+    document.getElementById('statusText').textContent = message;
+    if (progress !== null) {
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+  }
+
+  // Progress stages with smooth animations
+  progressThroughStages() {
+    const stages = [
+      { progress: 10, text: 'Preparing your document...' },
+      { progress: 20, text: 'Uploading to AI...' },
+      { progress: 35, text: 'AI analyzing content...' },
+      { progress: 50, text: 'Designing slide layouts...' },
+      { progress: 65, text: 'Applying styles & colors...' },
+      { progress: 80, text: 'Adding animations...' },
+      { progress: 92, text: 'Finalizing your slides...' },
+    ];
+
+    let stageIndex = 0;
+    const stageDelay = 1200; // ms between stages
+
+    // Clear any existing progress interval
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+    }
+
+    return new Promise((resolve) => {
+      this.progressInterval = setInterval(() => {
+        if (stageIndex < stages.length) {
+          const stage = stages[stageIndex];
+          this.showStatus(stage.text, stage.progress);
+          stageIndex++;
+        } else {
+          clearInterval(this.progressInterval);
+          resolve();
+        }
+      }, stageDelay);
+    });
+  }
+
+  hideStatus() {
+    this.statusSection.classList.remove('visible');
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+  }
+
+  showError(message) {
+    this.errorMessage.textContent = message;
+    this.errorMessage.classList.add('visible');
+  }
+
+  hideError() {
+    this.errorMessage.classList.remove('visible');
+  }
+
+  validateGeneratedHtml(html) {
+    const errors = [];
+
+    // Check if HTML exists and is not empty
+    if (!html || typeof html !== 'string') {
+      errors.push('Generated content is empty or invalid');
+      return { valid: false, errors };
+    }
+
+    // Trim and check minimum length
+    const trimmed = html.trim();
+    if (trimmed.length < 500) {
+      errors.push('Generated content is too short - may be incomplete');
+    }
+
+    // Check for essential HTML structure
+    const hasDoctype = trimmed.toLowerCase().includes('<!doctype');
+    const hasHtmlTag = trimmed.toLowerCase().includes('<html');
+    const hasBodyTag = trimmed.toLowerCase().includes('<body');
+    const hasHeadTag = trimmed.toLowerCase().includes('<head');
+
+    if (!hasDoctype) errors.push('Missing DOCTYPE declaration');
+    if (!hasHtmlTag) errors.push('Missing <html> tag');
+    if (!hasHeadTag) errors.push('Missing <head> tag');
+    if (!hasBodyTag) errors.push('Missing <body> tag');
+
+    // Check for slide sections
+    const sectionMatch = trimmed.match(/<section/gi);
+    if (!sectionMatch || sectionMatch.length < 2) {
+      errors.push('Expected at least 2 slide sections (<section>), found ' + (sectionMatch ? sectionMatch.length : 0));
+    }
+
+    // Check for script tags (should have navigation JavaScript)
+    const scriptMatch = trimmed.match(/<script/gi);
+    if (!scriptMatch || scriptMatch.length < 1) {
+      errors.push('Missing JavaScript - slides may not be interactive');
+    }
+
+    // Check for style tags
+    const styleMatch = trimmed.match(/<style/gi);
+    if (!styleMatch || styleMatch.length < 1) {
+      errors.push('Missing CSS styles - slides may not render correctly');
+    }
+
+    // Check for common markdown code blocks that weren't cleaned
+    if (trimmed.includes('```html') || trimmed.includes('```')) {
+      errors.push('Output contains unprocessed markdown code blocks');
+    }
+
+    // Check for common AI artifacts
+    if (trimmed.includes('Here is the HTML') || trimmed.includes('Below is')) {
+      errors.push('Output contains conversational text instead of pure HTML');
+    }
+
+    // Check for unclosed tags (basic check)
+    const openTags = (trimmed.match(/<section[^>]*>/gi) || []).length;
+    const closeTags = (trimmed.match(/<\/section>/gi) || []).length;
+    if (openTags !== closeTags) {
+      errors.push(`Mismatched section tags: ${openTags} opening, ${closeTags} closing`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
+  sanitizeHtml(html) {
+    let cleaned = html.trim();
+
+    // Remove markdown code blocks if present
+    const codeBlockMatch = cleaned.match(/```(?:html)?\n?([\s\S]+)```/);
+    if (codeBlockMatch) {
+      cleaned = codeBlockMatch[1];
+    }
+
+    // Remove any conversational text before <!DOCTYPE
+    const doctypeIndex = cleaned.toLowerCase().indexOf('<!doctype');
+    if (doctypeIndex > 0) {
+      cleaned = cleaned.substring(doctypeIndex);
+    }
+
+    // Remove any text after </html>
+    const htmlEndIndex = cleaned.toLowerCase().lastIndexOf('</html>');
+    if (htmlEndIndex !== -1) {
+      cleaned = cleaned.substring(0, htmlEndIndex + 7);
+    }
+
+    return cleaned;
+  }
+
+  async generateSlides() {
+    if (!this.selectedFile) return;
+
+    const additionalPrompt = document.getElementById('additionalPrompt').value;
+
+    // Clear any previous errors and debug button
+    this.hideError();
+    const debugBtn = this.errorMessage.querySelector('.debug-btn');
+    if (debugBtn) debugBtn.remove();
+
+    try {
+      this.optionsSection.classList.remove('visible');
+
+      // Start the progress animation
+      const progressPromise = this.progressThroughStages();
+
+      // Read file as base64
+      const base64Content = await this.readFileAsBase64(this.selectedFile);
+
+      // Call the API to generate slides
+      const responsePromise = fetch('/api/generate-slides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: this.selectedFile.name,
+          fileType: this.selectedFile.type,
+          fileData: base64Content,
+          style: this.selectedStyle,
+          additionalPrompt: additionalPrompt
+        })
+      });
+
+      // Wait for both progress and API response
+      const [_, response] = await Promise.all([progressPromise, responsePromise]);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate slides');
+      }
+
+      const data = await response.json();
+      let rawHtml = data.html;
+
+      // Sanitize the HTML
+      rawHtml = this.sanitizeHtml(rawHtml);
+
+      // Validate the generated HTML
+      const validation = this.validateGeneratedHtml(rawHtml);
+
+      if (!validation.valid) {
+        console.error('HTML validation failed:', validation.errors);
+        throw new Error('Generated slides are invalid: ' + validation.errors.join('; '));
+      }
+
+      this.generatedHtml = rawHtml;
+
+      this.showStatus('Done!', 100);
+
+      // Show preview
+      setTimeout(() => {
+        this.hideStatus();
+        this.showPreview();
+      }, 500);
+
+    } catch (error) {
+      console.error('Error generating slides:', error);
+      this.showError(error.message || 'Failed to generate slides. Please try again.');
+      this.optionsSection.classList.add('visible');
+      this.hideStatus();
+
+      // If we have HTML but validation failed, show a debug option
+      if (this.generatedHtml && this.generatedHtml.length > 100) {
+        this.showDebugOption();
+      }
+    }
+  }
+
+  showDebugOption() {
+    // Add a debug button to download the raw HTML
+    const errorDiv = this.errorMessage;
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = 'Download Raw HTML (Debug)';
+    debugBtn.style.cssText = 'margin-top: 0.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; cursor: pointer;';
+    debugBtn.onclick = () => this.downloadRawHtml();
+
+    // Remove existing debug button if any
+    const existingBtn = errorDiv.querySelector('.debug-btn');
+    if (existingBtn) existingBtn.remove();
+
+    debugBtn.className = 'debug-btn';
+    errorDiv.appendChild(debugBtn);
+  }
+
+  downloadRawHtml() {
+    if (!this.generatedHtml) return;
+
+    const blob = new Blob([this.generatedHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides-debug.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  showPreview() {
+    const previewFrame = document.getElementById('previewFrame');
+    const blob = new Blob([this.generatedHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+
+    // Clear any previous timeouts
+    if (this.iframeTimeout) clearTimeout(this.iframeTimeout);
+    if (this.messageRetries) clearTimeout(this.messageRetries);
+
+    let retries = 0;
+    const maxRetries = 5;
+
+    // Function to request slide count with retries
+    const requestSlideCount = () => {
+      retries++;
+      console.log(`Requesting slide count (attempt ${retries}/${maxRetries})`);
+      this.sendMessageToIframe({ action: 'getSlideCount' });
+
+      if (retries < maxRetries) {
+        this.messageRetries = setTimeout(requestSlideCount, 1000);
+      }
+    };
+
+    // Set up load handler
+    previewFrame.onload = () => {
+      console.log('Iframe loaded successfully');
+      // Wait for iframe content to initialize, then request slide count
+      setTimeout(requestSlideCount, 500);
+    };
+
+    // Set up error handler
+    previewFrame.onerror = () => {
+      console.error('Iframe failed to load');
+      this.showError('Failed to display slides. The generated content may have errors.');
+    };
+
+    // Set a timeout for initial message
+    this.iframeTimeout = setTimeout(() => {
+      if (this.totalSlides === 1 && this.currentSlide === 1) {
+        console.warn('Iframe did not respond within timeout - slides may not be interactive');
+        this.updateSlideCounter();
+      }
+    }, 8000);
+
+    previewFrame.src = url;
+    this.resultSection.classList.add('visible');
+    this.container.classList.add('wide');
+  }
+
+  sendMessageToIframe(message) {
+    if (this.previewFrame && this.previewFrame.contentWindow) {
+      console.log('Sending message to iframe:', message);
+      this.previewFrame.contentWindow.postMessage(message, '*');
+    } else {
+      console.warn('Cannot send message: iframe not ready');
+    }
+  }
+
+  handleIframeMessage(e) {
+    const { action, data } = e.data;
+    console.log('Received message from iframe:', action, data);
+
+    switch (action) {
+      case 'slideCount':
+        this.totalSlides = data.count || 1;
+        this.currentSlide = data.current || 1;
+        this.updateSlideCounter();
+        this.updateNavButtons();
+        break;
+      case 'slideChanged':
+        this.currentSlide = data.current || 1;
+        this.updateSlideCounter();
+        this.updateNavButtons();
+        break;
+    }
+  }
+
+  updateSlideCounter() {
+    this.slideCounter.textContent = `${this.currentSlide} / ${this.totalSlides}`;
+  }
+
+  updateNavButtons() {
+    document.getElementById('prevSlideBtn').disabled = this.currentSlide <= 1;
+    document.getElementById('nextSlideBtn').disabled = this.currentSlide >= this.totalSlides;
+  }
+
+  prevSlide() {
+    if (this.currentSlide > 1) {
+      this.sendMessageToIframe({ action: 'prevSlide' });
+    }
+  }
+
+  nextSlide() {
+    if (this.currentSlide < this.totalSlides) {
+      this.sendMessageToIframe({ action: 'nextSlide' });
+    }
+  }
+
+  toggleFullscreen() {
+    if (this.isFullscreen) {
+      this.exitFullscreen();
+    } else {
+      this.enterFullscreen();
+    }
+  }
+
+  enterFullscreen() {
+    this.previewContainer.classList.add('fullscreen');
+    this.isFullscreen = true;
+    document.getElementById('fullscreenBtn').textContent = '×';
+  }
+
+  exitFullscreen() {
+    this.previewContainer.classList.remove('fullscreen');
+    this.isFullscreen = false;
+    document.getElementById('fullscreenBtn').textContent = '⛶';
+  }
+
+  async downloadPdf() {
+    if (!this.generatedHtml) return;
+
+    try {
+      const response = await fetch('/api/export-slides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: this.generatedHtml,
+          format: 'pdf'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      this.showError('Failed to download PDF. Please try again.');
+    }
+  }
+
+  async downloadPptx() {
+    if (!this.generatedHtml) return;
+
+    try {
+      const response = await fetch('/api/export-slides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html: this.generatedHtml,
+          format: 'pptx'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PPTX');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PPTX:', error);
+      this.showError('Failed to download PPTX. Please try again.');
+    }
+  }
+}
+
+// Initialize the app
+new SlidesApp();

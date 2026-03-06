@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document to Slides Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-color: #38bdf8;
+      --input-bg: rgba(0, 0, 0, 0.2);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      transition: max-width 0.4s ease;
+    }
+
+    .container.wide {
+      max-width: 1400px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 2.5rem;
+      font-size: 1.1rem;
+    }
+
+    .upload-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent-color);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .drop-zone-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .drop-zone-text {
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .drop-zone-hint {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .options-section {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .options-section.visible {
+      display: block;
+    }
+
+    .file-info {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-info-name {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .file-icon {
+      font-size: 1.5rem;
+    }
+
+    .file-name {
+      font-weight: 500;
+    }
+
+    .remove-file {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.25rem;
+      transition: color 0.2s ease;
+    }
+
+    .remove-file:hover {
+      color: #ef4444;
+    }
+
+    .control-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.025em;
+      margin-bottom: 0.5rem;
+    }
+
+    textarea,
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+
+    .style-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .style-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .style-option {
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid var(--input-border);
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .style-option:hover {
+      border-color: var(--accent-color);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .style-option.selected {
+      border-color: var(--accent-color);
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    .style-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .style-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    button {
+      flex: 1;
+      background: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .status-section {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .status-section.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-color);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .status-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .result-section {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .result-section.visible {
+      display: block;
+    }
+
+    .preview-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 450px;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: white;
+      margin-top: 1rem;
+    }
+
+    .preview-container {
+      position: relative;
+      margin-top: 1rem;
+    }
+
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px 12px 0 0;
+      border: 1px solid var(--card-border);
+      border-bottom: none;
+    }
+
+    .preview-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .preview-nav button {
+      flex: none;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      min-width: auto;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .preview-nav button:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+      transform: none;
+    }
+
+    .preview-nav button:disabled {
+      opacity: 0.3;
+    }
+
+    .slide-counter {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      padding: 0 0.5rem;
+    }
+
+    .fullscreen-btn {
+      flex: none;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      min-width: auto;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .fullscreen-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: none;
+    }
+
+    .preview-frame {
+      border-radius: 0 0 12px 12px;
+    }
+
+    .preview-container.fullscreen .preview-controls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      border-radius: 0;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .preview-container.fullscreen .preview-frame {
+      position: fixed;
+      top: 48px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 0;
+      aspect-ratio: unset;
+      min-height: unset;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 1rem;
+      color: #fca5a5;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Document to Slides</h1>
+    <p class="subtitle">Upload a PDF or DOCX file and let AI create beautiful HTML slides</p>
+
+    <div class="upload-card">
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">📄</div>
+        <div class="drop-zone-text">Drop your document here</div>
+        <div class="drop-zone-hint">or click to browse • PDF, DOCX supported</div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf,.docx">
+
+      <div class="options-section" id="optionsSection">
+        <div class="file-info">
+          <div class="file-info-name">
+            <span class="file-icon">📁</span>
+            <span class="file-name" id="fileName">filename.pdf</span>
+          </div>
+          <button class="remove-file" id="removeFile" title="Remove file">✕</button>
+        </div>
+
+        <div class="control-group">
+          <label for="additionalPrompt">Additional instructions (optional)</label>
+          <textarea id="additionalPrompt" placeholder="E.g., Make it more energetic, focus on data visualization, use blue accent colors..."></textarea>
+        </div>
+
+        <div class="control-group">
+          <label>Choose a style</label>
+          <div class="style-grid">
+            <div class="style-option" data-style="neon-cyber">
+              <div class="style-name">Neon Cyber</div>
+              <div class="style-desc">Futuristic, techy, confident</div>
+            </div>
+            <div class="style-option selected" data-style="midnight-executive">
+              <div class="style-name">Midnight Executive</div>
+              <div class="style-desc">Premium, professional, corporate</div>
+            </div>
+            <div class="style-option" data-style="deep-space">
+              <div class="style-name">Deep Space</div>
+              <div class="style-desc">Inspiring, vast, visionary</div>
+            </div>
+            <div class="style-option" data-style="terminal-green">
+              <div class="style-name">Terminal Green</div>
+              <div class="style-desc">Developer-focused, hacker</div>
+            </div>
+            <div class="style-option" data-style="paper-ink">
+              <div class="style-name">Paper &amp; Ink</div>
+              <div class="style-desc">Editorial, literary, refined</div>
+            </div>
+            <div class="style-option" data-style="swiss-modern">
+              <div class="style-name">Swiss Modern</div>
+              <div class="style-desc">Clean, geometric, minimal</div>
+            </div>
+            <div class="style-option" data-style="soft-pastel">
+              <div class="style-name">Soft Pastel</div>
+              <div class="style-desc">Friendly, approachable, playful</div>
+            </div>
+            <div class="style-option" data-style="warm-editorial">
+              <div class="style-name">Warm Editorial</div>
+              <div class="style-desc">Human, storytelling, magazine</div>
+            </div>
+            <div class="style-option" data-style="gradient-wave">
+              <div class="style-name">Gradient Wave</div>
+              <div class="style-desc">Modern SaaS, energetic</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="secondary" id="cancelBtn">Cancel</button>
+          <button id="generateBtn">Generate Slides</button>
+        </div>
+      </div>
+
+      <div class="status-section" id="statusSection">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="status-text" id="statusText">Processing...</div>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+
+      <div class="result-section" id="resultSection">
+        <h3 style="text-align: center; margin-bottom: 1rem;">Your slides are ready!</h3>
+        <div class="preview-container" id="previewContainer">
+          <div class="preview-controls">
+            <div class="preview-nav">
+              <button id="prevSlideBtn" title="Previous slide">←</button>
+              <span class="slide-counter" id="slideCounter">1 / 1</span>
+              <button id="nextSlideBtn" title="Next slide">→</button>
+            </div>
+            <button class="fullscreen-btn" id="fullscreenBtn" title="Full screen">⛶</button>
+          </div>
+          <iframe class="preview-frame" id="previewFrame"></iframe>
+        </div>
+        <div class="action-buttons">
+          <button id="downloadPdfBtn">Download PDF</button>
+          <button id="downloadPptxBtn">Download PPTX</button>
+          <button class="secondary" id="newFileBtn">Upload another file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/slides-app.js"></script>
+</body>
+</html>

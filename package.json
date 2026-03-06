@@ -13,8 +13,11 @@
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.32.0",
+    "@google/genai": "^1.44.0",
     "chart.js": "^4.5.1",
     "countup.js": "^2.9.0",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "pptxgenjs": "^4.0.1",
+    "puppeteer": "^24.38.0"
   }
 }

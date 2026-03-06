@@ -805,6 +805,15 @@ class SlidesApp {
     const captureWidth = this.previewFrame.clientWidth;
     const captureHeight = this.previewFrame.clientHeight;
 
+    // Wait for any Mermaid diagrams to finish rendering
+    let waited = 0;
+    while (waited < 5000) {
+      const pending = iframeDoc.querySelectorAll('pre.mermaid:not([data-processed])');
+      if (pending.length === 0) break;
+      await new Promise(r => setTimeout(r, 300));
+      waited += 300;
+    }
+
     const disableStyle = iframeDoc.createElement('style');
     disableStyle.id = '__capture-override';
     disableStyle.textContent = `
@@ -842,13 +851,21 @@ class SlidesApp {
     return captures;
   }
 
-  parseAllSlides(statusCallback) {
+  async parseAllSlides(statusCallback) {
     const iframeDoc = this.previewFrame.contentDocument;
     const iframeWin = this.previewFrame.contentWindow;
     if (!iframeDoc) throw new Error('Cannot access slide content');
 
     const sections = iframeDoc.querySelectorAll('section');
     if (sections.length === 0) throw new Error('No slides found');
+
+    let waited = 0;
+    while (waited < 5000) {
+      const pending = iframeDoc.querySelectorAll('pre.mermaid:not([data-processed])');
+      if (pending.length === 0) break;
+      await new Promise(r => setTimeout(r, 300));
+      waited += 300;
+    }
 
     const overrideStyle = iframeDoc.createElement('style');
     overrideStyle.id = '__parse-override';
@@ -885,120 +902,27 @@ class SlidesApp {
     btn.disabled = true;
 
     try {
-      btn.textContent = 'Parsing slides...';
-      const slidesData = this.parseAllSlides((cur, tot) => {
-        btn.textContent = `Parsing ${cur}/${tot}...`;
+      btn.textContent = 'Capturing slides...';
+      const captures = await this.captureAllSlides((cur, tot) => {
+        btn.textContent = `Capturing ${cur}/${tot}...`;
       });
 
       btn.textContent = 'Building PDF...';
       const { jsPDF } = await import('jspdf');
 
-      const PAGE_W = 10;
-      const PAGE_H = 5.625;
-      const MX = 0.7;
-      const MY = 0.5;
-      const CW = PAGE_W - MX * 2;
-
+      const w = captures[0].width / 2;
+      const h = captures[0].height / 2;
       const pdf = new jsPDF({
         orientation: 'landscape',
-        unit: 'in',
-        format: [PAGE_W, PAGE_H],
+        unit: 'px',
+        format: [w, h],
+        hotfixes: ['px_scaling'],
       });
 
-      for (let s = 0; s < slidesData.length; s++) {
-        if (s > 0) pdf.addPage([PAGE_W, PAGE_H], 'landscape');
-
-        const slideData = slidesData[s];
-        const bg = hexToRgb(slideData.bgColor);
-        pdf.setFillColor(bg.r, bg.g, bg.b);
-        pdf.rect(0, 0, PAGE_W, PAGE_H, 'F');
-
-        const elements = slideData.elements;
-        if (elements.length === 0) continue;
-
-        let totalHeight = 0;
-        const measured = [];
-
-        for (const elem of elements) {
-          const plainText = elem.type === 'list' ? '' : getRunsPlainText(elem.runs);
-          let h = 0;
-
-          if (elem.type === 'title') {
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(elem.fontSize || 28);
-            const lines = pdf.splitTextToSize(plainText, CW);
-            h = lines.length * ((elem.fontSize || 28) / 72) * 1.3 + 0.2;
-            measured.push({ elem, lines, lineH: ((elem.fontSize || 28) / 72) * 1.3, h, fontStyle: 'bold' });
-          } else if (elem.type === 'subtitle') {
-            pdf.setFont('helvetica', elem.bold ? 'bold' : 'normal');
-            pdf.setFontSize(elem.fontSize || 20);
-            const lines = pdf.splitTextToSize(plainText, CW);
-            h = lines.length * ((elem.fontSize || 20) / 72) * 1.3 + 0.12;
-            measured.push({ elem, lines, lineH: ((elem.fontSize || 20) / 72) * 1.3, h, fontStyle: elem.bold ? 'bold' : 'normal' });
-          } else if (elem.type === 'text') {
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(elem.fontSize || 14);
-            const lines = pdf.splitTextToSize(plainText, CW);
-            h = lines.length * ((elem.fontSize || 14) / 72) * 1.4 + 0.08;
-            measured.push({ elem, lines, lineH: ((elem.fontSize || 14) / 72) * 1.4, h, fontStyle: 'normal' });
-          } else if (elem.type === 'list') {
-            const listMeasured = [];
-            let listH = 0;
-            pdf.setFont('helvetica', 'normal');
-            for (let j = 0; j < elem.items.length; j++) {
-              const item = elem.items[j];
-              pdf.setFontSize(item.fontSize || elem.fontSize || 14);
-              const prefix = elem.ordered ? `${j + 1}. ` : '\u2022 ';
-              const itemText = prefix + getRunsPlainText(item.runs);
-              const lines = pdf.splitTextToSize(itemText, CW - 0.3);
-              const itemLineH = ((item.fontSize || elem.fontSize || 14) / 72) * 1.4;
-              const itemH = lines.length * itemLineH + 0.04;
-              listMeasured.push({ item, lines, lineH: itemLineH, h: itemH });
-              listH += itemH;
-            }
-            h = listH + 0.05;
-            measured.push({ elem, listItems: listMeasured, h, fontStyle: 'normal' });
-          } else if (elem.type === 'image') {
-            h = 0;
-            measured.push({ elem, h });
-          }
-
-          totalHeight += h;
-        }
-
-        let yPos = Math.max(MY, (PAGE_H - totalHeight) / 2);
-
-        for (const m of measured) {
-          const elem = m.elem;
-          const textRgb = hexToRgb(elem.color || slideData.textColor);
-          pdf.setTextColor(textRgb.r, textRgb.g, textRgb.b);
-
-          if (elem.type === 'title' || elem.type === 'subtitle' || elem.type === 'text') {
-            pdf.setFont('helvetica', m.fontStyle);
-            pdf.setFontSize(elem.fontSize || 14);
-            for (const line of m.lines) {
-              const align = elem.align || 'left';
-              const x = align === 'center' ? PAGE_W / 2 : align === 'right' ? MX + CW : MX;
-              pdf.text(line, x, yPos + m.lineH * 0.8, { align });
-              yPos += m.lineH;
-            }
-            yPos += m.h - m.lines.length * m.lineH;
-          } else if (elem.type === 'list') {
-            pdf.setFont('helvetica', 'normal');
-            for (const li of m.listItems) {
-              const itemRgb = hexToRgb(li.item.color || elem.color || slideData.textColor);
-              pdf.setTextColor(itemRgb.r, itemRgb.g, itemRgb.b);
-              pdf.setFontSize(li.item.fontSize || elem.fontSize || 14);
-              for (const line of li.lines) {
-                pdf.text(line, MX + 0.3, yPos + li.lineH * 0.8);
-                yPos += li.lineH;
-              }
-              yPos += 0.04;
-            }
-            yPos += 0.05;
-          }
-        }
-      }
+      captures.forEach((canvas, i) => {
+        if (i > 0) pdf.addPage([w, h], 'landscape');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h);
+      });
 
       pdf.save(this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pdf');
     } catch (error) {
@@ -1017,7 +941,7 @@ class SlidesApp {
 
     try {
       btn.textContent = 'Parsing slides...';
-      const slidesData = this.parseAllSlides((cur, tot) => {
+      const slidesData = await this.parseAllSlides((cur, tot) => {
         btn.textContent = `Parsing ${cur}/${tot}...`;
       });
 

@@ -591,37 +591,110 @@ class SlidesApp {
 
     const btn = document.getElementById('downloadPdfBtn');
     const originalText = btn.textContent;
-    btn.textContent = 'Generating PDF...';
+    btn.textContent = 'Preparing PDF...';
     btn.disabled = true;
 
     try {
-      const response = await fetch('/api/export-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: this.generatedHtml, format: 'pdf' })
-      });
+      const iframeDoc = this.previewFrame.contentDocument
+        || this.previewFrame.contentWindow?.document;
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to generate PDF');
+      if (!iframeDoc) {
+        throw new Error('Cannot access slide content. Try downloading the HTML instead.');
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const printStyle = iframeDoc.createElement('style');
+      printStyle.id = 'pdf-print-style';
+      printStyle.textContent = `
+        @media print {
+          * { transition: none !important; animation: none !important; }
+          html, body { width: auto !important; height: auto !important; overflow: visible !important; }
+          .slides-container, [class*="slides"], body > div {
+            position: static !important; width: auto !important;
+            height: auto !important; overflow: visible !important;
+          }
+          section, .slide, [class*="slide"] {
+            position: relative !important; display: flex !important;
+            width: 100vw !important; height: 100vh !important;
+            opacity: 1 !important; visibility: visible !important;
+            transform: none !important; pointer-events: auto !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            break-after: page !important;
+          }
+          section *, .slide *, [class*="slide"] * {
+            opacity: 1 !important; visibility: visible !important;
+            transform: none !important;
+          }
+          .nav-dots, .progress, [class*="progress"], .slide-number,
+          [class*="nav-dot"], [class*="slide-nav"] { display: none !important; }
+        }
+        @page { size: landscape; margin: 0; }
+      `;
+      iframeDoc.head.appendChild(printStyle);
+      this.previewFrame.contentWindow.print();
+
+      setTimeout(() => {
+        const style = iframeDoc.getElementById('pdf-print-style');
+        if (style) style.remove();
+      }, 2000);
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error('Error generating PDF:', error);
       this.showError('PDF export failed: ' + error.message);
     } finally {
       btn.textContent = originalText;
       btn.disabled = false;
     }
+  }
+
+  parseHtmlSlides(html) {
+    const slides = [];
+    let slideIndex = 0;
+
+    for (const match of html.matchAll(/<section[^>]*>([\s\S]*?)<\/section>/gi)) {
+      slideIndex++;
+      const sc = match[1];
+
+      let title = '';
+      let tm = sc.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      if (!tm) tm = sc.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      if (tm) title = tm[1].replace(/<[^>]*>/g, '').trim();
+
+      let subtitle = '';
+      if (tm && tm[0].includes('h1')) {
+        const sub = sc.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+        if (sub) subtitle = sub[1].replace(/<[^>]*>/g, '').trim();
+      }
+
+      const bullets = [];
+      for (const ul of sc.matchAll(/<ul[^>]*>([\s\S]*?)<\/ul>/gi)) {
+        for (const li of ul[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)) {
+          const t = li[1].replace(/<[^>]*>/g, '').trim();
+          if (t) bullets.push(t);
+        }
+      }
+
+      const content = [];
+      for (const p of sc.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)) {
+        const t = p[1].replace(/<[^>]*>/g, '').trim();
+        if (t) content.push(t);
+      }
+
+      if (!bullets.length && !content.length) {
+        const allText = sc
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (allText?.length > 10) content.push(allText.substring(0, 500));
+      }
+
+      slides.push({
+        title: title || `Slide ${slideIndex}`,
+        subtitle,
+        bullets: bullets.length > 0 ? bullets : content,
+      });
+      if (slideIndex >= 50) break;
+    }
+    return slides;
   }
 
   async downloadPptx() {
@@ -633,28 +706,48 @@ class SlidesApp {
     btn.disabled = true;
 
     try {
-      const response = await fetch('/api/export-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: this.generatedHtml, format: 'pptx' })
+      const { default: PptxGenJS } = await import('pptxgenjs');
+      const slides = this.parseHtmlSlides(this.generatedHtml);
+
+      const pptx = new PptxGenJS();
+      pptx.author = 'AI Slides Generator';
+      pptx.title = 'Generated Presentation';
+      pptx.layout = 'LAYOUT_16x9';
+
+      slides.forEach(slide => {
+        const presSlide = pptx.addSlide();
+        let yPos = 0.5;
+
+        if (slide.title) {
+          presSlide.addText(slide.title, {
+            x: 0.5, y: yPos, w: '90%', h: 0.8,
+            fontSize: 32, bold: true, color: '363636', fontFace: 'Arial'
+          });
+          yPos += 1.2;
+        }
+
+        if (slide.subtitle) {
+          presSlide.addText(slide.subtitle, {
+            x: 0.5, y: yPos, w: '90%', h: 0.5,
+            fontSize: 20, color: '666666', fontFace: 'Arial'
+          });
+          yPos += 0.8;
+        }
+
+        if (slide.bullets?.length > 0) {
+          slide.bullets.slice(0, 8).forEach((bullet, idx) => {
+            presSlide.addText(bullet, {
+              x: 0.5, y: yPos + (idx * 0.4), w: '90%', h: 0.4,
+              fontSize: 16, color: '333333', fontFace: 'Arial', bullet: true
+            });
+          });
+        }
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to generate PPTX');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const fileName = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
+      await pptx.writeFile({ fileName });
     } catch (error) {
-      console.error('Error downloading PPTX:', error);
+      console.error('Error generating PPTX:', error);
       this.showError('PPTX export failed: ' + error.message);
     } finally {
       btn.textContent = originalText;

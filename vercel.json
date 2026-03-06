@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/generate-slides.js": {
+      "maxDuration": 60
+    }
+  }
+}

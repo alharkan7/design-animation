@@ -1,176 +1,8 @@
 /**
  * Document to Slides Generator
- * Handles file uploads, document parsing, and AI-powered slide generation
+ * Handles file uploads, document parsing, and AI-powered slide generation.
+ * PPTX export is now handled server-side via /api/export-slides (see lib/pptx-export.js).
  */
-
-function rgbToHex(color) {
-  if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return null;
-  if (color.startsWith('#')) return color.replace('#', '').substring(0, 6).toUpperCase();
-  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (!m) return null;
-  return ((parseInt(m[1]) << 16) | (parseInt(m[2]) << 8) | parseInt(m[3]))
-    .toString(16).padStart(6, '0').toUpperCase();
-}
-
-function hexToRgb(hex) {
-  hex = (hex || '000000').replace('#', '');
-  return {
-    r: parseInt(hex.substring(0, 2), 16) || 0,
-    g: parseInt(hex.substring(2, 4), 16) || 0,
-    b: parseInt(hex.substring(4, 6), 16) || 0,
-  };
-}
-
-function pxToPt(px) {
-  return Math.round(px * 0.75);
-}
-
-function mapAlign(textAlign) {
-  if (textAlign === 'center') return 'center';
-  if (textAlign === 'right' || textAlign === 'end') return 'right';
-  return 'left';
-}
-
-function isBold(fontWeight) {
-  const w = parseInt(fontWeight);
-  return !isNaN(w) ? w >= 600 : (fontWeight === 'bold' || fontWeight === 'bolder');
-}
-
-function getRunsPlainText(runs) {
-  return runs.map(r => r.text).join('').replace(/\n+$/, '').trim();
-}
-
-function domToTextRuns(node, iframeWin, inherited = {}) {
-  const runs = [];
-  for (const child of node.childNodes) {
-    if (child.nodeType === 3) {
-      const text = child.textContent;
-      if (/\S/.test(text)) {
-        runs.push({ text: text.replace(/\s+/g, ' '), options: { ...inherited } });
-      } else if (text.includes(' ') && runs.length > 0) {
-        runs.push({ text: ' ', options: { ...inherited } });
-      }
-    } else if (child.nodeType === 1) {
-      const tag = child.tagName.toLowerCase();
-      if (tag === 'script' || tag === 'style') continue;
-
-      try {
-        const computed = iframeWin.getComputedStyle(child);
-        if (computed.display === 'none') continue;
-      } catch (_) { continue; }
-
-      const style = { ...inherited };
-      if (tag === 'b' || tag === 'strong') style.bold = true;
-      if (tag === 'i' || tag === 'em') style.italic = true;
-      if (tag === 'u') style.underline = { style: 'sng' };
-      if (tag === 's' || tag === 'del' || tag === 'strike') style.strike = 'sngStrike';
-      if (tag === 'code' || tag === 'pre') style.fontFace = 'Courier New';
-
-      if (tag === 'br') {
-        runs.push({ text: '\n', options: {} });
-        continue;
-      }
-
-      runs.push(...domToTextRuns(child, iframeWin, style));
-    }
-  }
-  return runs;
-}
-
-function collectSlideElements(node, iframeWin) {
-  const elements = [];
-
-  for (const child of node.children) {
-    const tag = child.tagName.toLowerCase();
-    if (tag === 'script' || tag === 'style') continue;
-
-    let computed;
-    try {
-      computed = iframeWin.getComputedStyle(child);
-      if (computed.display === 'none') continue;
-    } catch (_) { continue; }
-
-    const baseProps = {
-      fontSize: pxToPt(parseFloat(computed.fontSize)) || 14,
-      color: rgbToHex(computed.color) || 'FFFFFF',
-      align: mapAlign(computed.textAlign),
-      fontFace: computed.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
-    };
-
-    if (['h1', 'h2'].includes(tag)) {
-      const runs = domToTextRuns(child, iframeWin, {});
-      if (runs.length > 0) {
-        elements.push({ type: 'title', runs, ...baseProps, bold: true });
-      }
-    } else if (['h3', 'h4', 'h5', 'h6'].includes(tag)) {
-      const runs = domToTextRuns(child, iframeWin, {});
-      if (runs.length > 0) {
-        elements.push({ type: 'subtitle', runs, ...baseProps, bold: isBold(computed.fontWeight) });
-      }
-    } else if (tag === 'p') {
-      if (child.textContent.trim()) {
-        elements.push({ type: 'text', runs: domToTextRuns(child, iframeWin, {}), ...baseProps });
-      }
-    } else if (tag === 'ul' || tag === 'ol') {
-      const items = [];
-      for (const li of child.querySelectorAll(':scope > li')) {
-        const liRuns = domToTextRuns(li, iframeWin, {});
-        if (liRuns.length > 0) {
-          const liC = iframeWin.getComputedStyle(li);
-          items.push({
-            runs: liRuns,
-            color: rgbToHex(liC.color) || baseProps.color,
-            fontSize: pxToPt(parseFloat(liC.fontSize)) || baseProps.fontSize,
-          });
-        }
-      }
-      if (items.length > 0) {
-        elements.push({ type: 'list', ordered: tag === 'ol', items, ...baseProps });
-      }
-    } else if (tag === 'img') {
-      try {
-        const canvas = iframeWin.document.createElement('canvas');
-        canvas.width = child.naturalWidth || child.width || 200;
-        canvas.height = child.naturalHeight || child.height || 200;
-        canvas.getContext('2d').drawImage(child, 0, 0);
-        elements.push({
-          type: 'image',
-          data: canvas.toDataURL('image/png'),
-          width: child.clientWidth || 200,
-          height: child.clientHeight || 150,
-        });
-      } catch (_) { /* skip cross-origin images */ }
-    } else {
-      if (child.textContent.trim()) {
-        const childElems = collectSlideElements(child, iframeWin);
-        if (childElems.length > 0) {
-          elements.push(...childElems);
-        } else {
-          elements.push({ type: 'text', runs: domToTextRuns(child, iframeWin, {}), ...baseProps });
-        }
-      }
-    }
-  }
-
-  return elements;
-}
-
-function parseSlide(section, iframeWin) {
-  const computed = iframeWin.getComputedStyle(section);
-  let bgColor = rgbToHex(computed.backgroundColor);
-
-  if (!bgColor) {
-    bgColor = rgbToHex(iframeWin.getComputedStyle(iframeWin.document.body).backgroundColor)
-           || rgbToHex(iframeWin.getComputedStyle(iframeWin.document.documentElement).backgroundColor)
-           || '000000';
-  }
-
-  return {
-    bgColor,
-    textColor: rgbToHex(computed.color) || 'FFFFFF',
-    elements: collectSlideElements(section, iframeWin),
-  };
-}
 
 class SlidesApp {
   constructor() {
@@ -851,51 +683,6 @@ class SlidesApp {
     return captures;
   }
 
-  async parseAllSlides(statusCallback) {
-    const iframeDoc = this.previewFrame.contentDocument;
-    const iframeWin = this.previewFrame.contentWindow;
-    if (!iframeDoc) throw new Error('Cannot access slide content');
-
-    const sections = iframeDoc.querySelectorAll('section');
-    if (sections.length === 0) throw new Error('No slides found');
-
-    let waited = 0;
-    while (waited < 5000) {
-      const pending = iframeDoc.querySelectorAll('pre.mermaid:not([data-processed])');
-      if (pending.length === 0) break;
-      await new Promise(r => setTimeout(r, 300));
-      waited += 300;
-    }
-
-    const overrideStyle = iframeDoc.createElement('style');
-    overrideStyle.id = '__parse-override';
-    overrideStyle.textContent = `
-      section.slide {
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: none !important;
-        transition: none !important;
-      }
-      *, *::before, *::after {
-        animation-duration: 0s !important;
-        animation-delay: 0s !important;
-        transition: none !important;
-      }
-    `;
-    iframeDoc.head.appendChild(overrideStyle);
-
-    try {
-      const slidesData = [];
-      for (let i = 0; i < sections.length; i++) {
-        if (statusCallback) statusCallback(i + 1, sections.length);
-        slidesData.push(parseSlide(sections[i], iframeWin));
-      }
-      return slidesData;
-    } finally {
-      overrideStyle.remove();
-    }
-  }
-
   async downloadPdf() {
     if (!this.generatedHtml) return;
     const btn = document.getElementById('downloadPdfBtn');
@@ -940,156 +727,28 @@ class SlidesApp {
     btn.disabled = true;
 
     try {
-      btn.textContent = 'Parsing slides...';
-      const slidesData = await this.parseAllSlides((cur, tot) => {
-        btn.textContent = `Parsing ${cur}/${tot}...`;
+      btn.textContent = 'Generating PPTX...';
+
+      const response = await fetch('/api/export-slides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: this.generatedHtml, format: 'pptx' }),
       });
 
-      btn.textContent = 'Building PPTX...';
-      const { default: PptxGenJS } = await import('pptxgenjs');
-
-      const pptx = new PptxGenJS();
-      pptx.author = 'AI Slides Generator';
-      pptx.title = 'Generated Presentation';
-      pptx.layout = 'LAYOUT_16x9';
-
-      const SLIDE_H = 5.625;
-      const MX = 0.7;
-      const MY = 0.5;
-      const CW = 10 - MX * 2;
-
-      for (const slideData of slidesData) {
-        const slide = pptx.addSlide();
-        slide.background = { color: slideData.bgColor };
-
-        const elements = slideData.elements;
-        if (elements.length === 0) continue;
-
-        const titleIdx = elements.findIndex(e => e.type === 'title');
-        const titleElem = titleIdx >= 0 ? elements[titleIdx] : null;
-        const contentElems = elements.filter((_, i) => i !== titleIdx);
-
-        if (titleElem) {
-          const titleRuns = titleElem.runs.map(r => ({
-            text: r.text,
-            options: {
-              ...r.options,
-              fontSize: r.options.fontSize || titleElem.fontSize || 28,
-              color: r.options.color || titleElem.color,
-              bold: r.options.bold !== undefined ? r.options.bold : true,
-              fontFace: r.options.fontFace || titleElem.fontFace,
-            }
-          }));
-
-          const hasContent = contentElems.length > 0;
-          slide.addText(titleRuns, {
-            x: MX,
-            y: hasContent ? MY : SLIDE_H * 0.2,
-            w: CW,
-            h: hasContent ? SLIDE_H * 0.3 : SLIDE_H * 0.6,
-            valign: hasContent ? 'bottom' : 'middle',
-            align: titleElem.align || 'left',
-            paraSpaceAfter: 6,
-          });
-        }
-
-        if (contentElems.length > 0) {
-          const bodyRuns = [];
-          const imageElems = [];
-
-          for (let i = 0; i < contentElems.length; i++) {
-            const elem = contentElems[i];
-
-            if (elem.type === 'image') {
-              imageElems.push(elem);
-              continue;
-            }
-
-            if (elem.type === 'list') {
-              for (let j = 0; j < elem.items.length; j++) {
-                const item = elem.items[j];
-                const prefix = elem.ordered ? `${j + 1}. ` : '\u2022 ';
-                bodyRuns.push({
-                  text: prefix,
-                  options: {
-                    fontSize: item.fontSize || elem.fontSize || 14,
-                    color: item.color || elem.color,
-                    fontFace: elem.fontFace,
-                  }
-                });
-                for (const run of item.runs) {
-                  bodyRuns.push({
-                    text: run.text,
-                    options: {
-                      ...run.options,
-                      fontSize: run.options.fontSize || item.fontSize || elem.fontSize || 14,
-                      color: run.options.color || item.color || elem.color,
-                      fontFace: run.options.fontFace || elem.fontFace,
-                    }
-                  });
-                }
-                bodyRuns.push({ text: '\n', options: {} });
-              }
-            } else {
-              for (const run of elem.runs) {
-                bodyRuns.push({
-                  text: run.text,
-                  options: {
-                    ...run.options,
-                    fontSize: run.options.fontSize || elem.fontSize || 14,
-                    color: run.options.color || elem.color,
-                    bold: run.options.bold || elem.bold || false,
-                    fontFace: run.options.fontFace || elem.fontFace,
-                  }
-                });
-              }
-            }
-
-            if (i < contentElems.length - 1 && elem.type !== 'image') {
-              bodyRuns.push({ text: '\n', options: {} });
-            }
-          }
-
-          while (bodyRuns.length > 0 && bodyRuns[bodyRuns.length - 1].text === '\n') {
-            bodyRuns.pop();
-          }
-
-          if (bodyRuns.length > 0) {
-            const contentY = titleElem ? SLIDE_H * 0.35 : MY;
-            const contentH = SLIDE_H - contentY - MY;
-
-            slide.addText(bodyRuns, {
-              x: MX,
-              y: contentY,
-              w: CW,
-              h: contentH,
-              valign: titleElem ? 'top' : 'middle',
-              align: contentElems.find(e => e.type !== 'image')?.align || 'left',
-              paraSpaceBefore: 4,
-              paraSpaceAfter: 4,
-            });
-          }
-
-          for (const img of imageElems) {
-            try {
-              const maxW = CW * 0.6;
-              const aspect = img.height / img.width;
-              const w = Math.min(maxW, img.width / 96);
-              const h = w * aspect;
-              slide.addImage({
-                data: img.data,
-                x: MX + (CW - w) / 2,
-                y: (SLIDE_H - h) / 2,
-                w,
-                h,
-              });
-            } catch (_) { /* skip failed images */ }
-          }
-        }
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server returned ${response.status}`);
       }
 
-      const fileName = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
-      await pptx.writeFile({ fileName });
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PPTX:', error);
       this.showError('PPTX export failed: ' + error.message);

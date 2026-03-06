@@ -6,6 +6,7 @@ import { defineConfig, loadEnv } from 'vite';
 import puppeteer from 'puppeteer';
 import PptxGenJS from 'pptxgenjs';
 import { STYLE_PRESETS, SLIDES_SYSTEM_INSTRUCTION, buildPrompt, sanitizeGeneratedHtml, validateGeneratedHtml } from './lib/slides-config.js';
+import { generatePptxBuffer } from './lib/pptx-export.js';
 
 function readJsonBody(req, limitBytes = 100_000) {
   return new Promise((resolve, reject) => {
@@ -210,66 +211,6 @@ function slidesGeneratorPlugin() {
   };
 }
 
-function parseHtmlSlides(html) {
-  const slides = [];
-  let slideIndex = 0;
-
-  for (const match of html.matchAll(/<section[^>]*>([\s\S]*?)<\/section>/gi)) {
-    slideIndex++;
-    const sectionContent = match[1];
-
-    let title = '';
-    let titleMatch = sectionContent.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-    if (!titleMatch) titleMatch = sectionContent.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
-    if (titleMatch) {
-      title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
-    }
-
-    let subtitle = '';
-    if (titleMatch && titleMatch[0].includes('h1')) {
-      const subMatch = sectionContent.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
-      if (subMatch) subtitle = subMatch[1].replace(/<[^>]*>/g, '').trim();
-    }
-
-    const bullets = [];
-    for (const ulMatch of sectionContent.matchAll(/<ul[^>]*>([\s\S]*?)<\/ul>/gi)) {
-      for (const liMatch of ulMatch[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)) {
-        const bulletText = liMatch[1].replace(/<[^>]*>/g, '').trim();
-        if (bulletText) bullets.push(bulletText);
-      }
-    }
-
-    const content = [];
-    for (const pMatch of sectionContent.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)) {
-      const pText = pMatch[1].replace(/<[^>]*>/g, '').trim();
-      if (pText) content.push(pText);
-    }
-
-    if (bullets.length === 0 && content.length === 0) {
-      const allText = sectionContent
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (allText && allText.length > 10) {
-        content.push(allText.substring(0, 500));
-      }
-    }
-
-    slides.push({
-      title: title || `Slide ${slideIndex}`,
-      subtitle: subtitle || '',
-      bullets: bullets.length > 0 ? bullets : content,
-      content: sectionContent
-    });
-
-    if (slideIndex >= 50) break;
-  }
-
-  return slides;
-}
-
 // Export plugin for PDF and PPTX generation
 function slidesExportPlugin() {
   let browser = null;
@@ -354,46 +295,7 @@ function slidesExportPlugin() {
   }
 
   async function generatePptx(html) {
-    const slides = parseHtmlSlides(html);
-
-    const pptx = new PptxGenJS();
-    pptx.author = 'AI Slides Generator';
-    pptx.title = 'Generated Presentation';
-    pptx.subject = 'AI Generated Slides';
-    pptx.layout = 'LAYOUT_16x9';
-
-    slides.forEach((slide) => {
-      const presSlide = pptx.addSlide();
-      let yPosition = 0.5;
-
-      if (slide.title) {
-        presSlide.addText(slide.title, {
-          x: 0.5, y: yPosition, w: '90%', h: 0.8,
-          fontSize: 32, bold: true, color: '363636', fontFace: 'Arial'
-        });
-        yPosition += 1.2;
-      }
-
-      if (slide.subtitle) {
-        presSlide.addText(slide.subtitle, {
-          x: 0.5, y: yPosition, w: '90%', h: 0.5,
-          fontSize: 20, color: '666666', fontFace: 'Arial'
-        });
-        yPosition += 0.8;
-      }
-
-      if (slide.bullets && slide.bullets.length > 0) {
-        const bulletPoints = slide.bullets.slice(0, 8);
-        bulletPoints.forEach((bullet, idx) => {
-          presSlide.addText(bullet, {
-            x: 0.5, y: yPosition + (idx * 0.4), w: '90%', h: 0.4,
-            fontSize: 16, color: '333333', fontFace: 'Arial', bullet: true
-          });
-        });
-      }
-    });
-
-    return await pptx.write({ outputType: 'nodebuffer' });
+    return await generatePptxBuffer(html);
   }
 
   async function handler(req, res) {

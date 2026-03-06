@@ -727,28 +727,22 @@ class SlidesApp {
     btn.disabled = true;
 
     try {
-      btn.textContent = 'Generating PPTX...';
+      btn.textContent = 'Extracting slides...';
 
-      const response = await fetch('/api/export-slides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: this.generatedHtml, format: 'pptx' }),
-      });
+      const iframeDoc = this.previewFrame.contentDocument;
+      const iframeWin = this.previewFrame.contentWindow;
+      if (!iframeDoc || !iframeWin) throw new Error('Cannot access slide content');
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Server returned ${response.status}`);
-      }
+      const { extractSlidesFromIframe, buildPptxFromSlides } = await import('./pptx-client.js');
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const slidesData = extractSlidesFromIframe(iframeDoc, iframeWin);
+      if (!slidesData || slidesData.length === 0) throw new Error('No slides found');
+
+      btn.textContent = 'Building PPTX...';
+      const pptx = await buildPptxFromSlides(slidesData);
+
+      const fileName = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.pptx';
+      await pptx.writeFile({ fileName });
     } catch (error) {
       console.error('Error downloading PPTX:', error);
       this.showError('PPTX export failed: ' + error.message);

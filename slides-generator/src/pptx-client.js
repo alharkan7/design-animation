@@ -15,6 +15,85 @@ function pxToInchY(px) { return (px / SLIDE_H_PX) * SLIDE_H_IN; }
 function pxToPt(px) { return Math.round(px * 0.75); }
 
 // ---------------------------------------------------------------------------
+// Web font → PowerPoint-safe font mapping
+// ---------------------------------------------------------------------------
+
+const FONT_MAP = {
+  // Serif fonts
+  'libre baskerville': 'Georgia',
+  'cormorant garamond': 'Palatino Linotype',
+  'playfair display': 'Georgia',
+  'source serif 4': 'Palatino Linotype',
+  'source serif pro': 'Palatino Linotype',
+  'merriweather': 'Georgia',
+  'lora': 'Palatino Linotype',
+  'crimson text': 'Georgia',
+  'eb garamond': 'Garamond',
+  'gelasio': 'Georgia',
+  'fraunces': 'Georgia',
+  'roboto slab': 'Rockwell',
+
+  // Sans-serif fonts
+  'inter': 'Segoe UI',
+  'dm sans': 'Segoe UI',
+  'source sans 3': 'Segoe UI',
+  'source sans pro': 'Segoe UI',
+  'work sans': 'Candara',
+  'outfit': 'Candara',
+  'nunito': 'Trebuchet MS',
+  'archivo': 'Franklin Gothic Medium',
+  'space grotesk': 'Century Gothic',
+  'cabinet grotesk': 'Century Gothic',
+  'clash display': 'Century Gothic',
+  'satoshi': 'Century Gothic',
+  'overpass': 'Segoe UI',
+  'barlow': 'Segoe UI',
+  'instrument sans': 'Segoe UI',
+  'poppins': 'Segoe UI',
+  'open sans': 'Segoe UI',
+  'lato': 'Segoe UI',
+  'raleway': 'Trebuchet MS',
+  'montserrat': 'Trebuchet MS',
+  'roboto': 'Segoe UI',
+  'prompt': 'Trebuchet MS',
+  'kanit': 'Trebuchet MS',
+  'corben': 'Rockwell',
+
+  // Monospace fonts
+  'jetbrains mono': 'Consolas',
+  'fira code': 'Consolas',
+  'source code pro': 'Consolas',
+  'inconsolata': 'Consolas',
+  'ibm plex mono': 'Consolas',
+  'cascadia code': 'Consolas',
+  'courier new': 'Courier New',
+};
+
+const CATEGORY_FALLBACKS = {
+  serif: 'Georgia',
+  'sans-serif': 'Segoe UI',
+  monospace: 'Consolas',
+  cursive: 'Segoe UI',
+  fantasy: 'Trebuchet MS',
+  'system-ui': 'Segoe UI',
+};
+
+function mapFont(fontFamily) {
+  if (!fontFamily) return 'Segoe UI';
+  const parts = fontFamily.split(',').map(f => f.trim().replace(/['"]/g, ''));
+  const primary = parts[0].toLowerCase();
+
+  if (FONT_MAP[primary]) return FONT_MAP[primary];
+
+  for (const part of parts) {
+    const lower = part.toLowerCase().trim();
+    if (CATEGORY_FALLBACKS[lower]) return CATEGORY_FALLBACKS[lower];
+  }
+
+  return 'Segoe UI';
+}
+
+// ---------------------------------------------------------------------------
 // Stage 1 — DOM traversal (runs directly on iframe document)
 // ---------------------------------------------------------------------------
 
@@ -95,7 +174,8 @@ function getElementAttrs(el, win) {
   const fontColor = colorToHex(cs.color);
   const borderColor = colorToHex(cs.borderColor);
   const borderWidth = parseFloat(cs.borderWidth) || 0;
-  const fontName = cs.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+  const fontFamily = cs.fontFamily;
+  const fontName = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
   const fontSize = parseFloat(cs.fontSize) || 16;
   const fontWeight = parseInt(cs.fontWeight) || 400;
   const italic = cs.fontStyle === 'italic';
@@ -108,7 +188,7 @@ function getElementAttrs(el, win) {
     border: borderWidth > 0 && borderColor.hex ? { color: borderColor.hex, width: borderWidth, opacity: borderColor.opacity } : null,
     shadow: parseShadow(cs),
     borderRadius: parseBorderRadius(cs, el),
-    font: { name: fontName, size: fontSize, weight: fontWeight, color: fontColor.hex || '000000', italic },
+    font: { name: fontName, family: fontFamily, size: fontSize, weight: fontWeight, color: fontColor.hex || '000000', italic },
     textAlign: cs.textAlign,
     lineHeight: parseFloat(cs.lineHeight) || fontSize * 1.2,
     opacity: isNaN(opacity) ? 1 : opacity,
@@ -188,6 +268,35 @@ function captureImageElement(imgEl) {
   } catch { return null; }
 }
 
+function captureSvgElement(svgEl, width, height) {
+  try {
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    if (!clone.getAttribute('width')) clone.setAttribute('width', String(Math.round(width)));
+    if (!clone.getAttribute('height')) clone.setAttribute('height', String(Math.round(height)));
+
+    const styles = svgEl.ownerDocument.querySelectorAll('style');
+    let cssText = '';
+    for (const s of styles) { cssText += s.textContent; }
+    if (cssText) {
+      const defs = clone.querySelector('defs') || clone.insertBefore(
+        svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'defs'), clone.firstChild
+      );
+      const style = svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'style');
+      style.textContent = cssText;
+      defs.appendChild(style);
+    }
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(clone);
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+  } catch { return null; }
+}
+
+function captureCanvasElement(canvasEl) {
+  try { return canvasEl.toDataURL('image/png'); } catch { return null; }
+}
+
 export function extractSlidesFromIframe(iframeDoc, iframeWin) {
   const override = iframeDoc.createElement('style');
   override.textContent = `
@@ -221,6 +330,28 @@ export function extractSlidesFromIframe(iframeDoc, iframeWin) {
         const dataUrl = captureImageElement(el.element);
         if (dataUrl) el.imageData = dataUrl;
       }
+
+      if (el.type === 'screenshot' && el.element) {
+        const tag = el.element.tagName.toLowerCase();
+        let dataUrl = null;
+
+        if (tag === 'svg') {
+          dataUrl = captureSvgElement(el.element, el.position.width, el.position.height);
+        } else if (tag === 'canvas') {
+          dataUrl = captureCanvasElement(el.element);
+        } else {
+          const innerSvg = el.element.querySelector('svg');
+          if (innerSvg) {
+            dataUrl = captureSvgElement(innerSvg, el.position.width, el.position.height);
+          }
+        }
+
+        if (dataUrl) {
+          el.imageData = dataUrl;
+          el.type = 'image';
+        }
+      }
+
       delete el.element;
     }
 
@@ -353,7 +484,7 @@ export async function buildPptxFromSlides(slidesData) {
 
       if (el.type === 'text' && (el.innerHTML || el.plainText)) {
         const baseFont = {
-          fontFace: el.font?.name || 'Arial',
+          fontFace: mapFont(el.font?.family || el.font?.name),
           fontSize: pxToPt(el.font?.size || 16),
           color: el.font?.color || '000000',
           bold: el.font?.weight >= 600,

@@ -407,48 +407,110 @@ class SlidesApp {
     const blob = new Blob([this.generatedHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
-    // Clear any previous timeouts
     if (this.iframeTimeout) clearTimeout(this.iframeTimeout);
     if (this.messageRetries) clearTimeout(this.messageRetries);
 
     let retries = 0;
     const maxRetries = 5;
 
-    // Function to request slide count with retries
     const requestSlideCount = () => {
       retries++;
-      console.log(`Requesting slide count (attempt ${retries}/${maxRetries})`);
       this.sendMessageToIframe({ action: 'getSlideCount' });
-
       if (retries < maxRetries) {
         this.messageRetries = setTimeout(requestSlideCount, 1000);
       }
     };
 
-    // Set up load handler
     previewFrame.onload = () => {
-      console.log('Iframe loaded successfully');
-      // Wait for iframe content to initialize, then request slide count
       setTimeout(requestSlideCount, 500);
+
+      // Fallback: if iframe never responds, try to detect slides from the DOM
+      this.iframeTimeout = setTimeout(() => {
+        if (this.totalSlides <= 1) {
+          this.tryFallbackSlideDetection();
+        }
+      }, 6000);
     };
 
-    // Set up error handler
     previewFrame.onerror = () => {
-      console.error('Iframe failed to load');
       this.showError('Failed to display slides. The generated content may have errors.');
     };
-
-    // Set a timeout for initial message
-    this.iframeTimeout = setTimeout(() => {
-      if (this.totalSlides === 1 && this.currentSlide === 1) {
-        console.warn('Iframe did not respond within timeout - slides may not be interactive');
-        this.updateSlideCounter();
-      }
-    }, 8000);
 
     previewFrame.src = url;
     this.resultSection.classList.add('visible');
     this.container.classList.add('wide');
+  }
+
+  tryFallbackSlideDetection() {
+    try {
+      const iframeDoc = this.previewFrame.contentDocument || this.previewFrame.contentWindow.document;
+      if (!iframeDoc) return;
+
+      const sections = iframeDoc.querySelectorAll('section');
+      if (sections.length > 0) {
+        this.totalSlides = sections.length;
+        this.currentSlide = 1;
+        this.updateSlideCounter();
+        this.updateNavButtons();
+
+        // Inject a minimal navigation handler if none exists
+        const script = iframeDoc.createElement('script');
+        script.textContent = `
+          if (!window._slideNavInjected) {
+            window._slideNavInjected = true;
+            const slides = document.querySelectorAll('section');
+            let current = 0;
+
+            function showSlide(idx) {
+              if (idx < 0 || idx >= slides.length) return;
+              slides.forEach((s, i) => {
+                s.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                if (i === idx) {
+                  s.style.opacity = '1';
+                  s.style.visibility = 'visible';
+                  s.style.transform = 'translateX(0)';
+                  s.style.zIndex = '1';
+                  s.style.pointerEvents = 'auto';
+                  s.classList.add('active');
+                } else {
+                  s.style.opacity = '0';
+                  s.style.visibility = 'hidden';
+                  s.style.transform = i < idx ? 'translateX(-30px)' : 'translateX(30px)';
+                  s.style.zIndex = '0';
+                  s.style.pointerEvents = 'none';
+                  s.classList.remove('active');
+                }
+              });
+              current = idx;
+              window.parent.postMessage({ action: 'slideChanged', data: { current: current + 1 } }, '*');
+            }
+
+            window.addEventListener('message', (e) => {
+              if (!e.data || !e.data.action) return;
+              switch (e.data.action) {
+                case 'getSlideCount':
+                  window.parent.postMessage({ action: 'slideCount', data: { count: slides.length, current: current + 1 } }, '*');
+                  break;
+                case 'nextSlide': showSlide(current + 1); break;
+                case 'prevSlide': showSlide(current - 1); break;
+                case 'goToSlide': showSlide(e.data.index); break;
+              }
+            });
+
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); showSlide(current + 1); }
+              if (e.key === 'ArrowLeft') { e.preventDefault(); showSlide(current - 1); }
+            });
+
+            showSlide(0);
+            window.parent.postMessage({ action: 'slideCount', data: { count: slides.length, current: 1 } }, '*');
+          }
+        `;
+        iframeDoc.body.appendChild(script);
+      }
+    } catch (e) {
+      console.warn('Fallback slide detection failed:', e.message);
+    }
   }
 
   sendMessageToIframe(message) {
@@ -461,11 +523,13 @@ class SlidesApp {
   }
 
   handleIframeMessage(e) {
+    if (!e.data || !e.data.action) return;
     const { action, data } = e.data;
-    console.log('Received message from iframe:', action, data);
 
     switch (action) {
       case 'slideCount':
+        if (this.messageRetries) clearTimeout(this.messageRetries);
+        if (this.iframeTimeout) clearTimeout(this.iframeTimeout);
         this.totalSlides = data.count || 1;
         this.currentSlide = data.current || 1;
         this.updateSlideCounter();
@@ -510,12 +574,14 @@ class SlidesApp {
 
   enterFullscreen() {
     this.previewContainer.classList.add('fullscreen');
+    document.body.style.overflow = 'hidden';
     this.isFullscreen = true;
-    document.getElementById('fullscreenBtn').textContent = '×';
+    document.getElementById('fullscreenBtn').textContent = '✕';
   }
 
   exitFullscreen() {
     this.previewContainer.classList.remove('fullscreen');
+    document.body.style.overflow = '';
     this.isFullscreen = false;
     document.getElementById('fullscreenBtn').textContent = '⛶';
   }
@@ -523,20 +589,21 @@ class SlidesApp {
   async downloadPdf() {
     if (!this.generatedHtml) return;
 
+    const btn = document.getElementById('downloadPdfBtn');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating PDF...';
+    btn.disabled = true;
+
     try {
       const response = await fetch('/api/export-slides', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          html: this.generatedHtml,
-          format: 'pdf'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: this.generatedHtml, format: 'pdf' })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to generate PDF');
       }
 
       const blob = await response.blob();
@@ -550,27 +617,31 @@ class SlidesApp {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      this.showError('Failed to download PDF. Please try again.');
+      this.showError('PDF export failed: ' + error.message);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
     }
   }
 
   async downloadPptx() {
     if (!this.generatedHtml) return;
 
+    const btn = document.getElementById('downloadPptxBtn');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating PPTX...';
+    btn.disabled = true;
+
     try {
       const response = await fetch('/api/export-slides', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          html: this.generatedHtml,
-          format: 'pptx'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: this.generatedHtml, format: 'pptx' })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PPTX');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to generate PPTX');
       }
 
       const blob = await response.blob();
@@ -584,7 +655,10 @@ class SlidesApp {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PPTX:', error);
-      this.showError('Failed to download PPTX. Please try again.');
+      this.showError('PPTX export failed: ' + error.message);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
     }
   }
 }

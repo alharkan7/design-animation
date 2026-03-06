@@ -61,6 +61,7 @@ class SlidesApp {
     // Download buttons
     document.getElementById('downloadPdfBtn').addEventListener('click', () => this.downloadPdf());
     document.getElementById('downloadPptxBtn').addEventListener('click', () => this.downloadPptx());
+    document.getElementById('downloadHtmlBtn').addEventListener('click', () => this.downloadHtml());
 
     // Navigation buttons
     document.getElementById('prevSlideBtn').addEventListener('click', () => this.prevSlide());
@@ -399,6 +400,20 @@ class SlidesApp {
     URL.revokeObjectURL(url);
   }
 
+  downloadHtml() {
+    if (!this.generatedHtml) return;
+
+    const blob = new Blob([this.generatedHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.selectedFile.name.replace(/\.[^/.]+$/, '') + '-slides.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   async readFileAsBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -618,20 +633,42 @@ class SlidesApp {
     const captures = [];
     const originalSlide = this.currentSlide;
 
+    const captureWidth = this.previewFrame.clientWidth;
+    const captureHeight = this.previewFrame.clientHeight;
+
+    const disableStyle = iframeDoc.createElement('style');
+    disableStyle.id = '__capture-override';
+    disableStyle.textContent = `
+      *, *::before, *::after {
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+      }
+    `;
+    iframeDoc.head.appendChild(disableStyle);
+
     for (let i = 0; i < slideCount; i++) {
       if (progressCallback) progressCallback(i + 1, slideCount);
       this.sendMessageToIframe({ action: 'goToSlide', index: i });
-      await new Promise(r => setTimeout(r, 500));
 
-      const canvas = await html2canvas(this.previewFrame, {
+      await new Promise(r => setTimeout(r, 100));
+      iframeDoc.documentElement.offsetHeight;
+
+      const canvas = await html2canvas(iframeDoc.documentElement, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         logging: false,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight,
       });
       captures.push(canvas);
     }
 
+    disableStyle.remove();
     this.sendMessageToIframe({ action: 'goToSlide', index: originalSlide - 1 });
     return captures;
   }

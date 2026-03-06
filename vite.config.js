@@ -158,7 +158,7 @@ function slidesGeneratorPlugin() {
       const prompt = buildPrompt(stylePreset, additionalPrompt);
 
       const result = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-flash-preview',
         contents: [
           { role: 'user', parts: [
             { text: prompt },
@@ -166,9 +166,19 @@ function slidesGeneratorPlugin() {
           ]}
         ],
         config: {
-          systemInstruction: SLIDES_SYSTEM_INSTRUCTION
+          systemInstruction: SLIDES_SYSTEM_INSTRUCTION,
+          maxOutputTokens: 65536,
+          responseMimeType: 'text/plain',
         }
       });
+
+      const finishReason = result.candidates?.[0]?.finishReason;
+      if (finishReason === 'MAX_TOKENS') {
+        throw new Error('The generated presentation was too long and got cut off. Try a shorter document or add "keep it concise, max 10 slides" to your instructions.');
+      }
+      if (finishReason && finishReason !== 'STOP') {
+        throw new Error(`Generation failed (reason: ${finishReason}). Please try again.`);
+      }
 
       let html = sanitizeGeneratedHtml(result.text);
       validateGeneratedHtml(html);

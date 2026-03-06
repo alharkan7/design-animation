@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const prompt = buildPrompt(stylePreset, additionalPrompt);
 
     const result = await ai.models.generateContent({
-      model: 'gemini-3.0-flash',
+      model: 'gemini-3-flash-preview',
       contents: [
         {
           role: 'user',

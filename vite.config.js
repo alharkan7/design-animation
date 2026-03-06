@@ -1,6 +1,7 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { GoogleGenAI } from '@google/genai';
 import { Readable } from 'node:stream';
+import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import puppeteer from 'puppeteer';
 import PptxGenJS from 'pptxgenjs';
@@ -761,6 +762,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), slidesExportPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'index.html'),
+          counter: resolve(__dirname, 'counter/index.html'),
+          languages: resolve(__dirname, 'languages/index.html'),
+          tts: resolve(__dirname, 'tts/index.html'),
+          'apbn-pendidikan': resolve(__dirname, 'apbn-pendidikan/index.html'),
+          'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
+        },
+      },
+    },
     server: {
       host: '::',
     },

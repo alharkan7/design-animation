@@ -735,7 +735,9 @@ class SlidesApp {
 
       const { extractSlidesFromIframe, buildPptxFromSlides } = await import('./pptx-client.js');
 
-      const slidesData = await extractSlidesFromIframe(iframeDoc, iframeWin);
+      const slidesData = await extractSlidesFromIframe(
+        iframeDoc, iframeWin, (msg) => this.sendMessageToIframe(msg)
+      );
       if (!slidesData || slidesData.length === 0) throw new Error('No slides found');
 
       btn.textContent = 'Building PPTX...';

@@ -275,45 +275,57 @@ function captureImageElement(imgEl) {
   } catch { return null; }
 }
 
-async function captureElementScreenshot(element, width, height) {
-  try {
-    const { default: html2canvas } = await import('html2canvas');
-    const iframeWin = element.ownerDocument.defaultView;
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      width: Math.round(width),
-      height: Math.round(height),
-      windowWidth: Math.round(width),
-      windowHeight: Math.round(height),
-      backgroundColor: null,
-      foreignObjectRendering: true,
-      window: iframeWin,
-    });
-    return canvas.toDataURL('image/png');
-  } catch (e) {
-    console.warn('html2canvas capture failed:', e);
-    return null;
-  }
+function cropFromCanvas(sourceCanvas, x, y, w, h, scale) {
+  const crop = document.createElement('canvas');
+  const sx = Math.round(x * scale);
+  const sy = Math.round(y * scale);
+  const sw = Math.round(w * scale);
+  const sh = Math.round(h * scale);
+  crop.width = sw;
+  crop.height = sh;
+  crop.getContext('2d').drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  return crop.toDataURL('image/png');
 }
 
-export async function extractSlidesFromIframe(iframeDoc, iframeWin) {
+export async function extractSlidesFromIframe(iframeDoc, iframeWin, sendMessageToIframe) {
+  const { default: html2canvas } = await import('html2canvas');
+
   const override = iframeDoc.createElement('style');
+  override.id = '__pptx-extract-override';
   override.textContent = `
-    *, *::before, *::after { transition: none !important; animation: none !important; }
+    *, *::before, *::after {
+      transition-duration: 0s !important; transition-delay: 0s !important;
+      animation-duration: 0s !important; animation-delay: 0s !important;
+    }
+  `;
+  iframeDoc.head.appendChild(override);
+
+  let waited = 0;
+  while (waited < 5000) {
+    const pending = iframeDoc.querySelectorAll('pre.mermaid:not([data-processed])');
+    if (pending.length === 0) break;
+    await new Promise(r => setTimeout(r, 300));
+    waited += 300;
+  }
+
+  const viewOverride = iframeDoc.createElement('style');
+  viewOverride.id = '__pptx-view-override';
+  viewOverride.textContent = `
     section.slide, .slide {
       opacity: 1 !important; visibility: visible !important;
       transform: none !important; pointer-events: auto !important;
     }
   `;
-  iframeDoc.head.appendChild(override);
+  iframeDoc.head.appendChild(viewOverride);
 
   const sections = iframeDoc.querySelectorAll('section');
+  const captureW = iframeDoc.documentElement.clientWidth || SLIDE_W_PX;
+  const captureH = iframeDoc.documentElement.clientHeight || SLIDE_H_PX;
+  const SCALE = 2;
   const slides = [];
 
-  for (const section of sections) {
+  for (let slideIdx = 0; slideIdx < sections.length; slideIdx++) {
+    const section = sections[slideIdx];
     const rect = section.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
 
@@ -327,15 +339,56 @@ export async function extractSlidesFromIframe(iframeDoc, iframeWin) {
 
     const elements = collectElements(section, rect, { font: null, background: null }, iframeWin);
 
+    const needsScreenshot = elements.some(el => el.type === 'screenshot');
+    let slideCanvas = null;
+
+    if (needsScreenshot) {
+      viewOverride.remove();
+
+      if (sendMessageToIframe) {
+        sendMessageToIframe({ action: 'goToSlide', index: slideIdx });
+      } else {
+        sections.forEach((s, j) => {
+          s.style.transition = 'none';
+          if (j === slideIdx) {
+            s.classList.add('active');
+            s.style.opacity = '1'; s.style.visibility = 'visible';
+            s.style.transform = 'none'; s.style.zIndex = '1';
+          } else {
+            s.classList.remove('active');
+            s.style.opacity = '0'; s.style.visibility = 'hidden'; s.style.zIndex = '0';
+          }
+        });
+      }
+      await new Promise(r => setTimeout(r, 200));
+      iframeDoc.documentElement.offsetHeight;
+
+      slideCanvas = await html2canvas(iframeDoc.documentElement, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: captureW,
+        height: captureH,
+        windowWidth: captureW,
+        windowHeight: captureH,
+      });
+
+      iframeDoc.head.appendChild(viewOverride);
+    }
+
     for (const el of elements) {
       if (el.type === 'image' && el.element && el.element.tagName === 'IMG') {
         const dataUrl = captureImageElement(el.element);
         if (dataUrl) el.imageData = dataUrl;
       }
 
-      if (el.type === 'screenshot' && el.element) {
-        const dataUrl = await captureElementScreenshot(
-          el.element, el.position.width, el.position.height
+      if (el.type === 'screenshot' && slideCanvas) {
+        const dataUrl = cropFromCanvas(
+          slideCanvas,
+          el.position.left, el.position.top,
+          el.position.width, el.position.height,
+          SCALE
         );
         if (dataUrl) {
           el.imageData = dataUrl;
@@ -350,6 +403,7 @@ export async function extractSlidesFromIframe(iframeDoc, iframeWin) {
   }
 
   override.remove();
+  viewOverride.remove();
   return slides;
 }
 

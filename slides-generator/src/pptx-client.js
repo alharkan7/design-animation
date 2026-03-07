@@ -224,6 +224,13 @@ function collectElements(parent, rootRect, inherited, win) {
     const bg = attrs.background || inherited.background;
     const tag = attrs.tag;
 
+    const isMermaidContainer = child.classList && child.classList.contains('mermaid-container');
+    const hasMermaidChild = !isMermaidContainer && child.querySelector && child.querySelector('.mermaid, [data-processed], svg.mermaid');
+    if (isMermaidContainer || hasMermaidChild) {
+      results.push({ ...attrs, position: relPos, type: 'screenshot', element: child, font });
+      continue;
+    }
+
     if (tag === 'svg' || tag === 'canvas' || tag === 'table' || tag === 'pre') {
       results.push({ ...attrs, position: relPos, type: 'screenshot', element: child, font });
       continue;
@@ -268,36 +275,31 @@ function captureImageElement(imgEl) {
   } catch { return null; }
 }
 
-function captureSvgElement(svgEl, width, height) {
+async function captureElementScreenshot(element, width, height) {
   try {
-    const clone = svgEl.cloneNode(true);
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    if (!clone.getAttribute('width')) clone.setAttribute('width', String(Math.round(width)));
-    if (!clone.getAttribute('height')) clone.setAttribute('height', String(Math.round(height)));
-
-    const styles = svgEl.ownerDocument.querySelectorAll('style');
-    let cssText = '';
-    for (const s of styles) { cssText += s.textContent; }
-    if (cssText) {
-      const defs = clone.querySelector('defs') || clone.insertBefore(
-        svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'defs'), clone.firstChild
-      );
-      const style = svgEl.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'style');
-      style.textContent = cssText;
-      defs.appendChild(style);
-    }
-
-    const serializer = new XMLSerializer();
-    const svgString = serializer.serializeToString(clone);
-    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
-  } catch { return null; }
+    const { default: html2canvas } = await import('html2canvas');
+    const iframeWin = element.ownerDocument.defaultView;
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      width: Math.round(width),
+      height: Math.round(height),
+      windowWidth: Math.round(width),
+      windowHeight: Math.round(height),
+      backgroundColor: null,
+      foreignObjectRendering: true,
+      window: iframeWin,
+    });
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('html2canvas capture failed:', e);
+    return null;
+  }
 }
 
-function captureCanvasElement(canvasEl) {
-  try { return canvasEl.toDataURL('image/png'); } catch { return null; }
-}
-
-export function extractSlidesFromIframe(iframeDoc, iframeWin) {
+export async function extractSlidesFromIframe(iframeDoc, iframeWin) {
   const override = iframeDoc.createElement('style');
   override.textContent = `
     *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -332,20 +334,9 @@ export function extractSlidesFromIframe(iframeDoc, iframeWin) {
       }
 
       if (el.type === 'screenshot' && el.element) {
-        const tag = el.element.tagName.toLowerCase();
-        let dataUrl = null;
-
-        if (tag === 'svg') {
-          dataUrl = captureSvgElement(el.element, el.position.width, el.position.height);
-        } else if (tag === 'canvas') {
-          dataUrl = captureCanvasElement(el.element);
-        } else {
-          const innerSvg = el.element.querySelector('svg');
-          if (innerSvg) {
-            dataUrl = captureSvgElement(innerSvg, el.position.width, el.position.height);
-          }
-        }
-
+        const dataUrl = await captureElementScreenshot(
+          el.element, el.position.width, el.position.height
+        );
         if (dataUrl) {
           el.imageData = dataUrl;
           el.type = 'image';

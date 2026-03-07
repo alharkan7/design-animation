@@ -18,79 +18,82 @@ function pxToPt(px) { return Math.round(px * 0.75); }
 // Web font → PowerPoint-safe font mapping
 // ---------------------------------------------------------------------------
 
+// [pptxFont, sizeScale] — sizeScale adjusts for metric differences between
+// the web font and PowerPoint font so text occupies roughly the same area.
+// < 1.0 means the PPTX font is wider/bolder and needs shrinking.
 const FONT_MAP = {
   // Serif fonts
-  'libre baskerville': 'Georgia',
-  'cormorant garamond': 'Palatino Linotype',
-  'playfair display': 'Georgia',
-  'source serif 4': 'Palatino Linotype',
-  'source serif pro': 'Palatino Linotype',
-  'merriweather': 'Georgia',
-  'lora': 'Palatino Linotype',
-  'crimson text': 'Georgia',
-  'eb garamond': 'Garamond',
-  'gelasio': 'Georgia',
-  'fraunces': 'Georgia',
-  'roboto slab': 'Rockwell',
+  'libre baskerville':  ['Georgia', 0.92],
+  'cormorant garamond': ['Garamond', 0.88],
+  'playfair display':   ['Georgia', 0.88],
+  'source serif 4':     ['Palatino Linotype', 0.93],
+  'source serif pro':   ['Palatino Linotype', 0.93],
+  'merriweather':       ['Georgia', 0.90],
+  'lora':               ['Palatino Linotype', 0.93],
+  'crimson text':       ['Georgia', 0.90],
+  'eb garamond':        ['Garamond', 0.88],
+  'gelasio':            ['Georgia', 0.93],
+  'fraunces':           ['Georgia', 0.85],
+  'roboto slab':        ['Rockwell', 0.92],
 
   // Sans-serif fonts
-  'inter': 'Segoe UI',
-  'dm sans': 'Segoe UI',
-  'source sans 3': 'Segoe UI',
-  'source sans pro': 'Segoe UI',
-  'work sans': 'Candara',
-  'outfit': 'Candara',
-  'nunito': 'Trebuchet MS',
-  'archivo': 'Franklin Gothic Medium',
-  'space grotesk': 'Century Gothic',
-  'cabinet grotesk': 'Century Gothic',
-  'clash display': 'Century Gothic',
-  'satoshi': 'Century Gothic',
-  'overpass': 'Segoe UI',
-  'barlow': 'Segoe UI',
-  'instrument sans': 'Segoe UI',
-  'poppins': 'Segoe UI',
-  'open sans': 'Segoe UI',
-  'lato': 'Segoe UI',
-  'raleway': 'Trebuchet MS',
-  'montserrat': 'Trebuchet MS',
-  'roboto': 'Segoe UI',
-  'prompt': 'Trebuchet MS',
-  'kanit': 'Trebuchet MS',
-  'corben': 'Rockwell',
+  'inter':              ['Segoe UI', 0.93],
+  'dm sans':            ['Segoe UI', 0.93],
+  'source sans 3':      ['Segoe UI', 0.93],
+  'source sans pro':    ['Segoe UI', 0.93],
+  'work sans':          ['Candara', 0.93],
+  'outfit':             ['Candara', 0.90],
+  'nunito':             ['Trebuchet MS', 0.90],
+  'archivo':            ['Franklin Gothic Medium', 0.88],
+  'space grotesk':      ['Century Gothic', 0.88],
+  'cabinet grotesk':    ['Century Gothic', 0.88],
+  'clash display':      ['Century Gothic', 0.85],
+  'satoshi':            ['Century Gothic', 0.90],
+  'overpass':           ['Segoe UI', 0.93],
+  'barlow':             ['Segoe UI', 0.93],
+  'instrument sans':    ['Segoe UI', 0.93],
+  'poppins':            ['Segoe UI', 0.90],
+  'open sans':          ['Segoe UI', 0.95],
+  'lato':               ['Segoe UI', 0.95],
+  'raleway':            ['Trebuchet MS', 0.88],
+  'montserrat':         ['Trebuchet MS', 0.88],
+  'roboto':             ['Segoe UI', 0.95],
+  'prompt':             ['Trebuchet MS', 0.88],
+  'kanit':              ['Trebuchet MS', 0.85],
+  'corben':             ['Rockwell', 0.82],
 
   // Monospace fonts
-  'jetbrains mono': 'Consolas',
-  'fira code': 'Consolas',
-  'source code pro': 'Consolas',
-  'inconsolata': 'Consolas',
-  'ibm plex mono': 'Consolas',
-  'cascadia code': 'Consolas',
-  'courier new': 'Courier New',
+  'jetbrains mono':     ['Consolas', 0.92],
+  'fira code':          ['Consolas', 0.92],
+  'source code pro':    ['Consolas', 0.93],
+  'inconsolata':        ['Consolas', 0.95],
+  'ibm plex mono':      ['Consolas', 0.92],
+  'cascadia code':      ['Consolas', 0.93],
+  'courier new':        ['Courier New', 1.0],
 };
 
 const CATEGORY_FALLBACKS = {
-  serif: 'Georgia',
-  'sans-serif': 'Segoe UI',
-  monospace: 'Consolas',
-  cursive: 'Segoe UI',
-  fantasy: 'Trebuchet MS',
-  'system-ui': 'Segoe UI',
+  serif:      ['Georgia', 0.92],
+  'sans-serif': ['Segoe UI', 0.93],
+  monospace:  ['Consolas', 0.93],
+  cursive:    ['Segoe UI', 0.90],
+  fantasy:    ['Trebuchet MS', 0.88],
+  'system-ui': ['Segoe UI', 0.93],
 };
 
 function mapFont(fontFamily) {
-  if (!fontFamily) return 'Segoe UI';
+  if (!fontFamily) return { name: 'Segoe UI', scale: 0.93 };
   const parts = fontFamily.split(',').map(f => f.trim().replace(/['"]/g, ''));
   const primary = parts[0].toLowerCase();
 
-  if (FONT_MAP[primary]) return FONT_MAP[primary];
+  if (FONT_MAP[primary]) return { name: FONT_MAP[primary][0], scale: FONT_MAP[primary][1] };
 
   for (const part of parts) {
     const lower = part.toLowerCase().trim();
-    if (CATEGORY_FALLBACKS[lower]) return CATEGORY_FALLBACKS[lower];
+    if (CATEGORY_FALLBACKS[lower]) return { name: CATEGORY_FALLBACKS[lower][0], scale: CATEGORY_FALLBACKS[lower][1] };
   }
 
-  return 'Segoe UI';
+  return { name: 'Segoe UI', scale: 0.93 };
 }
 
 // ---------------------------------------------------------------------------
@@ -528,9 +531,11 @@ export async function buildPptxFromSlides(slidesData) {
       }
 
       if (el.type === 'text' && (el.innerHTML || el.plainText)) {
+        const mapped = mapFont(el.font?.family || el.font?.name);
+        const rawPt = pxToPt(el.font?.size || 16);
         const baseFont = {
-          fontFace: mapFont(el.font?.family || el.font?.name),
-          fontSize: pxToPt(el.font?.size || 16),
+          fontFace: mapped.name,
+          fontSize: Math.round(rawPt * mapped.scale),
           color: el.font?.color || '000000',
           bold: el.font?.weight >= 600,
           italic: el.font?.italic || false,

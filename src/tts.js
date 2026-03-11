@@ -1,5 +1,8 @@
+import { DEFAULT_VOICE_ID } from './voices.js';
+
 const speakBtn = document.getElementById('speak-btn');
 const textInput = document.getElementById('text-input');
+const voiceSelect = document.getElementById('voice-select');
 const status = document.getElementById('status');
 const audioPlayer = document.getElementById('audio-player');
 
@@ -20,7 +23,7 @@ if (speakBtn) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     text,
-                    voiceId: 'JBFqnCBsd6RMkjVDRZzb',
+                    voiceId: voiceSelect?.value ?? DEFAULT_VOICE_ID,
                     modelId: 'eleven_multilingual_v2',
                     outputFormat: 'mp3_44100_128',
                 }),

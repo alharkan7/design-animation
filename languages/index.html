@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+    rel="stylesheet">
   <title>Ragam Kekayaan Bahasa Nusantara</title>
   <style>
     body {
@@ -15,10 +18,12 @@
       background: #f8fafc;
       font-family: 'Outfit', sans-serif;
     }
+
     canvas {
       display: block;
       touch-action: none;
     }
+
     .tooltip {
       position: absolute;
       background: rgba(255, 255, 255, 0.96);
@@ -33,6 +38,7 @@
       font-size: 14px;
       max-width: min(360px, calc(100vw - 24px));
     }
+
     #reset-btn {
       position: absolute;
       top: 24px;
@@ -55,21 +61,25 @@
       z-index: 100;
       padding: 0;
     }
+
     #reset-btn.visible {
       opacity: 1;
       pointer-events: auto;
       transform: scale(1);
     }
+
     #reset-btn:hover {
       background: rgba(255, 255, 255, 1);
       color: #0f172a;
       transform: scale(1.05);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
+
     #reset-btn svg {
       width: 20px;
       height: 20px;
     }
+
     #info-btn {
       position: absolute;
       top: 24px;
@@ -89,16 +99,19 @@
       z-index: 100;
       padding: 0;
     }
+
     #info-btn:hover {
       background: rgba(255, 255, 255, 1);
       color: #0f172a;
       transform: scale(1.05);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
+
     #info-btn svg {
       width: 20px;
       height: 20px;
     }
+
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -115,10 +128,12 @@
       pointer-events: none;
       transition: opacity 0.3s ease;
     }
+
     .modal-overlay.open {
       opacity: 1;
       pointer-events: auto;
     }
+
     .modal-content {
       background: #ffffff;
       border: 1px solid rgba(15, 23, 42, 0.08);
@@ -132,9 +147,11 @@
       transform: translateY(20px);
       transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     .modal-overlay.open .modal-content {
       transform: translateY(0);
     }
+
     .modal-title {
       font-size: 18px;
       font-weight: 600;
@@ -142,29 +159,36 @@
       font-family: 'Outfit', sans-serif;
       text-align: center;
     }
+
     .modal-body {
       font-size: 14px;
       line-height: 1.6;
       color: #334155;
       font-family: 'Outfit', sans-serif;
     }
+
     .modal-body ul {
       padding-left: 20px;
       margin: 0;
     }
+
     .modal-body li {
       margin-bottom: 8px;
     }
+
     .modal-body li:last-child {
       margin-bottom: 0;
     }
+
     .modal-body a {
       color: #0ea5e9;
       text-decoration: none;
     }
+
     .modal-body a:hover {
       text-decoration: underline;
     }
+
     .modal-close {
       position: absolute;
       top: 16px;
@@ -175,21 +199,24 @@
       cursor: pointer;
       padding: 4px;
     }
+
     .modal-close:hover {
       color: #0f172a;
     }
-
   </style>
 </head>
+
 <body>
   <div id="tooltip" class="tooltip"></div>
   <button id="reset-btn" aria-label="Reset View">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
     </svg>
   </button>
   <button id="info-btn" aria-label="Information">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"></circle>
       <line x1="12" y1="16" x2="12" y2="12"></line>
       <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -199,7 +226,8 @@
   <div id="info-modal" class="modal-overlay">
     <div class="modal-content">
       <button class="modal-close" id="modal-close">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -207,15 +235,21 @@
       <div class="modal-title">Konteks dan Pustaka</div>
       <div class="modal-body">
         <ul>
-          <li>Sumber: <a href="https://petabahasa.kemendikdasmen.go.id/" target="_blank" rel="noopener noreferrer">Peta Bahasa</a></li>
-          <li>Pembagian wilayah provinsi adalah berdasarkan status pada tahun 2019, sebelum ada perubahan/pemekaran wilayah.</li>
+          <li>Sumber: <a href="https://petabahasa.kemendikdasmen.go.id/" target="_blank" rel="noopener noreferrer">Peta
+              Bahasa</a></li>
+          <li>Pembagian wilayah provinsi adalah berdasarkan status pada tahun 2019, sebelum ada perubahan/pemekaran
+            wilayah.</li>
           <li>Nama Kementerian dan lembaga terkait merupakan nama resmi pada tahun di mana riset dipublikasikan.</li>
-          <li>Trivia: <a href="https://x.com/alhrkn/status/1334924759897817091" target="_blank" rel="noopener noreferrer">Statisika Bahasa (Indonesia)</a></li>
-          <li>Visualisasi oleh <a href="https://instagram.com/alhrkn" target="_blank" rel="noopener noreferrer">@alhrkn</a> | <a href="https://raihankalla.id" target="_blank" rel="noopener noreferrer">raihankalla.id</a></li>
+          <li>Trivia: <a href="https://x.com/alhrkn/status/1334924759897817091" target="_blank"
+              rel="noopener noreferrer">Statistika Bahasa (Indonesia)</a></li>
+          <li>Visualisasi oleh <a href="https://instagram.com/alhrkn" target="_blank"
+              rel="noopener noreferrer">@alhrkn</a> | <a href="https://raihankalla.id" target="_blank"
+              rel="noopener noreferrer">raihankalla.id</a></li>
         </ul>
       </div>
     </div>
   </div>
   <script type="module" src="/src/languages_animation.js"></script>
 </body>
+
 </html>

@@ -834,8 +834,8 @@ function layoutList() {
 
   const colDots = startX;
   const colName = startX + 35 * s;
-  const colArea = isMobile ? (startX + 35 * s) : (width / 2 - 40 * s);
-  const colProv = isMobile ? (startX + 35 * s) : (width / 2 + 130 * s);
+  const colProv = isMobile ? (startX + 35 * s) : (width / 2 - 40 * s);
+  const colArea = isMobile ? (startX + 35 * s) : (width / 2 + 130 * s);
 
   circles.forEach((c, i) => {
     const item = langList[i];
@@ -849,9 +849,11 @@ function layoutList() {
     c.ty = startY + i * rowHeight;
     c.tr = clamp(4 * s, 3, 5);
     c.color = COLOR_MAIN_1;
-    c.alpha = 0; // Force fade in
+    c.alpha = 0;
     c.tAlpha = 1;
-    c.delay = i * 0.02; 
+    // Initial y for slide-up effect
+    c.y = c.ty + 10 * s; 
+    c.delay = Math.floor(i * 2.0); 
     c.group = item.bahasa;
 
     if (isMobile) {
@@ -859,50 +861,70 @@ function layoutList() {
       labels.push({
         x: colName,
         y: c.ty - 6 * s,
+        targetY: c.ty - 6 * s,
         text: ellipsize(item.bahasa, 40),
         align: 'left',
         font: `500 ${Math.round(13 * s)}px Outfit`,
-        fillStyle: COLOR_TEXT
+        fillStyle: COLOR_TEXT,
+        alpha: 0,
+        yOffset: 10 * s,
+        delay: Math.floor(i * 2.0)
       });
       // Prov & Area
       labels.push({
         x: colName,
         y: c.ty + 8 * s,
+        targetY: c.ty + 8 * s,
         text: ellipsize(`${item.provinsi}, ${item.wilayah}`, 60),
         align: 'left',
         font: `${Math.round(10 * s)}px Outfit`,
-        fillStyle: 'rgba(100, 116, 139, 0.8)'
+        fillStyle: 'rgba(100, 116, 139, 0.8)',
+        alpha: 0,
+        yOffset: 10 * s,
+        delay: Math.floor(i * 2.0)
       });
     } else {
       // Name
       labels.push({
         x: colName,
         y: c.ty,
+        targetY: c.ty,
         text: ellipsize(item.bahasa, 32),
         align: 'left',
         font: `500 ${Math.round(12 * s)}px Outfit`,
         vAlign: 'middle',
-        fillStyle: COLOR_TEXT
+        fillStyle: COLOR_TEXT,
+        alpha: 0,
+        yOffset: 10 * s,
+        delay: Math.floor(i * 2.0)
+      });
+      // Prov
+      labels.push({
+        x: colProv,
+        y: c.ty,
+        targetY: c.ty,
+        text: ellipsize(item.provinsi, 30),
+        align: 'left',
+        font: `${Math.round(11 * s)}px Outfit`,
+        vAlign: 'middle',
+        fillStyle: 'rgba(71, 85, 105, 0.95)',
+        alpha: 0,
+        yOffset: 10 * s,
+        delay: Math.floor(i * 2.0)
       });
       // Area
       labels.push({
         x: colArea,
         y: c.ty,
+        targetY: c.ty,
         text: ellipsize(item.wilayah, 24),
         align: 'left',
         font: `${Math.round(11 * s)}px Outfit`,
         vAlign: 'middle',
-        fillStyle: 'rgba(71, 85, 105, 0.9)'
-      });
-      // Province
-      labels.push({
-        x: colProv,
-        y: c.ty,
-        text: ellipsize(item.provinsi, 36),
-        align: 'left',
-        font: `${Math.round(11 * s)}px Outfit`,
-        vAlign: 'middle',
-        fillStyle: 'rgba(100, 116, 139, 0.7)'
+        fillStyle: 'rgba(100, 116, 139, 0.7)',
+        alpha: 0,
+        yOffset: 10 * s,
+        delay: Math.floor(i * 2.0)
       });
     }
   });
@@ -1397,11 +1419,23 @@ function loop() {
     ctx.textBaseline = 'top';
 
     labels.forEach(l => {
+      // Update alpha/delay for reveal effect
+      if (l.delay !== undefined) {
+        if (l.delay > 0) {
+          l.delay--;
+          return;
+        }
+        l.alpha = Math.min(1, l.alpha + 0.12);
+        l.yOffset = l.yOffset * 0.88;
+        l.y = l.targetY + l.yOffset;
+      }
+
       // Simple culling
       const sy = (l.y - height / 2) * globalZoom + height / 2 + panY;
       if (sy < -60 || sy > height + 60) return;
 
       ctx.save();
+      if (l.alpha !== undefined) ctx.globalAlpha = l.alpha;
       ctx.translate(l.x, l.y);
       ctx.font = l.font ?? ctx.font;
       ctx.fillStyle = l.fillStyle ?? ctx.fillStyle;

@@ -980,7 +980,11 @@ function applyBarLayout(data, labelKey) {
   barMaxPanX = barScrollable ? Math.max(0, margin - (width / 2 - virtualChartWidth / 2)) : 0;
   barMinPanX = barScrollable ? Math.min(0, (width - margin) - (width / 2 + virtualChartWidth / 2)) : 0;
   
-  panX = 0; // Default to centered
+  if (isMobile && barScrollable) {
+    panX = barMaxPanX;
+  } else {
+    panX = 0; // Default to centered
+  }
   targetPanX = panX;
 
   let circleIndex = 0;

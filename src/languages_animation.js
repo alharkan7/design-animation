@@ -46,6 +46,9 @@ let dragStartPanX = 0;
 let dragStartPanY = 0;
 let dragMoved = false;
 let suppressClick = false;
+let scrollVelocityY = 0;
+let lastMoveY = 0;
+let lastMoveT = 0;
 
 const treeNodes = [];
 const treeEdges = [];
@@ -970,16 +973,22 @@ function applyBarLayout(data, labelKey) {
   const actualCols = packing.cols;
 
   barScrollable = virtualChartWidth > chartInnerWidth + 1;
-  barMinPanX = Math.min(0, chartInnerWidth - virtualChartWidth);
-  barMaxPanX = 0;
-  panX = clamp(panX, barMinPanX, barMaxPanX);
+  // Centered coordinate system: panX=0 is centered.
+  // Left edge is at width/2 - virtualChartWidth/2. 
+  // We want to be able to pan such that left edge is at margin:
+  // (width/2 - virtualChartWidth/2) + panX = margin  => panX = margin - width/2 + virtualChartWidth/2
+  barMaxPanX = barScrollable ? Math.max(0, margin - (width / 2 - virtualChartWidth / 2)) : 0;
+  barMinPanX = barScrollable ? Math.min(0, (width - margin) - (width / 2 + virtualChartWidth / 2)) : 0;
+  
+  panX = 0; // Default to centered
   targetPanX = panX;
 
   let circleIndex = 0;
+  const chartStartX = width / 2 - virtualChartWidth / 2;
 
   data.forEach((item, i) => {
     const count = item.circle_count ?? item.jumlah_bahasa;
-    const centerX = margin + i * barWidth + effectiveBarWidth / 2;
+    const centerX = chartStartX + i * barWidth + effectiveBarWidth / 2;
     const groupLabel = item[labelKey];
     const candidates = (labelKey === 'wilayah' ? islandLangMap : provinceLangMap).get(groupLabel) ?? [];
 
@@ -1334,6 +1343,32 @@ function loop() {
     panY += (targetPanY - panY) * 0.12;
   }
 
+  // Handle list momentum scrolling
+  if (mode === 'list' && !isDragging) {
+    if (Math.abs(scrollVelocityY) > 0.1) {
+      targetPanY += scrollVelocityY;
+      scrollVelocityY *= 0.94; // Friction
+
+      // Boundaries for momentum
+      const isMobile = width < 520;
+      const s = uiScale();
+      const rowHeight = isMobile ? 38 * s : 28 * s;
+      const tStartY = isMobile 
+        ? (Math.max(200, height * 0.32) + rowHeight) 
+        : (Math.max(220, height * 0.35) + rowHeight);
+      const limit = -(langList.length * rowHeight - (height - tStartY) + 100);
+      
+      if (targetPanY > 50) {
+        targetPanY = 50;
+        scrollVelocityY = 0;
+      } else if (targetPanY < limit) {
+        targetPanY = limit;
+        scrollVelocityY = 0;
+      }
+      panY = targetPanY;
+    }
+  }
+
   // Animate text
   textAnim.opacity += (1 - textAnim.opacity) * 0.08;
   textAnim.yOffset += (0 - textAnim.yOffset) * 0.08;
@@ -1559,64 +1594,69 @@ canvas.addEventListener('pointerdown', (e) => {
     navStartX = e.clientX;
     navStartY = e.clientY;
     navStartT = performance.now();
+    
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    isDragging = true;
+    dragMoved = false;
+    focusNode = null;
+  } else {
+    // Re-sync on additional pointers to prevent jumps
+    const pts = Array.from(pointers.values());
+    dragStartX = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+    dragStartY = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
   }
 
   const extra = isCoarsePointer() ? 7 : 0;
   updateHoverAt(e.clientX, e.clientY, extra);
 
-  if (mode === 'tree') {
-    isDragging = true;
-    dragMoved = false;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    dragStartPanX = panX;
-    dragStartPanY = panY;
-    focusNode = null;
-  } else if (mode === 'grid') {
-    isDragging = true;
-    dragMoved = false;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    dragStartPanX = panX;
-    dragStartPanY = panY;
-    focusNode = null;
-  } else if (mode === 'bar') {
-    isDragging = true;
-    dragMoved = false;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    dragStartPanX = panX;
-    dragStartPanY = panY;
-    focusNode = null;
+  if (mode === 'bar') {
     barIsDragging = true;
     barDragStartX = e.clientX;
     barDragStartPanX = panX;
-  } else if (isCoarsePointer()) {
-    // Only if NOT dragging
-    if (hoverClearTimer) window.clearTimeout(hoverClearTimer);
-    hoverClearTimer = window.setTimeout(() => {
-      hoveredCircle = null;
-    }, 2200);
-  }
+  } 
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (!pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!pointers.has(e.pointerId)) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
   const extra = isCoarsePointer() ? 7 : 0;
 
-  if ((mode === 'tree' || mode === 'grid' || mode === 'bar') && pointers.size >= 2) {
+  if ((mode === 'tree' || mode === 'grid' || mode === 'bar' || mode === 'list') && pointers.size >= 2) {
     const pts = Array.from(pointers.values());
     const dx = pts[0].x - pts[1].x;
     const dy = pts[0].y - pts[1].y;
     const dist = Math.hypot(dx, dy);
+    
+    // Centroid of the two fingers
+    const midX = (pts[0].x + pts[1].x) / 2;
+    const midY = (pts[0].y + pts[1].y) / 2;
+
     if (pinchStartDist == null) {
       pinchStartDist = dist || 1;
       pinchStartZoom = targetZoom;
+      // Reset drag start for smooth transition when one finger is released
+      dragStartX = midX;
+      dragStartY = midY;
+      dragStartPanX = panX;
+      dragStartPanY = panY;
     } else {
       const factor = (dist || 1) / pinchStartDist;
       targetZoom = clamp((pinchStartZoom || targetZoom) * factor, ZOOM_MIN, ZOOM_MAX);
+      
+      // Also pan while pinching to follow the midpoint
+      const mdx = midX - dragStartX;
+      const mdy = midY - dragStartY;
+      panX = dragStartPanX + mdx;
+      panY = dragStartPanY + mdy;
+      targetPanX = panX;
+      targetPanY = panY;
+      
       focusNode = null;
     }
     updateHoverAt(e.clientX, e.clientY, extra);
@@ -1626,37 +1666,28 @@ canvas.addEventListener('pointermove', (e) => {
   pinchStartDist = null;
   pinchStartZoom = null;
 
-  if ((mode === 'tree' || mode === 'grid' || mode === 'list') && isDragging) {
+  if ((mode === 'tree' || mode === 'grid' || mode === 'list' || mode === 'bar') && isDragging) {
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
 
+    // For momentum calculation
+    const now = performance.now();
+    const dt = now - lastMoveT;
+    if (dt > 0) {
+        scrollVelocityY = (e.clientY - lastMoveY) / (dt / 16);
+    }
+    lastMoveY = e.clientY;
+    lastMoveT = now;
+
     // Direct manipulation of panX/panY
     if (mode === 'list') {
-      // Primarily vertical scrolling for list
-      panX = dragStartPanX + dx * 0.2; // Small horizontal drift is okay
+      panX = dragStartPanX + dx * 0.2;
       panY = dragStartPanY + dy;
     } else {
       panX = dragStartPanX + dx;
       panY = dragStartPanY + dy;
     }
-
-    // IMPORTANT: Sync targetPanX to current panX so that when we release, 
-    // it doesn't try to tween back to an old target or focus point.
-    targetPanX = panX;
-    targetPanY = panY;
-
-    // Explicitly clear focusNode to stop the loop() from overriding our pan
-    focusNode = null;
-  }
-
-  if (mode === 'bar' && isDragging) {
-    const dx = e.clientX - dragStartX;
-    const dy = e.clientY - dragStartY;
-    if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
-    // Allow X panning
-    panX = dragStartPanX + dx;
-    panY = dragStartPanY + dy;
 
     targetPanX = panX;
     targetPanY = panY;
@@ -1684,44 +1715,64 @@ function endPointerInteraction(e) {
   }
 
   pointers.delete(e.pointerId);
-  if (pointers.size < 2) {
+
+  const wasDragging = isDragging;
+  
+  if (pointers.size === 0) {
+    isDragging = false;
+    barIsDragging = false;
     pinchStartDist = null;
     pinchStartZoom = null;
-  }
-  if (mode === 'tree') {
-    isDragging = false;
-    suppressClick = dragMoved;
-    dragMoved = false;
-    if (!suppressClick) focusHoveredNode();
-    return;
-  }
-
-  if (mode === 'grid' || mode === 'bar' || mode === 'list') {
-    isDragging = false;
-    suppressClick = dragMoved;
-    dragMoved = false;
-    barIsDragging = false;
-    if (!suppressClick && hoveredCircle) {
-      focusCircle(hoveredCircle);
-    }
-    return;
+  } else {
+    // Re-sync anchor to the remaining finger
+    const pts = Array.from(pointers.values());
+    dragStartX = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+    dragStartY = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    pinchStartDist = null; // Re-init pinch if another finger is added later
   }
 
-  if (!isCoarsePointer()) return;
-  if (mode === 'tree') return;
-  if (mode === 'bar' && barScrollable && Math.abs((e.clientX ?? 0) - navStartX) > Math.abs((e.clientY ?? 0) - navStartY)) return;
+  if (wasDragging && dragMoved && pointers.size === 0) {
+      if (isCoarsePointer()) {
+          const dt = performance.now() - navStartT;
+          const dx = e.clientX - navStartX;
+          const dy = e.clientY - navStartY;
+          const adx = Math.abs(dx);
+          const ady = Math.abs(dy);
 
-  const dt = performance.now() - (navStartT || 0);
-  const dx = (e.clientX ?? 0) - navStartX;
-  const dy = (e.clientY ?? 0) - navStartY;
-  const adx = Math.abs(dx);
-  const ady = Math.abs(dy);
-  if (dt > 900) return;
-  if (ady < 52) return;
-  if (ady < adx * 1.25) return;
+          // Fast swipe detection for scene change
+          if (dt < 420 && ady > 55 && ady > adx * 1.4) {
+              let allowSceneChange = true;
+              if (mode === 'list') {
+                  // Only allow scene change swipe in list mode if they swipe fast at boundaries 
+                  // to avoid conflict with normal scrolling
+                  const atTop = targetPanY >= 40;
+                  const atBottom = targetPanY <= -(langList.length * (width < 520 ? 38 : 28) * uiScale()); 
+                  if (!atTop && dy > 0) allowSceneChange = false;
+                  if (!atBottom && dy < 0) allowSceneChange = false;
+              }
 
-  if (dy < 0) applyScene(sceneIndex + 1);
-  else applyScene(sceneIndex - 1);
+              if (allowSceneChange) {
+                  if (dy < 0) applyScene(sceneIndex + 1);
+                  else applyScene(sceneIndex - 1);
+                  dragMoved = false;
+                  return;
+              }
+          }
+      }
+  }
+
+  // Handle normal interaction end (clicks/focus)
+  if (!dragMoved) {
+      if (mode === 'tree') {
+          focusHoveredNode();
+      } else if (mode === 'grid' || mode === 'bar' || mode === 'list') {
+          if (hoveredCircle) focusCircle(hoveredCircle);
+      }
+  }
+  
+  dragMoved = false;
 }
 
 canvas.addEventListener('pointerup', endPointerInteraction);

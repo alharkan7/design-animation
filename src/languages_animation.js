@@ -110,6 +110,13 @@ const scenes = [
     title: 'Pohon Kekerabatan Bahasa',
     caption: 'Keragaman bahasa di Indonesia ini mewakili 10% dari keseluruhan bahasa yang ada di dunia, menjadikan Indonesia sebagai negara dengan keragaman bahasa terbanyak kedua di dunia (setelah Papua Nugini).',
     apply: () => layoutTree()
+  },
+  {
+    key: 'list',
+    align: 'center',
+    title: 'Daftar Lengkap Bahasa',
+    caption: 'Berikut adalah daftar lengkap 718 bahasa Nusantara tersebut. Data ini menunjukkan kekayaan tak berwujud yang tersebar dari Sabang hingga Merauke, mencerminkan identitas unik dari setiap wilayah di Indonesia.',
+    apply: () => layoutList()
   }
 ];
 let nextHitBox = null;
@@ -458,7 +465,7 @@ async function loadData() {
         if (w === 'Nusa Tenggara Barat' || w === 'Nusa Tenggara Timur') w = 'Nusa Tenggara';
         uniqueWilayah.add(w);
       }
-      
+
       for (const w of uniqueWilayah) {
         if (!islandLangMap.has(w)) islandLangMap.set(w, []);
         islandLangMap.get(w).push(bahasa);
@@ -498,7 +505,7 @@ function aggregateCounts(list, field, outKey, normalizer) {
       if (normalizer) part = normalizer(part);
       unique.add(part);
     }
-    
+
     for (const part of unique) {
       map.set(part, (map.get(part) ?? 0) + 1);
     }
@@ -571,15 +578,15 @@ function applyScene(nextIndex) {
   const n = scenes.length || 1;
   const prevIndex = sceneIndex;
   sceneIndex = ((nextIndex % n) + n) % n;
-  
+
   // Text Transition Animation
   if (prevIndex !== sceneIndex) {
-     textAnim.prevScene = scenes[prevIndex];
-     textAnim.prevOpacity = 1;
-     textAnim.prevYOffset = 0;
-     
-     textAnim.opacity = 0;
-     textAnim.yOffset = 30; // Start from below
+    textAnim.prevScene = scenes[prevIndex];
+    textAnim.prevOpacity = 1;
+    textAnim.prevYOffset = 0;
+
+    textAnim.opacity = 0;
+    textAnim.yOffset = 30; // Start from below
   }
 
   const scene = scenes[sceneIndex];
@@ -605,53 +612,53 @@ function wrapText(ctx, text, maxWidth) {
 
 function drawSceneText(scene, opacity, yOffset) {
   if (opacity <= 0.01) return;
-  
+
   const s = uiScale();
   const alignRight = scene.align === 'right';
-  
+
   // Position text lower down and with more breathing room
   const topMargin = Math.max(60, height * 0.12);
   const sideMargin = Math.max(24, width * 0.08);
-  
+
   const maxTextW = Math.min(Math.round(580 * s), width - sideMargin * 2);
-  
-  const textBoxX = alignRight 
-    ? (width - sideMargin - maxTextW) 
+
+  const textBoxX = alignRight
+    ? (width - sideMargin - maxTextW)
     : (width - maxTextW) / 2;
-    
+
   const textX = alignRight ? (textBoxX + maxTextW) : (textBoxX + maxTextW / 2);
-  
+
   const titleSize = Math.round(32 * s);
   const titleFont = `400 ${titleSize}px "Playfair Display", serif`;
-  
+
   const bodySize = Math.round(15 * s);
   const bodyFont = `300 ${bodySize}px Outfit, sans-serif`;
-  
+
   const lineH = Math.round(bodySize * 1.5);
   const gap = Math.round(16 * s);
   const titleY = topMargin + yOffset;
   const captionY = titleY + titleSize + gap;
-  
+
   const maxLines = width < 520 ? 4 : 5;
 
   const nextText = (sceneIndex === scenes.length - 1) ? 'Kembali ↺' : 'Selanjutnya →';
-  
+
   ctx.save();
   ctx.globalAlpha = opacity;
   ctx.font = bodyFont;
   const capLines = wrapText(ctx, scene.caption, maxTextW);
   const lines = capLines.slice(0, maxLines);
-  
+
   // Only draw gradient bg for the main scene, or if we want transition to include bg?
   // Let's draw BG only if opacity > 0.5 to avoid double dark overlay?
   // Actually, we should probably separate BG from text.
   // But for now let's draw it with alpha.
-  
+
   const fadeH = (captionY - yOffset) + (lines.length + 1) * lineH + 60;
   // Use fixed height for gradient based on layout, ignore offset for the gradient box?
   // Or move gradient with text?
   // Let's move gradient with text.
-  
+
   const grad = ctx.createLinearGradient(0, yOffset, 0, fadeH + yOffset);
   grad.addColorStop(0, `rgba(248, 250, 252, ${0.98 * opacity})`);
   grad.addColorStop(0.7, `rgba(248, 250, 252, ${0.9 * opacity})`);
@@ -662,14 +669,14 @@ function drawSceneText(scene, opacity, yOffset) {
   // Text Rendering
   ctx.textBaseline = 'top';
   ctx.textAlign = alignRight ? 'right' : 'center';
-  
+
   // Title
   ctx.shadowColor = `rgba(255, 255, 255, ${0.8 * opacity})`;
   ctx.shadowBlur = 12;
   ctx.fillStyle = `rgba(15, 23, 42, ${opacity})`; // Dark text
   ctx.font = titleFont;
   ctx.fillText(scene.title, textX, titleY);
-  
+
   // Caption
   ctx.shadowBlur = 4;
   ctx.font = bodyFont;
@@ -679,32 +686,32 @@ function drawSceneText(scene, opacity, yOffset) {
     ctx.fillText(lines[i], textX, y);
     y += lineH;
   }
-  
+
   // Update textHitBox for active scene
   if (scene === scenes[sceneIndex]) {
-     textHitBox = {
-       x1: canvasRect.left + (alignRight ? (textX - maxTextW) : (textX - maxTextW/2)),
-       y1: canvasRect.top + titleY - 10,
-       x2: canvasRect.left + (alignRight ? (textX) : (textX + maxTextW/2)),
-       y2: canvasRect.top + y + 10
-     };
+    textHitBox = {
+      x1: canvasRect.left + (alignRight ? (textX - maxTextW) : (textX - maxTextW / 2)),
+      y1: canvasRect.top + titleY - 10,
+      x2: canvasRect.left + (alignRight ? (textX) : (textX + maxTextW / 2)),
+      y2: canvasRect.top + y + 10
+    };
   }
-  
+
   // Next Button (Text Link)
   ctx.font = `500 ${bodySize}px Outfit, sans-serif`;
   const nextW = ctx.measureText(nextText).width;
   const nextY = y + gap;
-  
+
   // Next button hitbox - Only update for the ACTIVE scene
   if (scene === scenes[sceneIndex] && opacity > 0.8) {
     let hx1, hx2;
     // Align relative to textX based on alignment
     if (alignRight) {
-       hx1 = canvasRect.left + (textX - nextW - 10);
-       hx2 = canvasRect.left + (textX + 10);
+      hx1 = canvasRect.left + (textX - nextW - 10);
+      hx2 = canvasRect.left + (textX + 10);
     } else {
-       hx1 = canvasRect.left + (textX - nextW/2 - 10);
-       hx2 = canvasRect.left + (textX + nextW/2 + 10);
+      hx1 = canvasRect.left + (textX - nextW / 2 - 10);
+      hx2 = canvasRect.left + (textX + nextW / 2 + 10);
     }
 
     nextHitBox = {
@@ -714,7 +721,7 @@ function drawSceneText(scene, opacity, yOffset) {
       y2: canvasRect.top + (nextY + lineH + 10)
     };
   }
-  
+
   // Draw Text
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
@@ -722,30 +729,30 @@ function drawSceneText(scene, opacity, yOffset) {
   ctx.fillStyle = COLOR_MAIN_1;
   // Reuse existing textAlign/textBaseline from earlier
   ctx.fillText(nextText, textX, nextY);
-  
+
   ctx.restore();
 }
 
 function drawStoryOverlayScreenSpace() {
   // Draw Outgoing
   if (textAnim.prevScene && textAnim.prevOpacity > 0.01) {
-      // Apply visibility to outgoing as well
-      const combinedPrevOpacity = textAnim.prevOpacity * textAnim.tVisible;
-      // We can also apply the hiding offset to the outgoing text for consistency, 
-      // but strictly speaking just opacity is enough to hide it.
-      // Let's keep it simple and just modulate opacity.
-      if (combinedPrevOpacity > 0.01) {
-          drawSceneText(textAnim.prevScene, combinedPrevOpacity, textAnim.prevYOffset);
-      }
+    // Apply visibility to outgoing as well
+    const combinedPrevOpacity = textAnim.prevOpacity * textAnim.tVisible;
+    // We can also apply the hiding offset to the outgoing text for consistency, 
+    // but strictly speaking just opacity is enough to hide it.
+    // Let's keep it simple and just modulate opacity.
+    if (combinedPrevOpacity > 0.01) {
+      drawSceneText(textAnim.prevScene, combinedPrevOpacity, textAnim.prevYOffset);
+    }
   }
-  
+
   // Draw Incoming
   const currentScene = scenes[sceneIndex];
   if (currentScene) {
-      // Modulate opacity by tVisible
-      const combinedOpacity = textAnim.opacity * textAnim.tVisible;
-      const combinedY = textAnim.yOffset + (1 - textAnim.tVisible) * -20;
-      drawSceneText(currentScene, combinedOpacity, combinedY);
+    // Modulate opacity by tVisible
+    const combinedOpacity = textAnim.opacity * textAnim.tVisible;
+    const combinedY = textAnim.yOffset + (1 - textAnim.tVisible) * -20;
+    drawSceneText(currentScene, combinedOpacity, combinedY);
   }
 }
 
@@ -754,7 +761,7 @@ function layoutGrid() {
   labels = [];
   targetZoom = 1.0;
   defaultZoom = 1.0;
-  globalZoom = width < 520 ? 0.9 : 0.8; 
+  globalZoom = width < 520 ? 0.9 : 0.8;
   panX = 0;
   panY = 0;
   targetPanX = 0;
@@ -771,19 +778,19 @@ function layoutGrid() {
   circles.forEach((c, i) => {
     const angle = i * 2.399963; // Golden angle in radians
     const r = cScale * Math.sqrt(i);
-    
+
     c.tx = cx + r * Math.cos(angle);
     c.ty = cy + r * Math.sin(angle);
     c.tr = clamp(Math.round(5 * s), 3, 7);
-    
+
     // Colorful spiral gradient
     const hue = (200 + i * 0.5) % 360;
     c.color = hsla(hue, 80, 50, 1);
-    
+
     c.group = (langList[i]?.bahasa?.toString?.() ?? `Language ${i + 1}`);
     c.alpha = 0;
     c.tAlpha = 1;
-    c.delay = i * 0.8; 
+    c.delay = i * 0.8;
   });
 }
 
@@ -797,8 +804,114 @@ function layoutBarChart(data, labelKey) {
   targetPanX = 0;
   targetPanY = 0;
   focusNode = null;
-  
+
+  applyBarLayout(data, labelKey);
+}
+
+function layoutList() {
+  mode = 'list';
+  targetZoom = 1.0;
+  defaultZoom = 1.0;
+  labels = [];
+  panX = 0;
+  panY = 0;
+  targetPanX = 0;
+  targetPanY = 0;
+  focusNode = null;
+  barScrollable = false;
+
   const s = uiScale();
+  const isMobile = width < 520;
+  const margin = Math.max(24, width * 0.08);
+  const rowHeight = isMobile ? 38 * s : 28 * s;
+  const startY = isMobile 
+    ? (Math.max(200, height * 0.32) + rowHeight) 
+    : (Math.max(220, height * 0.35) + rowHeight);
+
+  const startX = isMobile ? (width / 2 - 120 * s) : (width / 2 - 280 * s);
+
+  const colDots = startX;
+  const colName = startX + 35 * s;
+  const colArea = isMobile ? (startX + 35 * s) : (width / 2 - 40 * s);
+  const colProv = isMobile ? (startX + 35 * s) : (width / 2 + 130 * s);
+
+  circles.forEach((c, i) => {
+    const item = langList[i];
+    if (!item) {
+      c.tAlpha = 0;
+      c.tr = 0;
+      return;
+    }
+
+    c.tx = colDots;
+    c.ty = startY + i * rowHeight;
+    c.tr = clamp(4 * s, 3, 5);
+    c.color = COLOR_MAIN_1;
+    c.tAlpha = 1;
+    c.delay = i * 0.3;
+    c.group = item.bahasa;
+
+    if (isMobile) {
+      // Name
+      labels.push({
+        x: colName,
+        y: c.ty - 6 * s,
+        text: ellipsize(item.bahasa, 40),
+        align: 'left',
+        font: `500 ${Math.round(13 * s)}px Outfit`,
+        fillStyle: COLOR_TEXT
+      });
+      // Prov & Area
+      labels.push({
+        x: colName,
+        y: c.ty + 8 * s,
+        text: ellipsize(`${item.provinsi}, ${item.wilayah}`, 60),
+        align: 'left',
+        font: `${Math.round(10 * s)}px Outfit`,
+        fillStyle: 'rgba(100, 116, 139, 0.8)'
+      });
+    } else {
+      // Name
+      labels.push({
+        x: colName,
+        y: c.ty,
+        text: ellipsize(item.bahasa, 32),
+        align: 'left',
+        font: `500 ${Math.round(12 * s)}px Outfit`,
+        vAlign: 'middle',
+        fillStyle: COLOR_TEXT
+      });
+      // Area
+      labels.push({
+        x: colArea,
+        y: c.ty,
+        text: ellipsize(item.wilayah, 24),
+        align: 'left',
+        font: `${Math.round(11 * s)}px Outfit`,
+        vAlign: 'middle',
+        fillStyle: 'rgba(71, 85, 105, 0.9)'
+      });
+      // Province
+      labels.push({
+        x: colProv,
+        y: c.ty,
+        text: ellipsize(item.provinsi, 36),
+        align: 'left',
+        font: `${Math.round(11 * s)}px Outfit`,
+        vAlign: 'middle',
+        fillStyle: 'rgba(100, 116, 139, 0.7)'
+      });
+    }
+  });
+
+  // Hide unused
+  for (let i = langList.length; i < circles.length; i++) {
+    circles[i].tAlpha = 0;
+    circles[i].tr = 0;
+  }
+}
+
+function applyBarLayout(data, labelKey) {
   const margin = clamp(Math.round(width * 0.06), 14, 60);
   const chartInnerWidth = width - margin * 2;
   const minBarWidth = clamp(Math.round((width < 520 ? 52 : 36) * s), 26, 64);
@@ -819,7 +932,7 @@ function layoutBarChart(data, labelKey) {
     : clamp(Math.round(104 * s) + extraBottom, 88, 240);
   const chartHeight = clamp(Math.round(height - bottomPad - topInset), 160, Math.round(height * 0.82));
   const startY = height - bottomPad; // Bottom of bars
-  
+
   const barWidth = virtualChartWidth / data.length;
   const barGap = clamp(Math.round(barWidth * 0.14), 2, 12);
   const effectiveBarWidth = barWidth - barGap;
@@ -843,7 +956,7 @@ function layoutBarChart(data, labelKey) {
     const centerX = margin + i * barWidth + effectiveBarWidth / 2;
     const groupLabel = item[labelKey];
     const candidates = (labelKey === 'wilayah' ? islandLangMap : provinceLangMap).get(groupLabel) ?? [];
-    
+
     const totalCount = item.jumlah_bahasa ?? count;
     const countY = startY + Math.round(12 * s);
     const labelY = startY + Math.round(30 * s);
@@ -870,19 +983,19 @@ function layoutBarChart(data, labelKey) {
     // Assign circles
     for (let j = 0; j < count; j++) {
       if (circleIndex >= circles.length) break;
-      
+
       const c = circles[circleIndex];
       const col = j % actualCols;
       const row = Math.floor(j / actualCols);
-      
-      c.tx = centerX - (actualCols * diameter)/2 + col * diameter + diameter/2;
-      c.ty = startY - row * diameter - diameter/2;
+
+      c.tx = centerX - (actualCols * diameter) / 2 + col * diameter + diameter / 2;
+      c.ty = startY - row * diameter - diameter / 2;
       c.tr = r;
       c.color = (i % 2 === 0) ? COLOR_MAIN_1 : COLOR_MAIN_2;
       c.group = candidates.length ? candidates[j % candidates.length] : `${groupLabel}`;
       c.delay = j * 0.2; // Ripple up effect? Or just 0
       c.tAlpha = 1;
-      
+
       circleIndex++;
     }
   });
@@ -1172,7 +1285,7 @@ function loop() {
   globalZoom += (targetZoom - globalZoom) * 0.05;
   if (mode === 'tree') treeFrame++;
   else treeFrame = 0;
-  
+
   // Center camera on focusNode if set (works for both Tree nodes and Circles now)
   if (focusNode) {
     targetPanX = -(focusNode.x - width / 2) * globalZoom;
@@ -1192,14 +1305,14 @@ function loop() {
   // Animate text
   textAnim.opacity += (1 - textAnim.opacity) * 0.08;
   textAnim.yOffset += (0 - textAnim.yOffset) * 0.08;
-  
+
   // Visibility Animation
   const targetVis = textAnim.visible ? 1 : 0;
   textAnim.tVisible += (targetVis - textAnim.tVisible) * 0.12;
 
   if (textAnim.prevOpacity > 0) {
-      textAnim.prevOpacity += (0 - textAnim.prevOpacity) * 0.15; // Fade out faster
-      textAnim.prevYOffset += (-20 - textAnim.prevYOffset) * 0.1; // Move up
+    textAnim.prevOpacity += (0 - textAnim.prevOpacity) * 0.15; // Fade out faster
+    textAnim.prevYOffset += (-20 - textAnim.prevYOffset) * 0.1; // Move up
   }
 
   // Reset Button Visibility
@@ -1216,11 +1329,11 @@ function loop() {
   ctx.save();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   ctx.scale(dpr, dpr);
-  
+
   // Apply zoom centered
-  ctx.translate(width/2 + panX, height/2 + panY);
+  ctx.translate(width / 2 + panX, height / 2 + panY);
   ctx.scale(globalZoom, globalZoom);
-  ctx.translate(-width/2, -height/2);
+  ctx.translate(-width / 2, -height / 2);
 
   if (mode === 'tree') {
     for (const n of treeNodes) n.update();
@@ -1272,17 +1385,22 @@ function loop() {
     ctx.font = `${Math.round(12 * uiScale())}px Outfit`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    
+
     labels.forEach(l => {
+      // Simple culling
+      const sy = (l.y - height / 2) * globalZoom + height / 2 + panY;
+      if (sy < -60 || sy > height + 60) return;
+
       ctx.save();
       ctx.translate(l.x, l.y);
       ctx.font = l.font ?? ctx.font;
       ctx.fillStyle = l.fillStyle ?? ctx.fillStyle;
+      ctx.textBaseline = l.vAlign ?? 'top';
       if (l.rotation) {
         ctx.rotate(l.rotation * Math.PI / 180);
         ctx.textAlign = 'right';
       } else {
-        ctx.textAlign = 'center';
+        ctx.textAlign = l.align ?? 'center';
       }
       ctx.fillText(l.text, 0, 0);
       ctx.restore();
@@ -1383,13 +1501,13 @@ canvas.addEventListener('pointerdown', (e) => {
     nextPointerId = e.pointerId;
     return;
   }
-  
+
   // Check if clicked on text box
   if (textAnim.visible && textHitBox && e.clientX >= textHitBox.x1 && e.clientX <= textHitBox.x2 && e.clientY >= textHitBox.y1 && e.clientY <= textHitBox.y2) {
-     textPointerId = e.pointerId;
-     return;
+    textPointerId = e.pointerId;
+    return;
   }
-  
+
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture?.(e.pointerId);
 
@@ -1464,22 +1582,28 @@ canvas.addEventListener('pointermove', (e) => {
   pinchStartDist = null;
   pinchStartZoom = null;
 
-  if ((mode === 'tree' || mode === 'grid') && isDragging) {
+  if ((mode === 'tree' || mode === 'grid' || mode === 'list') && isDragging) {
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
-    
+
     // Direct manipulation of panX/panY
-    panX = dragStartPanX + dx;
-    panY = dragStartPanY + dy;
-    
+    if (mode === 'list') {
+      // Primarily vertical scrolling for list
+      panX = dragStartPanX + dx * 0.2; // Small horizontal drift is okay
+      panY = dragStartPanY + dy;
+    } else {
+      panX = dragStartPanX + dx;
+      panY = dragStartPanY + dy;
+    }
+
     // IMPORTANT: Sync targetPanX to current panX so that when we release, 
     // it doesn't try to tween back to an old target or focus point.
     targetPanX = panX;
     targetPanY = panY;
-    
+
     // Explicitly clear focusNode to stop the loop() from overriding our pan
-    focusNode = null; 
+    focusNode = null;
   }
 
   if (mode === 'bar' && isDragging) {
@@ -1488,8 +1612,8 @@ canvas.addEventListener('pointermove', (e) => {
     if (!dragMoved && (dx * dx + dy * dy) > 16) dragMoved = true;
     // Allow X panning
     panX = dragStartPanX + dx;
-    panY = dragStartPanY + dy; 
-    
+    panY = dragStartPanY + dy;
+
     targetPanX = panX;
     targetPanY = panY;
     focusNode = null;
@@ -1506,15 +1630,15 @@ function endPointerInteraction(e) {
     nextPointerId = null;
     return;
   }
-  
+
   if (textPointerId === e.pointerId) {
-     if (textAnim.visible && textHitBox && e.clientX >= textHitBox.x1 && e.clientX <= textHitBox.x2 && e.clientY >= textHitBox.y1 && e.clientY <= textHitBox.y2) {
-         textAnim.visible = false;
-     }
-     textPointerId = null;
-     return;
+    if (textAnim.visible && textHitBox && e.clientX >= textHitBox.x1 && e.clientX <= textHitBox.x2 && e.clientY >= textHitBox.y1 && e.clientY <= textHitBox.y2) {
+      textAnim.visible = false;
+    }
+    textPointerId = null;
+    return;
   }
-  
+
   pointers.delete(e.pointerId);
   if (pointers.size < 2) {
     pinchStartDist = null;
@@ -1527,8 +1651,8 @@ function endPointerInteraction(e) {
     if (!suppressClick) focusHoveredNode();
     return;
   }
-  
-  if (mode === 'grid' || mode === 'bar') {
+
+  if (mode === 'grid' || mode === 'bar' || mode === 'list') {
     isDragging = false;
     suppressClick = dragMoved;
     dragMoved = false;
@@ -1560,8 +1684,21 @@ canvas.addEventListener('pointerup', endPointerInteraction);
 canvas.addEventListener('pointercancel', endPointerInteraction);
 
 window.addEventListener('wheel', (e) => {
-  // Allow zooming in all modes
   e.preventDefault();
+  if (mode === 'list') {
+    targetPanY -= e.deltaY;
+    // Simple boundary clamping
+    const isMobile = width < 520;
+    const s = uiScale();
+    const rowHeight = isMobile ? 38 * s : 28 * s;
+    const startY = isMobile 
+      ? (Math.max(200, height * 0.32) + rowHeight) 
+      : (Math.max(220, height * 0.35) + rowHeight);
+    const limit = -(langList.length * rowHeight - (height - startY) + 100);
+    targetPanY = clamp(targetPanY, limit, 50);
+    return;
+  }
+  // Allow zooming in other modes
   const factor = Math.exp((-e.deltaY) * 0.0015);
   targetZoom = clamp(targetZoom * factor, ZOOM_MIN, ZOOM_MAX);
   focusNode = null;
@@ -1587,9 +1724,9 @@ if (infoBtn && infoModal) {
   infoBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!textAnim.visible) {
-       textAnim.visible = true;
+      textAnim.visible = true;
     } else {
-       infoModal.classList.add('open');
+      infoModal.classList.add('open');
     }
   });
 }

@@ -1,67 +1,47 @@
+
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, '..');
-
-const htmlPath = path.join(projectRoot, 'languages', 'index.html');
-const jsPath = path.join(projectRoot, 'src', 'languages_animation.js');
-const jsonPath = path.join(projectRoot, 'public', 'languages', 'lang_list.json');
-const outputPath = path.join(projectRoot, 'languages', 'bundled.html');
+const baseDir = '/Users/alharkan/Documents/Repositories/Archive/design-animation';
+const htmlPath = path.join(baseDir, 'languages/index.html');
+const jsPath = path.join(baseDir, 'src/languages_animation.js');
+const dataPath = path.join(baseDir, 'public/languages/lang_list.json');
+const outputPath = path.join(baseDir, 'languages/standalone.html');
 
 console.log('Reading files...');
-try {
-    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
-    let jsContent = fs.readFileSync(jsPath, 'utf8');
-    const jsonContent = fs.readFileSync(jsonPath, 'utf8');
+let html = fs.readFileSync(htmlPath, 'utf8');
+let js = fs.readFileSync(jsPath, 'utf8');
+const data = fs.readFileSync(dataPath, 'utf8');
 
-    console.log('Processing JS content...');
-    
-    // 1. Inject the JSON data
-    // Use a unique variable name to avoid conflicts
-    const inlinedDataConst = `const INLINED_DATA = ${jsonContent};\n\n`;
-    
-    // Prepend data to JS content
-    jsContent = inlinedDataConst + jsContent;
+console.log('Inserting data into JS...');
+// Replace the fetch call with the actual data
+const fetchPattern = /const resList = await fetch\(['"]\/languages\/lang_list\.json['"]\);[\s\S]*?const list = await resList\.json\(\);/;
+const replacement = `const list = ${data};`;
 
-    // 2. Replace the fetch calls
-    // We look for the specific pattern used in src/languages_animation.js
-    // const resList = await fetch('/languages/lang_list.json');
-    // const list = await resList.json();
-
-    const fetchPattern = /const resList = await fetch\(['"][^'"]+['"]\);/g;
-    const jsonPattern = /const list = await resList\.json\(\);/g;
-
-    if (!fetchPattern.test(jsContent) || !jsonPattern.test(jsContent)) {
-        console.warn('Warning: Fetch pattern not found in JS. Data might not be replaced correctly.');
-    }
-
-    jsContent = jsContent.replace(fetchPattern, '// Data inlined: fetch removed');
-    jsContent = jsContent.replace(jsonPattern, 'const list = INLINED_DATA;');
-
-    console.log('Processing HTML content...');
-    // 3. Replace external script with inline script
-    // <script type="module" src="/src/languages_animation.js"></script>
-    // We use a regex that handles potential whitespace variations
-    const scriptTagRegex = /<script\s+type="module"\s+src="\/src\/languages_animation\.js"\s*><\/script>/;
-    
-    // Create the inline script tag
-    // Note: We keep type="module" to support top-level await if used, and strict mode
-    const inlineScript = `<script type="module">\n${jsContent}\n</script>`;
-
-    const newHtmlContent = htmlContent.replace(scriptTagRegex, () => inlineScript);
-
-    if (newHtmlContent === htmlContent) {
-        console.error('Error: Could not find the script tag to replace in HTML.');
-        process.exit(1);
-    }
-
-    console.log(`Writing output to ${outputPath}...`);
-    fs.writeFileSync(outputPath, newHtmlContent);
-    console.log('Done! Bundled file created successfully.');
-
-} catch (err) {
-    console.error('An error occurred:', err);
-    process.exit(1);
+if (fetchPattern.test(js)) {
+  js = js.replace(fetchPattern, replacement);
+  console.log('Successfully injected data into JS.');
+} else {
+  console.warn('Could not find the fetch pattern in JS. Manual replacement might be needed.');
 }
+
+console.log('Inlining JS into HTML...');
+// Replace the script tag
+const scriptTagPattern = /<script type="module" src="\/src\/languages_animation\.js"><\/script>/;
+const inlinedScript = `<script type="module">
+${js}
+</script>`;
+
+if (scriptTagPattern.test(html)) {
+  html = html.replace(scriptTagPattern, inlinedScript);
+  console.log('Successfully inlined JS into HTML.');
+} else {
+  console.warn('Could not find the script tag in HTML. Manual replacement might be needed.');
+}
+
+// Optional: Inline the favicon if you want it TRULY standalone, but skipping for simplicity unless requested.
+// html = html.replace('<link rel="icon" type="image/svg+xml" href="/vite.svg" />', '');
+
+console.log(`Writing output to ${outputPath}...`);
+fs.writeFileSync(outputPath, html);
+console.log('Done!');

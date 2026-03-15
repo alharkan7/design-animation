@@ -655,16 +655,16 @@ function drawSceneText(scene, opacity, yOffset) {
   // But for now let's draw it with alpha.
 
   const fadeH = (captionY - yOffset) + (lines.length + 1) * lineH + 60;
-  // Use fixed height for gradient based on layout, ignore offset for the gradient box?
-  // Or move gradient with text?
-  // Let's move gradient with text.
-
-  const grad = ctx.createLinearGradient(0, yOffset, 0, fadeH + yOffset);
-  grad.addColorStop(0, `rgba(248, 250, 252, ${0.98 * opacity})`);
-  grad.addColorStop(0.7, `rgba(248, 250, 252, ${0.9 * opacity})`);
-  grad.addColorStop(1, `rgba(248, 250, 252, 0)`);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, fadeH + Math.abs(yOffset) + 100); // Fill large enough area
+  
+  // Only draw the background gradient for the CURRENT active scene to avoid double-darkening
+  if (scene === scenes[sceneIndex]) {
+    const grad = ctx.createLinearGradient(0, yOffset, 0, fadeH + yOffset);
+    grad.addColorStop(0, `rgba(248, 250, 252, ${0.98 * opacity})`);
+    grad.addColorStop(0.7, `rgba(248, 250, 252, ${0.9 * opacity})`);
+    grad.addColorStop(1, `rgba(248, 250, 252, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, fadeH + Math.abs(yOffset) + 100); 
+  }
 
   // Text Rendering
   ctx.textBaseline = 'top';
@@ -804,6 +804,8 @@ function layoutBarChart(data, labelKey) {
   targetPanX = 0;
   targetPanY = 0;
   focusNode = null;
+  
+  for (const c of circles) c.delay = 0;
 
   applyBarLayout(data, labelKey);
 }
@@ -847,8 +849,9 @@ function layoutList() {
     c.ty = startY + i * rowHeight;
     c.tr = clamp(4 * s, 3, 5);
     c.color = COLOR_MAIN_1;
+    c.alpha = 0; // Force fade in
     c.tAlpha = 1;
-    c.delay = i * 0.3;
+    c.delay = i * 0.02; 
     c.group = item.bahasa;
 
     if (isMobile) {
@@ -912,6 +915,7 @@ function layoutList() {
 }
 
 function applyBarLayout(data, labelKey) {
+  const s = uiScale();
   const margin = clamp(Math.round(width * 0.06), 14, 60);
   const chartInnerWidth = width - margin * 2;
   const minBarWidth = clamp(Math.round((width < 520 ? 52 : 36) * s), 26, 64);
@@ -1078,6 +1082,12 @@ function layoutTree() {
   for (const c of circles) {
     c.tAlpha = 0;
     c.tr = 0;
+    c.delay = 0;
+    c.alpha = 0;
+    c.r = 0;
+    // Move to center so if they ever fly to a new scene, they come from center
+    c.x = width / 2;
+    c.y = height / 2;
   }
 
   treeNodes.length = 0;
@@ -1335,6 +1345,9 @@ function loop() {
   ctx.scale(globalZoom, globalZoom);
   ctx.translate(-width / 2, -height / 2);
 
+  // Always update ALL circles regardless of mode so their alpha/pos stay current
+  circles.forEach(c => c.update());
+
   if (mode === 'tree') {
     for (const n of treeNodes) n.update();
 
@@ -1374,11 +1387,8 @@ function loop() {
     drawStoryOverlayScreenSpace();
     ctx.restore();
   } else {
-    // Draw Circles
-    circles.forEach(c => {
-      c.update();
-      c.draw();
-    });
+    // Draw Circles - mode is not 'tree'
+    circles.forEach(c => c.draw());
 
     // Draw Labels
     ctx.fillStyle = COLOR_TEXT;

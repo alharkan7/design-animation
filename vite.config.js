@@ -1,5 +1,5 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Modality } from '@google/genai';
 import { Readable } from 'node:stream';
 import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
@@ -211,6 +211,226 @@ function slidesGeneratorPlugin() {
   };
 }
 
+function infographicGeneratorPlugin() {
+  let ai = null;
+  let modelMethodsCache = null;
+
+  const IMAGE_MODELS = new Set([
+    'gemini-2.5-flash-image',
+    'gemini-3-pro-image-preview',
+    'gemini-3.1-flash-image-preview',
+  ]);
+
+  const PROMPT_EXTRACT_MODEL = 'gemini-flash-latest';
+
+  function normalizeModelName(name) {
+    if (typeof name !== 'string') return '';
+    return name.startsWith('models/') ? name.slice('models/'.length) : name;
+  }
+
+  function sanitizePrompt(text) {
+    if (!text || typeof text !== 'string') return '';
+    let cleaned = text.trim();
+    const fencedMatch = cleaned.match(/```(?:text|markdown)?\n?([\s\S]+?)```/i);
+    if (fencedMatch) cleaned = fencedMatch[1].trim();
+    return cleaned.replace(/^["']|["']$/g, '').trim();
+  }
+
+  function getErrorMessage(err) {
+    if (!err) return 'Unknown error';
+    if (typeof err === 'string') return err;
+    if (typeof err.message === 'string' && err.message.trim()) return err.message;
+    if (typeof err.error?.message === 'string' && err.error.message.trim()) return err.error.message;
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unknown error';
+    }
+  }
+
+  async function getModelSupportedMethods(model) {
+    if (!modelMethodsCache) {
+      modelMethodsCache = new Map();
+      const pager = await ai.models.list();
+      for await (const m of pager) {
+        const fullName = m.name || '';
+        const shortName = normalizeModelName(fullName);
+        const methods = Array.isArray(m.supportedActions)
+          ? m.supportedActions
+          : (Array.isArray(m.supportedGenerationMethods) ? m.supportedGenerationMethods : []);
+        const methodSet = new Set(methods);
+        if (fullName) modelMethodsCache.set(fullName, methodSet);
+        if (shortName) modelMethodsCache.set(shortName, methodSet);
+      }
+    }
+    return modelMethodsCache.get(model) || modelMethodsCache.get(normalizeModelName(model)) || null;
+  }
+
+  function extractGeneratedImage(contentResponse) {
+    const candidates = Array.isArray(contentResponse?.candidates) ? contentResponse.candidates : [];
+    for (const candidate of candidates) {
+      const parts = candidate?.content?.parts || [];
+      for (const part of parts) {
+        if (part?.inlineData?.data) {
+          return {
+            imageData: part.inlineData.data,
+            mimeType: part.inlineData.mimeType || 'image/png',
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  async function handler(req, res) {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Missing GEMINI_API_KEY in environment' }));
+      return;
+    }
+
+    if (!ai) ai = new GoogleGenAI({ apiKey });
+
+    try {
+      const body = await readJsonBody(req, 60_000_000);
+      const model = typeof body.model === 'string' ? body.model.trim() : '';
+      const manualPrompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
+      const fileData = typeof body.fileData === 'string' ? body.fileData : '';
+      const fileType = typeof body.fileType === 'string' ? body.fileType : 'application/octet-stream';
+      const fileName = typeof body.fileName === 'string' ? body.fileName : 'uploaded-document';
+
+      if (!IMAGE_MODELS.has(model)) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Invalid image model selected' }));
+        return;
+      }
+
+      if (!manualPrompt && !fileData) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Provide either a prompt or a document file' }));
+        return;
+      }
+
+      let generationPrompt = manualPrompt;
+      let generatedFromDocument = false;
+
+      if (fileData) {
+        const extraction = await ai.models.generateContent({
+          model: PROMPT_EXTRACT_MODEL,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: [
+                    'Convert this document into one detailed infographic image prompt.',
+                    'Goal: extract key facts, structure, and narrative from the document.',
+                    'Output only the final prompt text, no markdown and no explanation.',
+                    'The prompt should be clear for an image generation model to create a readable infographic with titles, sections, labels, charts/icons, and concise text snippets.',
+                    manualPrompt ? `Additional user direction: ${manualPrompt}` : '',
+                    `Document file name: ${fileName}`,
+                  ].filter(Boolean).join('\n'),
+                },
+                { inlineData: { mimeType: fileType, data: fileData } },
+              ],
+            },
+          ],
+          config: {
+            responseMimeType: 'text/plain',
+          },
+        });
+
+        generationPrompt = sanitizePrompt(extraction.text);
+        generatedFromDocument = true;
+
+        if (!generationPrompt) {
+          throw new Error('Gemini could not extract an infographic prompt from the document');
+        }
+      }
+
+      const supportedMethods = await getModelSupportedMethods(model);
+      let imageData = '';
+      let mimeType = 'image/png';
+
+      if (supportedMethods?.has('generateContent')) {
+        const contentResponse = await ai.models.generateContent({
+          model,
+          contents: generationPrompt,
+          config: {
+            responseModalities: [Modality.IMAGE, Modality.TEXT],
+          },
+        });
+
+        const extracted = extractGeneratedImage(contentResponse);
+        if (!extracted?.imageData) {
+          throw new Error('Model returned no image output. Try a more explicit visual prompt.');
+        }
+        imageData = extracted.imageData;
+        mimeType = extracted.mimeType;
+      } else if (supportedMethods?.has('predict')) {
+        const imageResponse = await ai.models.generateImages({
+          model,
+          prompt: generationPrompt,
+          config: {
+            numberOfImages: 1,
+          },
+        });
+
+        const firstImage = imageResponse.generatedImages?.[0];
+        const imageBytes = firstImage?.image?.imageBytes;
+        const returnedMimeType = firstImage?.image?.mimeType || 'image/png';
+        if (!imageBytes) {
+          const reason = firstImage?.raiFilteredReason ? `: ${firstImage.raiFilteredReason}` : '';
+          throw new Error(`Image generation returned no image${reason}`);
+        }
+        imageData = imageBytes;
+        mimeType = returnedMimeType;
+      } else {
+        throw new Error(`Model "${model}" does not support image generation in this API key/project.`);
+      }
+
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({
+        imageData,
+        mimeType,
+        promptUsed: generationPrompt,
+        generatedFromDocument,
+      }));
+    } catch (err) {
+      console.error('Infographic generation error:', err);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: getErrorMessage(err) || 'Failed to generate infographic' }));
+    }
+  }
+
+  return {
+    name: 'infographic-generator-api',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-infographic', (req, res) => {
+        handler(req, res);
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use('/api/generate-infographic', (req, res) => {
+        handler(req, res);
+      });
+    },
+  };
+}
+
 // Export plugin for PDF and PPTX generation
 function slidesExportPlugin() {
   let browser = null;
@@ -372,7 +592,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), slidesExportPlugin()],
+    plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), infographicGeneratorPlugin(), slidesExportPlugin()],
     build: {
       rollupOptions: {
         input: {
@@ -382,6 +602,7 @@ export default defineConfig(({ mode }) => {
           tts: resolve(__dirname, 'tts/index.html'),
           'apbn-pendidikan': resolve(__dirname, 'apbn-pendidikan/index.html'),
           'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
+          'infographic-generator': resolve(__dirname, 'infographic-generator/index.html'),
         },
       },
     },

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text to Infographic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-gradient: linear-gradient(145deg, #0b1220 0%, #16233d 45%, #1d3056 100%);
+      --card-bg: rgba(255, 255, 255, 0.06);
+      --card-border: rgba(255, 255, 255, 0.14);
+      --text-primary: #f8fafc;
+      --text-secondary: #b8c5d9;
+      --accent-color: #56e0d7;
+      --danger-color: #fb7185;
+      --input-bg: rgba(11, 18, 32, 0.55);
+      --input-border: rgba(255, 255, 255, 0.14);
+      --font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: var(--font-family);
+      color: var(--text-primary);
+      background: var(--bg-gradient);
+      padding: 2rem 1rem 3rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(90deg, #ffffff, #8df4e8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.6);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 800px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    label {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    textarea,
+    select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      margin-bottom: 1rem;
+    }
+
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(86, 224, 215, 0.12);
+    }
+
+    .drop-zone {
+      margin-top: 0.35rem;
+      border: 2px dashed var(--input-border);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      text-align: center;
+      padding: 1.2rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent-color);
+      color: var(--text-primary);
+      background: rgba(86, 224, 215, 0.08);
+    }
+
+    .file-info {
+      margin-top: 0.6rem;
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(86, 224, 215, 0.3);
+      background: rgba(86, 224, 215, 0.08);
+      color: var(--text-primary);
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.92rem;
+    }
+
+    .file-info.visible {
+      display: flex;
+    }
+
+    .file-info button {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 0.2rem;
+    }
+
+    .file-info button:hover {
+      color: var(--danger-color);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      font-family: inherit;
+      font-size: 0.98rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+      transform: none;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: linear-gradient(90deg, #56e0d7, #43c3f6);
+      color: #0b1220;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border: 1px solid var(--input-border);
+    }
+
+    .btn:not(:disabled):hover {
+      transform: translateY(-1px);
+    }
+
+    .status,
+    .error {
+      margin-top: 1rem;
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      display: none;
+      font-size: 0.95rem;
+    }
+
+    .status.visible {
+      display: block;
+      border: 1px solid rgba(86, 224, 215, 0.4);
+      background: rgba(86, 224, 215, 0.12);
+      color: #d8fff9;
+    }
+
+    .error.visible {
+      display: block;
+      border: 1px solid rgba(251, 113, 133, 0.4);
+      background: rgba(251, 113, 133, 0.12);
+      color: #ffd6dd;
+    }
+
+    .result {
+      margin-top: 1.4rem;
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .result img {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 20px 35px -20px rgba(0, 0, 0, 0.8);
+      cursor: zoom-in;
+    }
+
+    .result-tools {
+      margin-top: 0.8rem;
+      display: flex;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    .prompt-box {
+      margin-top: 0.8rem;
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--input-border);
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .prompt-box.visible {
+      display: block;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-content {
+      width: min(1100px, 96vw);
+      height: min(88vh, 900px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(11, 18, 32, 0.85);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-toolbar {
+      padding: 0.65rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-toolbar .group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .modal-toolbar button {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      border-radius: 9px;
+      padding: 0.45rem 0.7rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .modal-toolbar button:hover {
+      border-color: var(--accent-color);
+    }
+
+    .zoom-label {
+      min-width: 52px;
+      color: var(--text-secondary);
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    .modal-stage {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      touch-action: none;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(86, 224, 215, 0.14), transparent 35%),
+        radial-gradient(circle at 80% 75%, rgba(67, 195, 246, 0.16), transparent 40%),
+        rgba(7, 11, 22, 0.95);
+    }
+
+    .modal-stage img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
+      max-width: none;
+      max-height: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      cursor: grab;
+    }
+
+    .modal-stage img.dragging {
+      cursor: grabbing;
+    }
+
+    #fileInput {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Text to Infographic</h1>
+    <p class="subtitle">Type a prompt or drop a document, then generate an infographic image with Gemini.</p>
+
+    <section class="card">
+      <div class="grid">
+        <div class="control">
+          <label for="modelSelect">Image model</label>
+          <select id="modelSelect">
+            <option value="gemini-2.5-flash-image">gemini-2.5-flash-image</option>
+            <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
+            <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="dropZone">Document upload (optional)</label>
+          <div id="dropZone" class="drop-zone">
+            Drop a document here or click to upload
+          </div>
+          <input id="fileInput" type="file" accept=".txt,.md,.markdown,.pdf,.doc,.docx,.rtf,.csv,.json,.xml,.html,.htm">
+          <div id="fileInfo" class="file-info">
+            <span id="fileName"></span>
+            <button id="clearFileBtn" type="button" aria-label="Remove file">×</button>
+          </div>
+        </div>
+      </div>
+
+      <label for="promptInput">Prompt (used directly if no document is uploaded)</label>
+      <textarea id="promptInput" placeholder="Example: Create a modern infographic about electric vehicle adoption in Southeast Asia, include timeline, key stats, and visual icons..."></textarea>
+
+      <div class="actions">
+        <button id="generateBtn" class="btn btn-primary" type="button">Generate Infographic</button>
+        <button id="resetBtn" class="btn btn-secondary" type="button">Reset</button>
+      </div>
+
+      <div id="statusBox" class="status"></div>
+      <div id="errorBox" class="error"></div>
+
+      <section id="resultSection" class="result">
+        <img id="resultImage" alt="Generated infographic preview">
+        <div class="result-tools">
+          <button id="previewBtn" class="btn btn-secondary" type="button">Open Preview Modal</button>
+          <a id="downloadLink" class="btn btn-secondary" download="infographic.png">Download Image</a>
+        </div>
+        <div id="promptUsedBox" class="prompt-box"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="previewModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-toolbar">
+        <div class="group">
+          <button id="zoomOutBtn" type="button">-</button>
+          <span id="zoomLabel" class="zoom-label">100%</span>
+          <button id="zoomInBtn" type="button">+</button>
+          <button id="resetViewBtn" type="button">Reset View</button>
+        </div>
+        <div class="group">
+          <button id="closeModalBtn" type="button">Close</button>
+        </div>
+      </div>
+      <div id="modalStage" class="modal-stage">
+        <img id="modalImage" alt="Infographic preview zoomed">
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/infographic-generator.js"></script>
+</body>
+</html>

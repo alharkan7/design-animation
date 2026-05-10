@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Bibliography Formatter</title>
+  <style>
+    :root {
+      --bg: radial-gradient(circle at 12% 18%, #273043 0%, #0f1720 45%, #080d12 100%);
+      --panel: rgba(10, 16, 24, 0.78);
+      --panel-border: rgba(255, 255, 255, 0.15);
+      --text-primary: #f4f6f8;
+      --text-muted: #b9c5d1;
+      --accent: #66c2ff;
+      --paper: #fdfcf7;
+      --ink: #1a1a1a;
+      --paper-border: #d8d2c1;
+      --success: #8be28b;
+      --font-ui: 'Source Sans 3', sans-serif;
+      --font-paper: 'Libre Baskerville', serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      padding: 1.5rem;
+    }
+
+    .layout {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .panel {
+      position: sticky;
+      top: 1.5rem;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 1.25rem;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0.35rem 0 0.6rem;
+      font-size: 1.7rem;
+      line-height: 1.2;
+    }
+
+    .lead {
+      margin: 0 0 1.2rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .control label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    select,
+    input[type="file"],
+    button {
+      font: inherit;
+    }
+
+    select {
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      padding: 0.7rem 0.8rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-top: 1.1rem;
+    }
+
+    button,
+    .file-button {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.2s ease, border-color 0.2s ease;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    button:hover,
+    .file-button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #06263b;
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-primary);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    #csvFileInput {
+      display: none;
+    }
+
+    .meta {
+      margin-top: 0.95rem;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .meta strong {
+      color: var(--text-primary);
+    }
+
+    .status {
+      margin-top: 0.7rem;
+      font-size: 0.88rem;
+      min-height: 1.1rem;
+      color: var(--success);
+    }
+
+    .paper-wrap {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 1.2rem;
+      min-height: calc(100vh - 3rem);
+    }
+
+    .paper {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--paper-border);
+      border-radius: 4px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+      padding: 2.6rem;
+      font-family: var(--font-paper);
+      line-height: 1.55;
+    }
+
+    .paper h2 {
+      text-align: center;
+      font-size: 1.25rem;
+      margin: 0 0 1.45rem;
+      letter-spacing: 0.02em;
+    }
+
+    .entries {
+      margin: 0;
+      padding: 0;
+    }
+
+    .entry {
+      position: relative;
+      list-style: none;
+      margin: 0 0 0.95rem;
+      padding: 0.05rem 3.2rem 0 1.9rem;
+      text-indent: -1.9rem;
+      font-size: 0.98rem;
+    }
+
+    .entry.vancouver {
+      padding-left: 0;
+      text-indent: 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.1rem;
+      right: 0;
+      opacity: 0;
+      border: 1px solid #9ba4af;
+      background: #fff;
+      color: #25323f;
+      border-radius: 8px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.16s ease;
+    }
+
+    .entry:hover .copy-btn,
+    .entry:focus-within .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn.copied {
+      border-color: #1f8f3e;
+      color: #1f8f3e;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        position: static;
+      }
+
+      .paper-wrap {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 1rem;
+      }
+
+      .paper {
+        padding: 1.6rem 1.2rem;
+      }
+
+      .entry {
+        padding-right: 2.9rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <aside class="panel">
+      <p class="eyebrow">Reference Tools</p>
+      <h1>Bibliography Formatter</h1>
+      <p class="lead">
+        Render your reference database as a thesis-ready bibliography, then switch style instantly (APA, Chicago, MLA, Vancouver, and IEEE).
+      </p>
+
+      <div class="control">
+        <label for="citationStyle">Citation style</label>
+        <select id="citationStyle">
+          <option value="apa">APA (7th)</option>
+          <option value="chicago">Chicago (Author-Date)</option>
+          <option value="mla">MLA (9th)</option>
+          <option value="vancouver">Vancouver</option>
+          <option value="ieee">IEEE</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label>Dataset source</label>
+        <label for="csvFileInput" class="file-button secondary">Use another CSV</label>
+        <input id="csvFileInput" type="file" accept=".csv,text/csv" />
+      </div>
+
+      <div class="button-row">
+        <button id="downloadTextBtn" class="primary">Download Bibliography (.txt)</button>
+        <button id="downloadBibtexBtn" class="secondary">Download BibTeX (.bib)</button>
+      </div>
+
+      <p class="meta">
+        Loaded records: <strong id="recordCount">0</strong><br />
+        Source: <strong id="sourceLabel">default dataset</strong>
+      </p>
+      <p id="statusMessage" class="status"></p>
+    </aside>
+
+    <main class="paper-wrap">
+      <article class="paper">
+        <h2>Bibliography</h2>
+        <ol id="bibliographyEntries" class="entries"></ol>
+      </article>
+    </main>
+  </div>
+
+  <script type="module" src="/src/citation-generator.js"></script>
+</body>
+
+</html>

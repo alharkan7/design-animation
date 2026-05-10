@@ -603,6 +603,7 @@ export default defineConfig(({ mode }) => {
           'apbn-pendidikan': resolve(__dirname, 'apbn-pendidikan/index.html'),
           'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
           'infographic-generator': resolve(__dirname, 'infographic-generator/index.html'),
+          'citation-generator': resolve(__dirname, 'citation-generator/index.html'),
         },
       },
     },

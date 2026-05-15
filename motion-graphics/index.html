@@ -333,18 +333,20 @@
       background: #000;
       border: 1px solid var(--card-border);
       border-radius: 0 0 12px 12px;
-      overflow: hidden;
+      overflow: auto;
+      max-height: 80vh;
     }
 
     .preview-frame {
       width: 100%;
-      aspect-ratio: 16 / 9;
+      min-height: 500px;
       border: none;
       display: block;
     }
 
     .preview-frame.portrait {
-      aspect-ratio: 9 / 16;
+      max-width: 400px;
+      margin: 0 auto;
     }
 
     .code-view {
@@ -389,14 +391,15 @@
       inset: 0;
       z-index: 9999;
       border-radius: 0;
+      overflow: auto;
+      max-height: none;
     }
 
     .preview-container:fullscreen .preview-frame,
     .preview-container:-webkit-full-screen .preview-frame,
     .preview-container.fullscreen .preview-frame {
-      flex: 1;
       width: 100% !important;
-      height: 100% !important;
+      min-height: 100vh !important;
       aspect-ratio: unset !important;
     }
 

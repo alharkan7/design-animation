@@ -439,7 +439,9 @@ class MotionGraphicsApp {
   }
 
   showPreview() {
-    const blob = new Blob([this.generatedHtml], { type: 'text/html' });
+    // Inject overflow handling to ensure content is scrollable
+    const scrollableHtml = this.injectScrollStyles(this.generatedHtml);
+    const blob = new Blob([scrollableHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
     this.previewFrame.src = url;
@@ -458,6 +460,34 @@ class MotionGraphicsApp {
     // Save to database if it's a new generation (not loading from history)
     if (!this.currentGraphicId) {
       this.saveToDatabase();
+    }
+  }
+
+  injectScrollStyles(html) {
+    // Inject a style tag to ensure the document is scrollable
+    const scrollStyle = `
+      <style data-injected="scroll-fix">
+        html, body {
+          overflow: auto !important;
+          max-height: none !important;
+          height: auto !important;
+          min-height: 100vh !important;
+        }
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+      </style>
+    `;
+
+    // Insert after opening <head> tag, or after <html> if no head
+    if (html.includes('<head>')) {
+      return html.replace('<head>', '<head>' + scrollStyle);
+    } else if (html.includes('<html>')) {
+      return html.replace('<html>', '<html><head>' + scrollStyle + '</head>');
+    } else {
+      // No head or html tags, prepend to document
+      return scrollStyle + html;
     }
   }
 
@@ -717,11 +747,20 @@ class MotionGraphicsApp {
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="spin">
-        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="8 4"/>
-      </svg>
+      <i data-lucide="loader" class="spin" style="display: inline-flex; align-items: center; justify-content: center;"></i>
       Exporting...
     `;
+    createIcons({
+      icons,
+      nameAttr: 'data-lucide',
+      attrs: {
+        width: 16,
+        height: 16,
+        strokeWidth: 2,
+        stroke: 'currentColor',
+        fill: 'none',
+      }
+    });
 
     // Add spin animation
     if (!document.getElementById('spin-style')) {

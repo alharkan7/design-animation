@@ -1846,3 +1846,6 @@ if (infoModal) {
 }
 
 loadData();
+
+// Initialize lucide icons
+lucide.createIcons();

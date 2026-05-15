@@ -7,6 +7,7 @@ import puppeteer from 'puppeteer';
 import PptxGenJS from 'pptxgenjs';
 import { STYLE_PRESETS, SLIDES_SYSTEM_INSTRUCTION, buildPrompt, sanitizeGeneratedHtml, validateGeneratedHtml } from './lib/slides-config.js';
 import { generatePptxBuffer } from './lib/pptx-export.js';
+import { SYSTEM_INSTRUCTION as MG_SYSTEM_INSTRUCTION, buildPrompt as buildMGPrompt, sanitizeHtml as sanitizeMGHtml, validateHtml as validateMGHtml, CSS_PRESETS } from './lib/motion-graphics-config.js';
 
 function readJsonBody(req, limitBytes = 100_000) {
   return new Promise((resolve, reject) => {
@@ -159,12 +160,14 @@ function slidesGeneratorPlugin() {
       const prompt = buildPrompt(stylePreset, additionalPrompt);
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-flash-latest',
         contents: [
-          { role: 'user', parts: [
-            { text: prompt },
-            { inlineData: { mimeType: fileType, data: fileData } }
-          ]}
+          {
+            role: 'user', parts: [
+              { text: prompt },
+              { inlineData: { mimeType: fileType, data: fileData } }
+            ]
+          }
         ],
         config: {
           systemInstruction: SLIDES_SYSTEM_INSTRUCTION,
@@ -585,6 +588,321 @@ function slidesExportPlugin() {
   };
 }
 
+function motionGraphicsGeneratorPlugin() {
+  let ai = null;
+
+  async function handler(req, res) {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Missing GEMINI_API_KEY in environment' }));
+      return;
+    }
+
+    if (!ai) ai = new GoogleGenAI({ apiKey });
+
+    try {
+      const body = await readJsonBody(req, 1_000_000);
+      const { prompt, cssPreset = 'midnight-executive' } = body;
+
+      if (!prompt) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Missing prompt' }));
+        return;
+      }
+
+      const preset = CSS_PRESETS[cssPreset] || CSS_PRESETS['midnight-executive'];
+      const builtPrompt = buildMGPrompt(prompt, cssPreset);
+
+      // Build system instruction with actual CSS values
+      const systemInstruction = MG_SYSTEM_INSTRUCTION
+        .replace('{PRIMARY_COLOR}', preset.colors.primary)
+        .replace('{ACCENT_COLOR}', preset.colors.accent)
+        .replace('{BG_COLOR}', preset.colors.bg)
+        .replace('{BG_SECONDARY_COLOR}', preset.colors.bgSecondary)
+        .replace('{TEXT_COLOR}', preset.colors.text)
+        .replace('{TEXT_SECONDARY_COLOR}', preset.colors.textSecondary)
+        .replace("{DISPLAY_FONT}'", preset.typography.display)
+        .replace("{BODY_FONT}", preset.typography.body);
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: [
+          { role: 'user', parts: [{ text: builtPrompt }] }
+        ],
+        config: {
+          systemInstruction: systemInstruction,
+          maxOutputTokens: 32768,
+          responseMimeType: 'text/plain',
+        }
+      });
+
+      const finishReason = result.candidates?.[0]?.finishReason;
+      if (finishReason === 'MAX_TOKENS') {
+        throw new Error('The generated motion graphic was too long and got cut off. Try a simpler prompt.');
+      }
+      if (finishReason && finishReason !== 'STOP') {
+        throw new Error(`Generation failed (reason: ${finishReason}). Please try again.`);
+      }
+
+      let html = sanitizeMGHtml(result.text);
+      validateMGHtml(html);
+
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ html }));
+
+    } catch (err) {
+      console.error('Motion graphics generation error:', err);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: err?.message || 'Failed to generate motion graphics' }));
+    }
+  }
+
+  return {
+    name: 'motion-graphics-generator-api',
+    configureServer(server) {
+      server.middlewares.use('/api/generate-motion-graphics', (req, res) => {
+        handler(req, res);
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use('/api/generate-motion-graphics', (req, res) => {
+        handler(req, res);
+      });
+    },
+  };
+}
+
+function motionGraphicsExportPlugin() {
+  let browser = null;
+
+  async function getBrowser() {
+    if (!browser) {
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+    }
+    return browser;
+  }
+
+  // Get animation duration from computed styles
+  async function getAnimationDuration(page) {
+    return await page.evaluate(() => {
+      let maxDuration = 5000; // Default 5 seconds
+
+      // Check all animated elements
+      const elements = document.querySelectorAll('*');
+      elements.forEach(el => {
+        const styles = window.getComputedStyle(el);
+        const animationDuration = styles.animationDuration;
+        const animationDelay = styles.animationDelay;
+
+        if (animationDuration && animationDuration !== '0s' && animationDuration !== 'none') {
+          let duration = parseFloat(animationDuration);
+          if (animationDuration.includes('ms')) duration /= 1000;
+
+          let delay = 0;
+          if (animationDelay && animationDelay !== '0s') {
+            delay = parseFloat(animationDelay);
+            if (animationDelay.includes('ms')) delay /= 1000;
+          }
+
+          const totalDuration = (duration + delay) * 1000; // Convert to ms
+          // For looping animations, capture one full cycle
+          const iterationCount = styles.animationIterationCount;
+          const iterations = iterationCount === 'infinite' ? 1 : parseFloat(iterationCount);
+          maxDuration = Math.max(maxDuration, totalDuration * iterations + 1000); // Add 1s buffer
+        }
+      });
+
+      return maxDuration;
+    });
+  }
+
+  async function handler(req, res) {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const body = await readJsonBody(req, 10_000_000);
+      const { html, resolution = '1080p', layout = 'landscape' } = body;
+
+      if (!html) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Missing html content' }));
+        return;
+      }
+
+      // Calculate dimensions based on resolution and layout
+      const getDimensions = () => {
+        const baseRes = resolution === '720p' ? 720 : resolution === '4k' ? 2160 : 1080;
+        if (layout === 'portrait') {
+          return { width: Math.round(baseRes * 9 / 16), height: baseRes };
+        }
+        return { width: baseRes, height: Math.round(baseRes * 9 / 16) };
+      };
+
+      const { width, height } = getDimensions();
+
+      const br = await getBrowser();
+      const page = await br.newPage();
+
+      await page.setViewport({ width, height });
+
+      // Inject the HTML
+      await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+
+      // Wait a bit for animations to start
+      await new Promise(r => setTimeout(r, 500));
+
+      // Get animation duration
+      const duration = await getAnimationDuration(page);
+      console.log(`Recording for ${duration}ms`);
+
+      // Start video recording using the page's canvas
+      const videoBuffer = await page.evaluate(async (recordDuration) => {
+        return new Promise((resolve) => {
+          // Create a canvas that captures the entire page
+          const canvas = document.createElement('canvas');
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          const ctx = canvas.getContext('2d');
+
+          // Use html2canvas-like approach with setInterval
+          const frames = [];
+          const fps = 30;
+          const interval = 1000 / fps;
+          const totalFrames = Math.ceil((recordDuration + 1000) / interval); // Add 1s buffer
+
+          let currentFrame = 0;
+
+          const captureFrame = () => {
+            // Capture the current state using foreignObject
+            const svg = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="${window.innerWidth}" height="${window.innerHeight}">
+                <foreignObject width="100%" height="100%">
+                  <div xmlns="http://www.w3.org/1999/xhtml">
+                    <style>
+                      html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+                    </style>
+                    ${document.documentElement.outerHTML}
+                  </div>
+                </foreignObject>
+              </svg>
+            `;
+            const img = new Image();
+            const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0);
+              URL.revokeObjectURL(url);
+              frames.push(canvas.toDataURL('image/webp', 0.8));
+
+              currentFrame++;
+              if (currentFrame < totalFrames) {
+                setTimeout(captureFrame, interval);
+              } else {
+                // Convert frames to WebM using MediaRecorder
+                const stream = canvas.captureStream(fps);
+                const mediaRecorder = new MediaRecorder(stream, {
+                  mimeType: 'video/webm;codecs=vp9',
+                  videoBitsPerSecond: 5000000
+                });
+
+                const chunks = [];
+                mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+                mediaRecorder.onstop = () => {
+                  const blob = new Blob(chunks, { type: 'video/webm' });
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                  reader.readAsDataURL(blob);
+                };
+
+                mediaRecorder.start();
+
+                // Play back all frames
+                let frameIndex = 0;
+                const playFrames = () => {
+                  if (frameIndex < frames.length) {
+                    const frameImg = new Image();
+                    frameImg.onload = () => {
+                      ctx.drawImage(frameImg, 0, 0);
+                      frameIndex++;
+                      setTimeout(playFrames, interval);
+                    };
+                    frameImg.src = frames[frameIndex];
+                  } else {
+                    mediaRecorder.stop();
+                  }
+                };
+                playFrames();
+              }
+            };
+            img.src = url;
+          };
+
+          captureFrame();
+        });
+      }, duration);
+
+      await page.close();
+
+      // Send video
+      const videoBufferData = Buffer.from(videoBuffer, 'base64');
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'video/webm');
+      res.setHeader('Content-Disposition', 'attachment; filename="motion-graphic.webm"');
+      res.end(videoBufferData);
+
+    } catch (err) {
+      console.error('Motion graphics export error:', err);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: err?.message || 'Export failed' }));
+    }
+  }
+
+  // Cleanup browser on process exit
+  process.on('beforeExit', async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
+
+  return {
+    name: 'motion-graphics-export-api',
+    configureServer(server) {
+      server.middlewares.use('/api/export-motion-graphics-video', (req, res) => {
+        handler(req, res);
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use('/api/export-motion-graphics-video', (req, res) => {
+        handler(req, res);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   for (const [k, v] of Object.entries(env)) {
@@ -592,7 +910,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), infographicGeneratorPlugin(), slidesExportPlugin()],
+    plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), infographicGeneratorPlugin(), slidesExportPlugin(), motionGraphicsGeneratorPlugin(), motionGraphicsExportPlugin()],
     build: {
       rollupOptions: {
         input: {
@@ -604,6 +922,7 @@ export default defineConfig(({ mode }) => {
           'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
           'infographic-generator': resolve(__dirname, 'infographic-generator/index.html'),
           'citation-generator': resolve(__dirname, 'citation-generator/index.html'),
+          'motion-graphics': resolve(__dirname, 'motion-graphics/index.html'),
         },
       },
     },

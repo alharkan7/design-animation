@@ -19,6 +19,7 @@
     "dotenv": "^17.2.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
+    "lucide": "^1.16.0",
     "pptxgenjs": "^4.0.1",
     "puppeteer": "^24.38.0"
   }

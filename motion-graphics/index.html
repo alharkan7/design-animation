@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Graphics Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Lucide icons base styles */
+    [data-lucide] {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1em;
+      height: 1em;
+      margin-right: 0.5em;
+    }
+
+    .toolbar-btn [data-lucide] {
+      margin-right: 0.5em;
+    }
+
+    .toolbar-btn:has([data-lucide]):only-child [data-lucide],
+    .toolbar-btn:not(:has(span)):not(:has(.text)) [data-lucide] {
+      margin-right: 0;
+    }
+  </style>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-color: #38bdf8;
+      --input-bg: rgba(0, 0, 0, 0.2);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --font-family: 'Outfit', sans-serif;
+      --sidebar-width: 280px;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent-color);
+    }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .prompt-section {
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .prompt-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .prompt-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.025em;
+      margin-bottom: 0.75rem;
+    }
+
+    .prompt-input {
+      width: 100%;
+      min-height: 120px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      padding: 1rem;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      resize: vertical;
+      transition: all 0.2s ease;
+    }
+
+    .prompt-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+
+    .prompt-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .style-selector {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .style-option {
+      padding: 0.5rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .style-option:hover {
+      border-color: var(--accent-color);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .style-option.selected {
+      border-color: var(--accent-color);
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    .generate-btn {
+      width: 100%;
+      margin-top: 1.5rem;
+      background: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+    .generate-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-section {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .status-section.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-color);
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    .status-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .preview-section {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .preview-section.visible {
+      display: block;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px 12px 0 0;
+      border: 1px solid var(--card-border);
+      border-bottom: none;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding-right: 0.75rem;
+      margin-right: 0.75rem;
+      border-right: 1px solid var(--card-border);
+    }
+
+    .toolbar-group:last-child {
+      border-right: none;
+      margin-right: 0;
+    }
+
+    .toolbar-btn {
+      padding: 0.5rem 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toolbar-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .toolbar-btn.active {
+      background: var(--accent-color);
+      color: #0f172a;
+      border-color: var(--accent-color);
+    }
+
+    .toolbar-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .toolbar-select {
+      padding: 0.5rem 0.75rem;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .toolbar-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .preview-container {
+      position: relative;
+      background: #000;
+      border: 1px solid var(--card-border);
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+    }
+
+    .preview-frame {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: none;
+      display: block;
+    }
+
+    .preview-frame.portrait {
+      aspect-ratio: 9 / 16;
+    }
+
+    .code-view {
+      display: none;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #1a1a2e;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+    }
+
+    .code-view.visible {
+      display: block;
+    }
+
+    .code-view.portrait {
+      aspect-ratio: 9 / 16;
+    }
+
+    .code-content {
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+      overflow: auto;
+      color: #a5b4fc;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      white-space: pre;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+
+    .preview-container:fullscreen,
+    .preview-container:-webkit-full-screen,
+    .preview-container.fullscreen {
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      width: 100vw !important;
+      height: 100vh !important;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      border-radius: 0;
+    }
+
+    .preview-container:fullscreen .preview-frame,
+    .preview-container:-webkit-full-screen .preview-frame,
+    .preview-container.fullscreen .preview-frame {
+      flex: 1;
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: unset !important;
+    }
+
+    .sidebar {
+      width: var(--sidebar-width);
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 1px solid var(--card-border);
+      padding: 1.5rem;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      overflow-y: auto;
+      z-index: 10000;
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 9999;
+    }
+
+    .sidebar-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .char-counter {
+      text-align: right;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    .char-counter.limit-near {
+      color: #fbbf24;
+    }
+
+    .char-counter.limit-reached {
+      color: #ef4444;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .copy-btn.copied {
+      background: rgba(34, 197, 94, 0.3);
+      border-color: rgba(34, 197, 94, 0.5);
+      color: #22c55e;
+    }
+
+    .regenerate-section {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .regenerate-section button {
+      flex: 1;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .sidebar-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .sidebar-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+    }
+
+    .sidebar-close:hover {
+      color: var(--text-primary);
+    }
+
+    .control-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .control-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.025em;
+      margin-bottom: 0.5rem;
+    }
+
+    .color-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+
+    input[type="color"] {
+      width: 40px;
+      height: 32px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .color-hex {
+      flex: 1;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      background: none;
+      border: none;
+    }
+
+    select.font-select {
+      width: 100%;
+      padding: 0.6rem;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    select.font-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .range-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-color);
+    }
+
+    .range-value {
+      min-width: 40px;
+      text-align: right;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .sidebar-footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .apply-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .apply-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 1rem;
+      color: #fca5a5;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    /* History Panel Styles */
+    .history-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 9998;
+    }
+
+    .history-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .history-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 360px;
+      background: rgba(15, 23, 42, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid var(--card-border);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 10001;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .history-panel.open {
+      transform: translateX(0);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .history-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .history-close {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.5rem;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .history-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .history-search {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    .history-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .history-empty .empty-icon {
+      width: 48px;
+      height: 48px;
+      opacity: 0.5;
+      margin-bottom: 1rem;
+    }
+
+    .history-empty p {
+      margin: 0.5rem 0;
+    }
+
+    .history-empty .empty-subtext {
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+
+    .history-loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .history-item-preview {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-item-text {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-item-meta {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .history-date {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .history-preset {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-color);
+      border-radius: 4px;
+      text-transform: capitalize;
+    }
+
+    .history-item-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .history-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--input-border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .history-action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .history-action-btn.load-btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .history-action-btn.delete-btn:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .icon-sm {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .history-panel {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .main {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        transform: translateX(100%);
+      }
+
+      .content {
+        padding: 1rem;
+      }
+
+      .prompt-card {
+        padding: 1.5rem;
+      }
+
+      .toolbar {
+        gap: 0.25rem;
+      }
+
+      .toolbar-group {
+        border-right: none;
+        margin-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Motion Graphics Generator</h1>
+    <button class="icon-btn" id="historyBtn" title="Saved Graphics">
+      <i data-lucide="folder-open"></i>
+    </button>
+  </div>
+
+  <div class="main">
+    <div class="content">
+      <div class="prompt-section">
+        <div class="prompt-card">
+          <label class="prompt-label" for="promptInput">Describe your motion graphic</label>
+          <textarea
+            id="promptInput"
+            class="prompt-input"
+            maxlength="2000"
+            placeholder="Example: A pulsing heart shape with particles floating around it, using smooth fade-in animations. Background should be deep blue with the heart in bright red."
+          ></textarea>
+          <div class="char-counter" id="charCounter">0 / 2000</div>
+
+          <div class="style-selector" id="styleSelector">
+            <div class="style-option selected" data-style="midnight-executive">Midnight Executive</div>
+            <div class="style-option" data-style="neon-cyber">Neon Cyber</div>
+            <div class="style-option" data-style="deep-space">Deep Space</div>
+            <div class="style-option" data-style="sunset-vibrant">Sunset Vibrant</div>
+            <div class="style-option" data-style="nature-fresh">Nature Fresh</div>
+            <div class="style-option" data-style="minimal-light">Minimal Light</div>
+          </div>
+
+          <button id="generateBtn" class="generate-btn">Generate Motion Graphic</button>
+
+          <div class="status-section" id="statusSection">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="status-text" id="statusText">Generating...</div>
+          </div>
+
+          <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="preview-section" id="previewSection">
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <button class="toolbar-btn active" id="layoutLandscape" data-icon="Monitor" title="Landscape">
+                Landscape
+              </button>
+              <button class="toolbar-btn" id="layoutPortrait" data-icon="Smartphone" title="Portrait">
+                Portrait
+              </button>
+            </div>
+
+            <div class="toolbar-group">
+              <select id="resolutionSelect" class="toolbar-select" title="Resolution">
+                <option value="720p">720p</option>
+                <option value="1080p" selected>1080p</option>
+                <option value="4k">4K</option>
+              </select>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-btn active" id="viewPreview" data-icon="Eye" title="Preview">
+                Preview
+              </button>
+              <button class="toolbar-btn" id="viewCode" data-icon="Code" title="Code">
+                Code
+              </button>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-btn" id="fullscreenBtn" data-icon="Maximize" title="Fullscreen">
+              </button>
+              <button class="toolbar-btn" id="paletteBtn" data-icon="Palette" title="Style Settings">
+              </button>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="toolbar-btn" id="downloadBtn" data-icon="Download" title="Download Video">
+                Download
+              </button>
+            </div>
+          </div>
+
+          <div class="preview-container" id="previewContainer">
+            <iframe id="previewFrame" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+            <div id="codeView" class="code-view">
+              <button id="copyCodeBtn" class="copy-btn">Copy</button>
+              <pre id="codeContent" class="code-content"></pre>
+            </div>
+          </div>
+
+          <div class="regenerate-section" id="regenerateSection" style="display: none;">
+            <button id="regenerateBtn" class="generate-btn">Regenerate</button>
+            <button id="newPromptBtn" class="generate-btn secondary" style="background: rgba(255, 255, 255, 0.1); color: var(--text-primary);">New Prompt</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Style Settings</h2>
+        <button class="sidebar-close" id="sidebarClose">&times;</button>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Primary Color</label>
+        <div class="color-input-wrapper">
+          <input type="color" id="primaryColor" value="#3b82f6">
+          <input type="text" class="color-hex" id="primaryColorHex" value="#3b82f6">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Accent Color</label>
+        <div class="color-input-wrapper">
+          <input type="color" id="accentColor" value="#818cf8">
+          <input type="text" class="color-hex" id="accentColorHex" value="#818cf8">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Background Color</label>
+        <div class="color-input-wrapper">
+          <input type="color" id="bgColor" value="#0f172a">
+          <input type="text" class="color-hex" id="bgColorHex" value="#0f172a">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Display Font</label>
+        <select id="displayFont" class="font-select">
+          <option value="Outfit, sans-serif">Outfit</option>
+          <option value="Orbitron, sans-serif">Orbitron</option>
+          <option value="Space Grotesk, sans-serif">Space Grotesk</option>
+          <option value="Montserrat, sans-serif">Montserrat</option>
+          <option value="Poppins, sans-serif">Poppins</option>
+          <option value="Inter, sans-serif">Inter</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Body Font</label>
+        <select id="bodyFont" class="font-select">
+          <option value="Inter, sans-serif">Inter</option>
+          <option value="Rajdhani, sans-serif">Rajdhani</option>
+          <option value="DM Sans, sans-serif">DM Sans</option>
+          <option value="Lato, sans-serif">Lato</option>
+          <option value="Open Sans, sans-serif">Open Sans</option>
+          <option value="Source Sans 3, sans-serif">Source Sans 3</option>
+        </select>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="apply-btn" id="applyStyleBtn">Apply & Regenerate</button>
+      </div>
+    </aside>
+
+    <div class="history-overlay" id="historyOverlay"></div>
+
+    <aside class="history-panel" id="historyPanel">
+      <div class="history-header">
+        <h2 class="history-title">Saved Graphics</h2>
+        <button class="history-close" id="historyClose">&times;</button>
+      </div>
+
+      <div class="history-search">
+        <input type="text" id="searchInput" class="search-input" placeholder="Search saved graphics...">
+      </div>
+
+      <div class="history-list" id="historyList">
+        <div class="history-loading">Loading...</div>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="/src/motion-graphics.js"></script>
+</body>
+</html>

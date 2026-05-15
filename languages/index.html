@@ -10,7 +10,18 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
     rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <title>Kekayaan Bahasa Nusantara</title>
+  <style>
+    /* Lucide icons base styles */
+    [data-lucide] {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1em;
+      height: 1em;
+    }
+  </style>
   <style>
     body {
       margin: 0;
@@ -80,6 +91,13 @@
       height: 20px;
     }
 
+    #reset-btn i,
+    #info-btn i,
+    .modal-close i {
+      width: 20px;
+      height: 20px;
+    }
+
     #info-btn {
       position: absolute;
       top: 24px;
@@ -108,6 +126,11 @@
     }
 
     #info-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .modal-close svg {
       width: 20px;
       height: 20px;
     }
@@ -209,28 +232,16 @@
 <body>
   <div id="tooltip" class="tooltip"></div>
   <button id="reset-btn" aria-label="Reset View">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
-    </svg>
+    <i data-lucide="rotate-ccw"></i>
   </button>
   <button id="info-btn" aria-label="Information">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="16" x2="12" y2="12"></line>
-      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-    </svg>
+    <i data-lucide="info"></i>
   </button>
 
   <div id="info-modal" class="modal-overlay">
     <div class="modal-content">
       <button class="modal-close" id="modal-close">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+        <i data-lucide="x"></i>
       </button>
       <div class="modal-title">Konteks dan Pustaka</div>
       <div class="modal-body">

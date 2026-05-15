@@ -772,106 +772,162 @@ function motionGraphicsExportPlugin() {
       // Wait a bit for animations to start
       await new Promise(r => setTimeout(r, 500));
 
-      // Get animation duration
-      const duration = await getAnimationDuration(page);
-      console.log(`Recording for ${duration}ms`);
+      // Get animation duration (capped at 5 seconds for performance)
+      let duration = await getAnimationDuration(page);
+      const maxDuration = 5000; // 5 seconds max
+      duration = Math.min(duration, maxDuration);
+      console.log(`Recording for ${duration}ms (${duration / 1000}s)`);
 
-      // Start video recording using the page's canvas
-      const videoBuffer = await page.evaluate(async (recordDuration) => {
-        return new Promise((resolve) => {
-          // Create a canvas that captures the entire page
-          const canvas = document.createElement('canvas');
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          const ctx = canvas.getContext('2d');
+      // Capture frames using screenshots
+      const fps = 30;
+      const totalFrames = Math.min(Math.ceil(duration / 1000 * fps), 150); // Max 150 frames (5 seconds)
+      const frameDelay = 1000 / fps;
 
-          // Use html2canvas-like approach with setInterval
-          const frames = [];
-          const fps = 30;
-          const interval = 1000 / fps;
-          const totalFrames = Math.ceil((recordDuration + 1000) / interval); // Add 1s buffer
-
-          let currentFrame = 0;
-
-          const captureFrame = () => {
-            // Capture the current state using foreignObject
-            const svg = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="${window.innerWidth}" height="${window.innerHeight}">
-                <foreignObject width="100%" height="100%">
-                  <div xmlns="http://www.w3.org/1999/xhtml">
-                    <style>
-                      html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
-                    </style>
-                    ${document.documentElement.outerHTML}
-                  </div>
-                </foreignObject>
-              </svg>
-            `;
-            const img = new Image();
-            const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-
-            img.onload = () => {
-              ctx.drawImage(img, 0, 0);
-              URL.revokeObjectURL(url);
-              frames.push(canvas.toDataURL('image/webp', 0.8));
-
-              currentFrame++;
-              if (currentFrame < totalFrames) {
-                setTimeout(captureFrame, interval);
-              } else {
-                // Convert frames to WebM using MediaRecorder
-                const stream = canvas.captureStream(fps);
-                const mediaRecorder = new MediaRecorder(stream, {
-                  mimeType: 'video/webm;codecs=vp9',
-                  videoBitsPerSecond: 5000000
-                });
-
-                const chunks = [];
-                mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-
-                mediaRecorder.onstop = () => {
-                  const blob = new Blob(chunks, { type: 'video/webm' });
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                  reader.readAsDataURL(blob);
-                };
-
-                mediaRecorder.start();
-
-                // Play back all frames
-                let frameIndex = 0;
-                const playFrames = () => {
-                  if (frameIndex < frames.length) {
-                    const frameImg = new Image();
-                    frameImg.onload = () => {
-                      ctx.drawImage(frameImg, 0, 0);
-                      frameIndex++;
-                      setTimeout(playFrames, interval);
-                    };
-                    frameImg.src = frames[frameIndex];
-                  } else {
-                    mediaRecorder.stop();
-                  }
-                };
-                playFrames();
-              }
-            };
-            img.src = url;
-          };
-
-          captureFrame();
+      console.log(`Capturing ${totalFrames} frames...`);
+      const frames = [];
+      for (let i = 0; i < totalFrames; i++) {
+        const screenshot = await page.screenshot({
+          type: 'png',
+          clip: { x: 0, y: 0, width, height }
         });
-      }, duration);
+        frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
+        if (i < totalFrames - 1) {
+          await new Promise(r => setTimeout(r, frameDelay));
+        }
+        if (i % 30 === 0) {
+          console.log(`Captured ${i}/${totalFrames} frames`);
+        }
+      }
 
       await page.close();
+      console.log('Frames captured, encoding video...');
+
+      // Encode video using a separate page with timeout
+      const encodePage = await br.newPage();
+
+      // Increase the default timeout for this page (2 minutes)
+      encodePage.setDefaultTimeout(120000);
+
+      // Set a longer timeout for video encoding
+      const videoDataUrl = await encodePage.evaluate(async (frameDataUrls) => {
+        return new Promise((resolve, reject) => {
+          // Add timeout to prevent hanging
+          const timeout = setTimeout(() => {
+            reject(new Error('Video encoding timed out after 60 seconds'));
+          }, 60000);
+
+          const canvas = document.createElement('canvas');
+          const firstImg = new Image();
+
+          firstImg.onload = () => {
+            canvas.width = firstImg.width;
+            canvas.height = firstImg.height;
+            const ctx = canvas.getContext('2d');
+            const fps = 30;
+
+            // Try different MIME types
+            let mimeType = 'video/webm;codecs=vp9';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+              mimeType = 'video/webm;codecs=vp8';
+              if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm';
+              }
+            }
+
+            const stream = canvas.captureStream(fps);
+            const mediaRecorder = new MediaRecorder(stream, {
+              mimeType,
+              videoBitsPerSecond: 5000000
+            });
+
+            const chunks = [];
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) {
+                chunks.push(e.data);
+              }
+            };
+
+            mediaRecorder.onstop = () => {
+              clearTimeout(timeout);
+              try {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                if (blob.size === 0) {
+                  reject(new Error('Generated video is empty'));
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Failed to read video blob'));
+                reader.readAsDataURL(blob);
+              } catch (e) {
+                reject(e);
+              }
+            };
+
+            mediaRecorder.onerror = (e) => {
+              clearTimeout(timeout);
+              reject(new Error('MediaRecorder error: ' + e));
+            };
+
+            mediaRecorder.start();
+
+            // Draw each frame
+            let frameIndex = 0;
+            const drawFrame = () => {
+              if (frameIndex < frameDataUrls.length) {
+                const img = new Image();
+                img.onload = () => {
+                  ctx.drawImage(img, 0, 0);
+                  frameIndex++;
+                  setTimeout(drawFrame, 1000 / fps);
+                };
+                img.onerror = () => {
+                  console.error(`Failed to load frame ${frameIndex}`);
+                  frameIndex++;
+                  // Continue even if a frame fails
+                  setTimeout(drawFrame, 1000 / fps);
+                };
+                img.src = frameDataUrls[frameIndex];
+              } else {
+                // Give it time to finish recording
+                setTimeout(() => {
+                  try {
+                    mediaRecorder.stop();
+                  } catch (e) {
+                    clearTimeout(timeout);
+                    reject(e);
+                  }
+                }, 200);
+              }
+            };
+            drawFrame();
+          };
+
+          firstImg.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Failed to load first frame'));
+          };
+          firstImg.src = frameDataUrls[0];
+        });
+      }, frames);
+
+      // Close encode page after successful encoding
+      try {
+        await encodePage.close();
+      } catch (e) {
+        console.error('Error closing encode page:', e);
+      }
+      console.log('Video encoded successfully');
+
+      // Extract base64 data
+      const base64Data = videoDataUrl.split(',')[1];
+      const videoBuffer = Buffer.from(base64Data, 'base64');
 
       // Send video
-      const videoBufferData = Buffer.from(videoBuffer, 'base64');
       res.statusCode = 200;
       res.setHeader('Content-Type', 'video/webm');
       res.setHeader('Content-Disposition', 'attachment; filename="motion-graphic.webm"');
-      res.end(videoBufferData);
+      res.end(videoBuffer);
 
     } catch (err) {
       console.error('Motion graphics export error:', err);

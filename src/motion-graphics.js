@@ -62,6 +62,7 @@ class MotionGraphicsApp {
     this.historyBtn = document.getElementById('historyBtn');
     this.historyPanel = document.getElementById('historyPanel');
     this.historyList = document.getElementById('historyList');
+    this.historyOverlay = document.getElementById('historyOverlay');
     this.searchInput = document.getElementById('searchInput');
 
     this.init();
@@ -668,14 +669,14 @@ class MotionGraphicsApp {
 
   openHistory() {
     this.historyPanel.classList.add('open');
-    this.historyOverlay.classList.add('visible');
+    this.historyOverlay?.classList.add('visible');
     // Refresh the list when opening
     this.loadSavedGraphics();
   }
 
   closeHistory() {
-    this.historyPanel.classList.remove('open');
-    this.historyOverlay.classList.remove('visible');
+    this.historyPanel?.classList.remove('open');
+    this.historyOverlay?.classList.remove('visible');
   }
 
   applyCustomStyle() {

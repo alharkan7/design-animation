@@ -22,6 +22,7 @@ const state = {
     easing: 'easeInOut', // linear, easeIn, easeOut, easeInOut, easeInQuick, custom
     aspectRatio: '16:9', // 16:9, 9:16, 1:1, 4:3, original
     backgroundColor: '#0f172a',
+    outputQuality: 'high', // low, medium, high, ultra
     // Custom easing parameters
     customEasing: {
       startSpeed: 0,    // 0-1, initial velocity
@@ -31,6 +32,14 @@ const state = {
   },
   canvasSize: { width: 1920, height: 1080 },
   animationId: null
+};
+
+// Output quality presets
+const qualityPresets = {
+  'low': { width: 1280, height: 720, bitrate: 5000000 },     // 720p, 5 Mbps
+  'medium': { width: 1920, height: 1080, bitrate: 15000000 }, // 1080p, 15 Mbps
+  'high': { width: 2560, height: 1440, bitrate: 30000000 },   // 1440p, 30 Mbps
+  'ultra': { width: 3840, height: 2160, bitrate: 50000000 }   // 4K, 50 Mbps
 };
 
 // Easing functions
@@ -623,8 +632,16 @@ async function startRecording() {
   }
   if (status) status.classList.remove('hidden');
 
-  // Start recorder
-  const success = window.recorder.start(60);
+  // Get quality preset
+  const quality = qualityPresets[state.settings.outputQuality] || qualityPresets['high'];
+
+  // Reinitialize recorder with correct quality settings
+  window.recorder = new VideoRecorder(quality.width, quality.height);
+  window.recorder.ctx.imageSmoothingEnabled = true;
+  window.recorder.ctx.imageSmoothingQuality = 'high';
+
+  // Start recorder with bitrate
+  const success = window.recorder.start(60, quality.bitrate);
   if (!success) {
     alert('Failed to start recording. Browser might not support WebM.');
     state.isRecording = false;
@@ -664,8 +681,11 @@ async function startRecording() {
   updatePlaybackButtons();
 }
 
-// Initialize recorder
-window.recorder = new VideoRecorder(1920, 1080);
+// Initialize recorder with high quality default
+const defaultQuality = qualityPresets[state.settings.outputQuality] || qualityPresets['high'];
+window.recorder = new VideoRecorder(defaultQuality.width, defaultQuality.height);
+window.recorder.ctx.imageSmoothingEnabled = true;
+window.recorder.ctx.imageSmoothingQuality = 'high';
 
 // Build UI
 document.querySelector('#app').innerHTML = `
@@ -763,6 +783,17 @@ document.querySelector('#app').innerHTML = `
       <div class="control-group">
         <label for="bg-color">Background Color (for letterboxing)</label>
         <input type="color" id="bg-color" value="${state.settings.backgroundColor}">
+      </div>
+
+      <!-- Output Quality -->
+      <div class="control-group">
+        <label for="output-quality">Output Quality</label>
+        <select id="output-quality">
+          <option value="low">Low (720p, 5 Mbps)</option>
+          <option value="medium">Medium (1080p, 15 Mbps)</option>
+          <option value="high" selected>High (1440p, 30 Mbps)</option>
+          <option value="ultra">Ultra (4K, 50 Mbps)</option>
+        </select>
       </div>
 
       <!-- Export -->
@@ -1177,6 +1208,10 @@ document.getElementById('aspect-ratio').addEventListener('change', (e) => {
 
 document.getElementById('bg-color').addEventListener('change', (e) => {
   state.settings.backgroundColor = e.target.value;
+});
+
+document.getElementById('output-quality').addEventListener('change', (e) => {
+  state.settings.outputQuality = e.target.value;
 });
 
 // Playback controls

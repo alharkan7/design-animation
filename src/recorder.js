@@ -3,7 +3,13 @@ export class VideoRecorder {
         this.canvas = document.createElement('canvas');
         this.canvas.width = width;
         this.canvas.height = height;
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', {
+            alpha: true,
+            desynchronized: false
+        });
+        // Enable high quality image smoothing
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
         this.mediaRecorder = null;
         this.chunks = [];
         this.stream = null;
@@ -13,12 +19,13 @@ export class VideoRecorder {
     /**
      * Starts recording the canvas stream.
      * @param {number} fps - The frame rate to capture at.
+     * @param {number} bitrate - Video bitrate in bps (default 25 Mbps for high quality)
      */
-    start(fps = 60) {
+    start(fps = 60, bitrate = 25000000) {
         this.chunks = [];
         this.stream = this.canvas.captureStream(fps);
 
-        // VP9 is preferred for transparency support in WebM
+        // VP9 is preferred for high quality, has better compression than VP8
         const mimeTypes = [
             'video/webm; codecs=vp9',
             'video/webm; codecs=vp8',
@@ -34,14 +41,20 @@ export class VideoRecorder {
 
         const options = {
             mimeType: selectedType,
-            videoBitsPerSecond: 8000000 // 8 Mbps for high quality
+            videoBitsPerSecond: bitrate // 25 Mbps for high quality (was 8 Mbps)
         };
 
+        // Try to create MediaRecorder with options
         try {
             this.mediaRecorder = new MediaRecorder(this.stream, options);
         } catch (e) {
-            console.error('MediaRecorder initialization failed:', e);
-            return false;
+            console.warn('Could not create MediaRecorder with bitrate option, trying without:', e);
+            try {
+                this.mediaRecorder = new MediaRecorder(this.stream);
+            } catch (e2) {
+                console.error('MediaRecorder initialization failed:', e2);
+                return false;
+            }
         }
 
         this.mediaRecorder.ondataavailable = (e) => {
@@ -50,7 +63,7 @@ export class VideoRecorder {
             }
         };
 
-        this.mediaRecorder.start();
+        this.mediaRecorder.start(100); // Collect data every 100ms for smoother chunks
         return true;
     }
 

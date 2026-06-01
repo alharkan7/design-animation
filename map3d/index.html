@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../src/style.css" />
+    <title>3D Indonesia Map</title>
+    <!-- Load ECharts and ECharts-GL -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #0f172a; /* Dark background matching the project theme */
+        color: white;
+      }
+      #chart-container {
+        width: 100vw;
+        height: 100vh;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+      .overlay {
+        position: absolute;
+        top: 2rem;
+        left: 2rem;
+        z-index: 10;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 16px;
+        max-width: 320px;
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        pointer-events: auto; /* allow clicking inside */
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      .overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-10px);
+      }
+      .overlay-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.8rem;
+        background: linear-gradient(to right, #fff, #38bdf8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      p {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      
+      /* Legend styling */
+      .legend-box {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .legend-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #e2e8f0;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        color: #cbd5e1;
+      }
+      .legend-color-gradient {
+        width: 16px;
+        height: 40px;
+        border-radius: 4px;
+        background: linear-gradient(to top, #0ea5e9, #38bdf8, #818cf8, #c084fc, #e879f9, #f472b6);
+      }
+      .legend-color-flat {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        background: #1e293b;
+        border: 1px solid #334155;
+      }
+
+      /* Settings styling */
+      .settings-box {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .setting-item {
+        margin-bottom: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .setting-item label {
+        font-size: 0.85rem;
+        color: #cbd5e1;
+        display: flex;
+        justify-content: space-between;
+      }
+      .setting-item input[type="range"] {
+        width: 100%;
+        accent-color: #38bdf8;
+      }
+      .setting-item select {
+        background: rgba(15, 23, 42, 0.8);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 0.85rem;
+        outline: none;
+      }
+
+      .controls-hint {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 0.85rem;
+        color: #38bdf8;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .controls-hint span {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      /* Toggle buttons */
+      .toggle-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0;
+        transition: color 0.2s;
+      }
+      .toggle-btn:hover {
+        color: #fff;
+      }
+      .show-info-btn {
+        position: absolute;
+        top: 2rem;
+        left: 2rem;
+        z-index: 9;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 500;
+        transition: all 0.2s;
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .show-info-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #38bdf8;
+      }
+      .show-info-btn.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .home-link {
+        position: absolute;
+        bottom: 2rem;
+        left: 2rem;
+        z-index: 10;
+        color: white;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        transition: all 0.2s;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .home-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #38bdf8;
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart-container"></div>
+    
+    <button id="show-info" class="show-info-btn hidden">ℹ️ Show Info</button>
+
+    <div id="info-overlay" class="overlay">
+      <div class="overlay-header">
+        <h1>Population Density</h1>
+        <button id="hide-info" class="toggle-btn" title="Hide Info">✖</button>
+      </div>
+      <p>Interactive 3D visualization of population distribution across the Indonesian archipelago.</p>
+      
+      <div class="legend-box">
+        <div class="legend-title">Legend</div>
+        <div class="legend-item">
+          <div class="legend-color-gradient"></div>
+          <div>
+            <strong>Spikes:</strong> Population density.<br>
+            <span style="font-size: 0.8em; color: #94a3b8;">Taller height & warmer color (pink) = Higher Density.</span>
+          </div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color-flat" style="background: linear-gradient(to top, #0f172a, #450a0a); height: 40px;"></div>
+          <div>
+            <strong>Base Map:</strong> Air Quality (AQI).<br>
+            <span style="font-size: 0.8em; color: #94a3b8;">Dark Blue = Good, Dark Red = Poor.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-box">
+        <div class="legend-title">Visual Settings</div>
+        
+        <div class="setting-item">
+          <label for="color-palette">Color Palette</label>
+          <select id="color-palette">
+            <option value="cool">Cool to Pink</option>
+            <option value="heat">Heatmap</option>
+            <option value="neon">Neon Blue/Green</option>
+            <option value="mono">Monochrome Bright</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="bar-size">Bar Thickness <span id="bar-size-val">0.6</span></label>
+          <input type="range" id="bar-size" min="0.2" max="1.5" step="0.1" value="0.6">
+        </div>
+
+        <div class="setting-item">
+          <label for="bar-bevel">Peak Pointiness <span id="bar-bevel-val">0</span></label>
+          <input type="range" id="bar-bevel" min="0" max="1" step="0.1" value="0">
+        </div>
+      </div>
+
+      <div class="controls-hint">
+        <span>🖱️ Left Click + Drag to Rotate</span>
+        <span>🖱️ Right Click + Drag to Pan</span>
+        <span>🖱️ Scroll to Zoom</span>
+      </div>
+    </div>
+
+    <a href="/" class="home-link">
+      <span>←</span> Back to Home
+    </a>
+
+    <script>
+      document.getElementById('hide-info').addEventListener('click', () => {
+        document.getElementById('info-overlay').classList.add('hidden');
+        document.getElementById('show-info').classList.remove('hidden');
+      });
+      document.getElementById('show-info').addEventListener('click', () => {
+        document.getElementById('info-overlay').classList.remove('hidden');
+        document.getElementById('show-info').classList.add('hidden');
+      });
+    </script>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

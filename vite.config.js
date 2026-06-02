@@ -980,6 +980,7 @@ export default defineConfig(({ mode }) => {
           'citation-generator': resolve(__dirname, 'citation-generator/index.html'),
           'motion-graphics': resolve(__dirname, 'motion-graphics/index.html'),
           'image-sequencer': resolve(__dirname, 'image-sequencer/index.html'),
+          'map3d': resolve(__dirname, 'map3d/index.html'),
         },
       },
     },

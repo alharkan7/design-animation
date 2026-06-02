@@ -10,6 +10,8 @@
     <!-- Load ECharts and ECharts-GL -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       body {
         margin: 0;
@@ -50,6 +52,11 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+      }
+      #hide-info {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
       }
       h1 {
         margin: 0 0 0.5rem 0;
@@ -156,11 +163,21 @@
         color: #94a3b8;
         cursor: pointer;
         font-size: 1.2rem;
-        padding: 0;
+        padding: 0.25rem;
         transition: color 0.2s;
+        border-radius: 8px;
+        line-height: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
       .toggle-btn:hover {
         color: #fff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .toggle-btn svg {
+        width: 20px;
+        height: 20px;
       }
       .show-info-btn {
         position: absolute;
@@ -171,7 +188,7 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: white;
-        padding: 0.75rem 1rem;
+        padding: 0.75rem;
         border-radius: 8px;
         cursor: pointer;
         font-family: inherit;
@@ -179,6 +196,9 @@
         transition: all 0.2s;
         opacity: 1;
         pointer-events: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
       .show-info-btn:hover {
         background: rgba(255, 255, 255, 0.1);
@@ -217,12 +237,16 @@
   <body>
     <div id="chart-container"></div>
     
-    <button id="show-info" class="show-info-btn hidden">ℹ️ Show Info</button>
+    <button id="show-info" class="show-info-btn hidden" aria-label="Show info" title="Show info">
+      <i data-lucide="info" aria-hidden="true"></i>
+    </button>
 
     <div id="info-overlay" class="overlay">
       <div class="overlay-header">
         <h1>Population Density</h1>
-        <button id="hide-info" class="toggle-btn" title="Hide Info">✖</button>
+        <button id="hide-info" class="toggle-btn" aria-label="Hide info" title="Hide info">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
       </div>
       <p>Interactive 3D visualization of population distribution across the Indonesian archipelago.</p>
       
@@ -280,6 +304,8 @@
     </a>
 
     <script>
+      if (window.lucide?.createIcons) window.lucide.createIcons();
+
       document.getElementById('hide-info').addEventListener('click', () => {
         document.getElementById('info-overlay').classList.add('hidden');
         document.getElementById('show-info').classList.remove('hidden');

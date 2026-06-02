@@ -5,6 +5,67 @@
 async function initMap() {
   const chartDom = document.getElementById('chart-container');
   const myChart = echarts.init(chartDom);
+
+  // --- Mobile 2-finger panning + zooming logic ---
+  // ECharts-GL maps right-click (button: 2) to panning and supports pinch-to-zoom natively.
+  // We want 2 fingers to both zoom AND pan simultaneously. We allow the native pinch (by not
+  // stopping propagation) and synthesize right-click mouse events for panning based on the
+  // midpoint of the 2 fingers.
+  let isTwoFingerPan = false;
+
+  chartDom.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      isTwoFingerPan = true;
+      // Note: intentionally NOT calling stopPropagation() so ECharts can process pinch-to-zoom
+      const x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+      const mouseEvent = new MouseEvent('mousedown', {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        button: 2, // Right click maps to panning
+        buttons: 2
+      });
+      const targetNode = chartDom.querySelector('canvas') || chartDom;
+      targetNode.dispatchEvent(mouseEvent);
+    }
+  }, { capture: true, passive: false });
+
+  chartDom.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && isTwoFingerPan) {
+      // Note: intentionally NOT calling stopPropagation()
+      const x = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const y = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+      const mouseEvent = new MouseEvent('mousemove', {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        button: 2,
+        buttons: 2
+      });
+      const targetNode = chartDom.querySelector('canvas') || chartDom;
+      targetNode.dispatchEvent(mouseEvent);
+    }
+  }, { capture: true, passive: false });
+
+  chartDom.addEventListener('touchend', (e) => {
+    if (isTwoFingerPan && e.touches.length < 2) {
+      isTwoFingerPan = false;
+      const mouseEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        buttons: 0
+      });
+      const targetNode = chartDom.querySelector('canvas') || chartDom;
+      targetNode.dispatchEvent(mouseEvent);
+    }
+  }, { capture: true, passive: false });
+  // -------------------------------------------
   
   // Show loading spinner
   myChart.showLoading({

@@ -9,7 +9,7 @@
     <title>3D Indonesia Map</title>
     <!-- Load ECharts and ECharts-GL -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <script src="../lib/echarts-gl.js"></script>
     <!-- Icons (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -28,6 +28,9 @@
         z-index: 1;
       }
       .overlay {
+        overflow-y: auto;
+        max-height: 80vh;
+        scrollbar-width: none;
         position: absolute;
         top: 2rem;
         left: 2rem;
@@ -293,9 +296,13 @@
       </div>
 
       <div class="controls-hint">
-        <span>🖱️ Left Click + Drag to Rotate</span>
-        <span>🖱️ Right Click + Drag to Pan</span>
-        <span>🖱️ Scroll to Zoom</span>
+        <span style="white-space: nowrap">🖱️ Left Click + Drag to Rotate</span>
+        <span style="white-space: nowrap">🖱️ Right Click + Drag to Pan</span>
+        <span style="white-space: nowrap">🖱️ Scroll to Zoom</span>
+        <br>
+        <span style="white-space: nowrap">📱 1 Finger Drag to Rotate</span>
+        <span style="white-space: nowrap">📱 2 Fingers Drag to Pan</span>
+        <span style="white-space: nowrap">📱 Pinch to Zoom</span>
       </div>
     </div>
 

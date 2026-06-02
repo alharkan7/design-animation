@@ -5,6 +5,115 @@
 async function initMap() {
   const chartDom = document.getElementById('chart-container');
   const myChart = echarts.init(chartDom);
+
+  // --- Mobile 2-finger panning + zooming logic ---
+  // We use mathematical gesture detection to disambiguate a pinch (zoom) from a drag (pan).
+  let gestureState = 'none'; // 'none', 'unknown', 'pan', 'zoom'
+  let initialPinchDist = 0;
+  let initialMidpoint = { x: 0, y: 0 };
+  let lastMidpoint = { x: 0, y: 0 };
+
+  let panAccumulator = { dx: 0, dy: 0 };
+  let isPanningFrame = false;
+
+  chartDom.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      gestureState = 'unknown';
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      initialPinchDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      initialMidpoint = {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+      };
+      lastMidpoint = { ...initialMidpoint };
+      // We don't stop propagation here to allow ECharts to receive touchstart for zooming if it turns out to be a zoom.
+    } else {
+      gestureState = 'none';
+    }
+  }, { capture: true, passive: false });
+
+  chartDom.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && gestureState !== 'none') {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+
+      const currentDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      const currentMidpoint = {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2
+      };
+
+      if (gestureState === 'unknown') {
+        const deltaDist = Math.abs(currentDist - initialPinchDist);
+        const deltaMid = Math.hypot(currentMidpoint.x - initialMidpoint.x, currentMidpoint.y - initialMidpoint.y);
+
+        // Thresholds to decide gesture intent. Use slightly larger delta to be sure.
+        if (deltaDist > 15 || deltaMid > 15) {
+          if (deltaMid > deltaDist * 1.2) {
+            gestureState = 'pan';
+          } else {
+            gestureState = 'zoom';
+          }
+        }
+      }
+
+      if (gestureState === 'pan') {
+        // Block ECharts from seeing this move, so it doesn't zoom
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+
+        panAccumulator.dx += currentMidpoint.x - lastMidpoint.x;
+        panAccumulator.dy += currentMidpoint.y - lastMidpoint.y;
+
+        if (!isPanningFrame) {
+          isPanningFrame = true;
+          requestAnimationFrame(() => {
+            const option = myChart.getOption();
+            if (option && option.geo3D && option.geo3D[0] && option.geo3D[0].viewControl) {
+              const viewControl = option.geo3D[0].viewControl;
+              const currentCenter = viewControl.center || [0, 0, 0];
+
+              const sensitivity = 0.4;
+              const newCenter = [
+                currentCenter[0] - panAccumulator.dx * sensitivity,
+                currentCenter[1] + panAccumulator.dy * sensitivity,
+                currentCenter[2]
+              ];
+
+              myChart.setOption({
+                geo3D: {
+                  viewControl: {
+                    center: newCenter
+                  }
+                }
+              });
+            }
+            panAccumulator.dx = 0;
+            panAccumulator.dy = 0;
+            isPanningFrame = false;
+          });
+        }
+      }
+
+      lastMidpoint = currentMidpoint;
+    }
+  }, { capture: true, passive: false });
+
+  chartDom.addEventListener('touchend', (e) => {
+    gestureState = 'none';
+    panAccumulator.dx = 0;
+    panAccumulator.dy = 0;
+  }, { capture: true, passive: false });
+
+  chartDom.addEventListener('touchcancel', (e) => {
+    gestureState = 'none';
+    panAccumulator.dx = 0;
+    panAccumulator.dy = 0;
+  }, { capture: true, passive: false });
+  // -------------------------------------------
   
   // Show loading spinner
   myChart.showLoading({

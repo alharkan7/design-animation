@@ -288,7 +288,7 @@ async function initMap() {
           autoRotate: true,
           autoRotateAfterStill: 99999999,
           autoRotateSpeed: 1.5,
-          distance: 120,
+          distance: 50,
           alpha: 40,
           beta: -20,
           center: [0, -5, 0],
@@ -428,10 +428,36 @@ async function initMap() {
       }
     });
 
+    let isRotating = true;
+
+    function setRotation(state) {
+      isRotating = state;
+      myChart.setOption({ geo3D: { viewControl: { autoRotate: state } } });
+      updateRotationIcon();
+    }
+
+    function updateRotationIcon() {
+      const toggleBtn = document.getElementById('rotation-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = `<i data-lucide="${isRotating ? 'pause' : 'play'}" aria-hidden="true"></i><span id="rotation-text">${isRotating ? 'Pause' : 'Resume'}</span>`;
+        if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+      }
+    }
+
+    // Toggle on spacebar
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        setRotation(!isRotating);
+      }
+    });
+
     // Stop rotation when the user interacts anywhere on the map
     myChart.getZr().on('mousedown', function() {
-      const resumeBtn = document.getElementById('resume-rotation-btn');
-      if (resumeBtn) resumeBtn.style.display = 'block';
+      if (isRotating) {
+        isRotating = false;
+        updateRotationIcon();
+      }
     });
 
     // Handle close button
@@ -443,17 +469,16 @@ async function initMap() {
     }
 
     const palettes = {
+      blue: ['#bfdbfe', '#60a5fa', '#3b82f6', '#1d4ed8', '#1e3a8a'],
       warm: ['#f59e0b', '#ea580c', '#dc2626', '#991b1b', '#7f1d1d'],
-      heat: ['#fcd34d', '#fbbf24', '#f59e0b', '#ea580c', '#b91c1c'],
       mono: ['#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c']
     };
 
-    // Handle resume rotation
-    const resumeBtn = document.getElementById('resume-rotation-btn');
-    if (resumeBtn) {
-      resumeBtn.addEventListener('click', () => {
-        myChart.setOption({ geo3D: { viewControl: { autoRotate: true } } });
-        resumeBtn.style.display = 'none';
+    // Handle toggle button
+    const toggleBtn = document.getElementById('rotation-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        setRotation(!isRotating);
       });
     }
 
@@ -467,24 +492,7 @@ async function initMap() {
       document.querySelector('.legend-color-gradient').style.background = `linear-gradient(to top, ${newPalette.join(', ')})`;
     });
 
-    document.getElementById('bar-size').addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      document.getElementById('bar-size-val').innerText = val.toFixed(2);
-      myChart.setOption({
-        series: [{ barSize: val }]
-      });
-    });
 
-    document.getElementById('bar-bevel').addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      document.getElementById('bar-bevel-val').innerText = val.toFixed(1);
-      myChart.setOption({
-        series: [{
-          bevelSize: val,
-          bevelSmoothness: val > 0 ? 2 : 0
-        }]
-      });
-    });
 
   } catch (error) {
     console.error('Error loading map data:', error);

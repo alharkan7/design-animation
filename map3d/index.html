@@ -172,7 +172,7 @@
       /* Click Info Card */
       .info-card {
         position: absolute;
-        top: 2rem;
+        bottom: 6rem;
         right: 2rem;
         z-index: 20;
         background: rgba(255, 255, 255, 0.9);
@@ -180,8 +180,10 @@
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(0, 0, 0, 0.1);
         border-radius: 12px;
-        padding: 1.2rem;
-        width: 260px;
+        padding: 0.75rem 2.5rem 0.75rem 1rem;
+        width: auto;
+        min-width: 220px;
+        white-space: nowrap;
         box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
         pointer-events: auto;
         transform: translateY(0) scale(1);
@@ -193,50 +195,37 @@
         pointer-events: none;
         transform: translateY(-20px) scale(0.95);
       }
-      .info-card-header {
+      .info-row {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.25rem;
-        position: relative;
+        align-items: baseline;
+        gap: 0.4rem;
+        flex-wrap: wrap;
       }
-      .info-card h2 {
+      .info-city {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: 1rem;
+        font-weight: 700;
         color: #1e293b;
-        line-height: 1.2;
-        padding-right: 24px; /* Space for close button */
       }
       .info-province {
-        color: #475569;
+        color: #64748b;
         font-size: 0.85rem;
-        margin-bottom: 1rem;
-      }
-      .info-stats {
-        background: rgba(0, 0, 0, 0.03);
-        border-radius: 6px;
-        padding: 0.75rem;
-        border: 1px solid rgba(0, 0, 0, 0.05);
       }
       .stat-label {
-        font-size: 0.75rem;
-        color: #334155;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+        color: #475569;
+        font-weight: 500;
       }
       .stat-value {
-        font-size: 1.6rem;
+        font-size: 1rem;
         font-weight: 700;
         color: #ea580c;
-        line-height: 1;
       }
       
-      /* Specific Close Button for Info Card */
       #close-info-card {
         position: absolute;
-        top: -4px;
-        right: -4px;
+        top: 0.5rem;
+        right: 0.5rem;
         background: transparent;
         border: none;
         color: #475569;
@@ -320,7 +309,7 @@
         background: rgba(255, 255, 255, 0.1);
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgb(110, 110, 110, 0.5);
         backdrop-filter: blur(10px);
         transition: all 0.2s;
         font-weight: 500;
@@ -332,6 +321,59 @@
         background: rgba(255, 255, 255, 0.2);
         border-color: #ea580c;
         transform: translateY(-2px);
+      }
+
+      .rotation-toggle-btn {
+        position: absolute;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 10;
+        color: #1e293b;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid rgb(110, 110, 110, 0.5);
+        backdrop-filter: blur(10px);
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .rotation-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #ea580c;
+        color: #ea580c;
+        transform: translateY(-2px);
+      }
+      @media (max-width: 768px) {
+        .info-overlay {
+          top: 1rem;
+          left: 1rem;
+          width: calc(100% - 2rem);
+          max-width: 350px;
+        }
+        .show-info-btn {
+          top: 1rem;
+          left: 1rem;
+        }
+        .home-link {
+          bottom: 2rem;
+          left: 1rem;
+          padding: 0.5rem 1rem;
+        }
+        .rotation-toggle-btn {
+          bottom: 2rem;
+          right: 1rem;
+          padding: 0.5rem 0.75rem;
+        }
+        .info-card {
+          bottom: 5.5rem;
+          right: 1rem;
+          width: auto;
+          max-width: calc(100% - 2rem);
+        }
       }
     </style>
   </head>
@@ -356,66 +398,62 @@
         <div class="legend-item">
           <div class="legend-color-gradient"></div>
           <div>
-            <strong>Spikes:</strong> Data count per regency/city.<br>
-            <span style="font-size: 0.8em; color: #475569;">Taller height & warmer color (pink) = Higher Count.</span>
+            <strong>Data Spikes:</strong> Quantity per regency/city.<br>
+            <span style="font-size: 0.8em; color: #475569;">Taller height and deeper colors indicate higher counts.</span>
           </div>
         </div>
         <div class="legend-item">
-          <div class="legend-color-flat" style="background: linear-gradient(to top, #0f172a, #450a0a); height: 40px;"></div>
+          <div class="legend-color-flat" style="background: linear-gradient(to top, #f2efe9, #e07a5f); height: 40px;"></div>
           <div>
-            <strong>Base Map:</strong> Data density heatmap.<br>
-            <span style="font-size: 0.8em; color: #475569;">Dark Blue = Low count, Dark Red = High count.</span>
+            <strong>Base Map:</strong> Regional density heatmap.<br>
+            <span style="font-size: 0.8em; color: #475569;">Lighter areas represent low density, deeper areas indicate higher density.</span>
           </div>
         </div>
       </div>
 
       <div class="settings-box">
-        <div class="legend-title">Visual Settings</div>
+        <div class="legend-title">Color Palette</div>
         
         <div class="setting-item">
-          <label for="color-palette">Color Palette</label>
           <select id="color-palette">
             <option value="warm">Warm Sunrise</option>
-            <option value="heat">Deep Heatmap</option>
+            <option value="blue">Deep Ocean Blue</option>
             <option value="mono">Monochrome Red</option>
           </select>
         </div>
-
-        <div class="setting-item">
-          <label for="bar-size">Bar Thickness <span id="bar-size-val">0.15</span></label>
-          <input type="range" id="bar-size" min="0.05" max="1.5" step="0.05" value="0.15">
-        </div>
-
-        <div class="setting-item">
-          <label for="bar-bevel">Peak Pointiness <span id="bar-bevel-val">0</span></label>
-          <input type="range" id="bar-bevel" min="0" max="1" step="0.1" value="0">
-        </div>
       </div>
 
-      <div class="controls-hint">
-        <button id="resume-rotation-btn" class="toggle-btn" style="display: none; width: 100%; background: #ea580c; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-bottom: 0.5rem;">
-          Resume Rotation
-        </button>
-        <span>
-          <i data-lucide="mouse"></i>
-          Left click + drag to rotate
-        </span>
-        <span>🖱️ Scroll to Zoom</span>
-        <span style="color: #1e293b; font-weight: 500; margin-top: 4px;">🖱️ Click on a region to view details</span>
-      </div>
+      <ul class="controls-hint" style="list-style: none; margin: 1rem 0 0 0; padding: 1rem 0 0 0; display: flex; flex-direction: column; gap: 0.5rem; color: #334155; font-size: 0.85rem;">
+        <li style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="mouse-pointer-click" style="width: 16px; height: 16px;"></i>
+          <span><strong>Click & Drag</strong> to rotate map</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i>
+          <span><strong>Scroll</strong> to zoom</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
+          <span><strong>Click region</strong> to view details</span>
+        </li>
+        <li style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="keyboard" style="width: 16px; height: 16px;"></i>
+          <span><strong>Spacebar</strong> to pause/resume</span>
+        </li>
+      </ul>
     </div>
 
     <!-- Click Info Card -->
     <div id="click-info-card" class="info-card hidden">
-      <div class="info-card-header">
-        <h2 id="info-city">City Name</h2>
-        <button id="close-info-card" class="toggle-btn" aria-label="Close" title="Close">
-          <i data-lucide="x" aria-hidden="true"></i>
-        </button>
+      <button id="close-info-card" class="toggle-btn" aria-label="Close" title="Close">
+        <i data-lucide="x" aria-hidden="true" style="width: 16px; height: 16px;"></i>
+      </button>
+      <div class="info-row" style="margin-bottom: 0.25rem;">
+        <div id="info-city" class="info-city">City Name</div>
+        <div id="info-province" class="info-province">Province</div>
       </div>
-      <div id="info-province" class="info-province">Province</div>
-      <div class="info-stats">
-        <div class="stat-label">SPPG Count</div>
+      <div class="info-row">
+        <div class="stat-label">Data Count:</div>
         <div id="info-count" class="stat-value">0</div>
       </div>
     </div>
@@ -423,6 +461,11 @@
     <a href="/" class="home-link">
       <span>←</span> Home
     </a>
+
+    <button id="rotation-toggle-btn" class="rotation-toggle-btn" title="Toggle Rotation (Space)">
+      <i data-lucide="pause" aria-hidden="true" id="rotation-icon"></i>
+      <span id="rotation-text">Pause</span>
+    </button>
 
     <script>
       if (window.lucide?.createIcons) window.lucide.createIcons();

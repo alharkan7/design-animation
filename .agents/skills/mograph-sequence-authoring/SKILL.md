@@ -1,6 +1,6 @@
 ---
 name: mograph-sequence-authoring
-description: Use when the user wants to create a new motion graphics animation HTML sequence for the Mograph Player application. Covers best practices for CSS animation timing, responsiveness, design aesthetics, and the Mograph export contract.
+description: Use when the user wants to create a new motion graphics animation HTML sequence for the Mograph Player application. Covers best practices for CSS animation timing, responsiveness, design aesthetics, specific motion patterns, and the Mograph export contract.
 ---
 
 # Mograph Sequence Authoring
@@ -41,7 +41,26 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
    - Use `ease-in` (starts slow, accelerates) for exits.
 7. **Stagger with Overlap**: Don't wait for one animation to finish before starting the next. Overlap them to create fluid choreography.
 
-## 3. Video Composition & Scale
+## 3. Specific Motion Graphics Patterns
+
+Motion graphics often involve kinetic typography, data visualization, and stylish overlays. Apply these specific recipes to elevate your sequences:
+
+### Kinetic Typography & Emphasis
+- **Karaoke Highlights**: Animate colors of words sequentially. To make it high-energy, add an accent glow and a 15% scale pop to the active word.
+- **Marker Sweep (Highlight Mode)**: A yellow (or accent color) marker sweep behind text. Achieve this with an absolutely positioned `.highlight-bar` behind the text, `transform-origin: left center;`, and animating `transform: scaleX(0)` to `scaleX(1)`.
+- **Hand-drawn Circle (Circle Mode)**: Create an organic circle around a key metric or word. Use `border-radius: 50%`, slightly rotate it (`rotate(-3deg)`), and animate `transform: scale(0)` to `scale(1)` with a bouncy `cubic-bezier(0.34, 1.56, 0.64, 1)` ease.
+- **Burst Lines**: Radiating lines from the center of a text element to add impact ("WOW"). Use multiple absolutely positioned `.burst-line` elements rotated around the center, animating their `scaleY` and `opacity`.
+
+### Data in Motion (Stats & Charts)
+- **Visual Weight**: A number on its own floats in empty space. Pair every metric with a visual element that gives it presence—a proportional fill bar, a background color shift, or a progress ring.
+- **Visual Continuity**: When showing successive stats of the same concept (e.g., Q1 -> Q2 -> Q3), keep the visual aesthetic the same. Only change the aesthetic when shifting to a completely new concept.
+- **Avoid Web Dashboards**: 
+  - 🚫 **No pie charts** (hard to read in motion).
+  - 🚫 **No multi-axis charts**.
+  - 🚫 **No gridlines, tick marks, or legends** (visual noise).
+  - 🚫 **No 6-panel dashboards** (2-3 metrics side-by-side maximum).
+
+## 4. Video Composition & Scale
 
 Video frames are not web pages. Web sizes are invisible on video.
 
@@ -59,7 +78,7 @@ Video frames are not web pages. Web sizes are invisible on video.
    - Anchor content to edges (left/top or right/bottom) rather than always floating in the center.
    - Use structural elements like rules and border panels to guide the eye.
 
-## 4. Design Aesthetics & Color
+## 5. Design Aesthetics & Color
 
 1. **Typography**: Use modern Google Fonts. Pair a bold, expressive font (e.g., `Space Grotesk`, `Outfit`, `Syne`) with a clean sans-serif (`Inter`, `Roboto`).
 2. **Color Presence**: 

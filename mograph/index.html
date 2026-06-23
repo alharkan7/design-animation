@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional motion graphics player — preview, control, and export HTML animation sequences as video.">
+  <title>Mograph Player</title>
+  <link rel="icon" type="image/svg+xml" href="/vite.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="mg-app">
+
+    <!-- ═══════ TOOLBAR ═══════ -->
+    <header class="mg-toolbar">
+      <!-- Brand -->
+      <div class="mg-brand">
+        <div class="mg-brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5,3 19,12 5,21"/>
+          </svg>
+        </div>
+        <div class="mg-brand-name">Mograph<span>Player</span></div>
+      </div>
+
+      <div class="mg-toolbar-divider"></div>
+
+      <!-- Sequence selector in toolbar -->
+      <div class="mg-toolbar-section">
+        <div class="mg-select-wrap">
+          <select id="sequence-select" class="mg-select" style="width: 220px;">
+            <option value="">— Select a sequence —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mg-toolbar-spacer"></div>
+
+      <!-- Recording indicator -->
+      <div class="mg-recording-indicator" id="recording-indicator">
+        <span class="dot"></span>
+        REC
+      </div>
+    </header>
+
+    <!-- ═══════ MAIN AREA ═══════ -->
+    <main class="mg-main">
+      <!-- Sidebar Controls -->
+      <aside class="mg-sidebar">
+
+        <!-- Aspect Ratio -->
+        <div>
+          <div class="mg-panel-header">
+            <span class="mg-panel-title">Composition</span>
+          </div>
+          <div class="mg-panel-body">
+            <div class="mg-field">
+              <span class="mg-label">Aspect Ratio</span>
+              <div class="mg-btn-group">
+                <button class="mg-ratio-btn" data-ratio="16:9" data-tooltip="Landscape (16:9)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>16:9</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="9:16" data-tooltip="Portrait (9:16)">
+                  <div class="ratio-icon portrait"></div>
+                  <span>9:16</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="1:1" data-tooltip="Square (1:1)">
+                  <div class="ratio-icon square"></div>
+                  <span>1:1</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="4:3" data-tooltip="Classic (4:3)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>4:3</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="3:4" data-tooltip="Portrait (3:4)">
+                  <div class="ratio-icon portrait"></div>
+                  <span>3:4</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="21:9" data-tooltip="Ultra-wide (21:9)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>21:9</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Settings -->
+        <div class="mg-export-section">
+          <div class="mg-panel-header">
+            <span class="mg-panel-title">Export</span>
+          </div>
+          <div class="mg-panel-body">
+            <div class="mg-field">
+              <span class="mg-label">Resolution</span>
+              <div class="mg-select-wrap">
+                <select id="quality-select" class="mg-select">
+                  <option value="720p">720p (HD)</option>
+                  <option value="1080p" selected>1080p (Full HD)</option>
+                  <option value="4k">4K (Ultra HD)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mg-field">
+              <span class="mg-label">Frame Rate</span>
+              <div class="mg-select-wrap">
+                <select id="fps-select" class="mg-select">
+                  <option value="24">24 fps (Film)</option>
+                  <option value="30" selected>30 fps (Standard)</option>
+                  <option value="60">60 fps (Smooth)</option>
+                </select>
+              </div>
+            </div>
+
+            <button class="mg-export-btn" id="export-btn" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export Video
+            </button>
+
+            <div class="mg-export-progress" id="export-progress">
+              <div class="mg-progress-bar">
+                <div class="mg-progress-bar-fill" id="progress-bar-fill"></div>
+              </div>
+              <span class="mg-progress-text" id="progress-text">Preparing...</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Viewport -->
+      <section class="mg-viewport">
+        <!-- Info badge -->
+        <div class="mg-viewport-info" id="viewport-info">16:9 • 960×540</div>
+
+        <!-- Frame container -->
+        <div class="mg-viewport-frame" id="viewport-frame" style="display: none;">
+          <iframe id="viewport-iframe" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>
+        </div>
+
+        <!-- Empty state -->
+        <div class="mg-empty-state" id="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="4"/>
+            <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+          </svg>
+          <p>
+            <strong>No sequence loaded</strong><br>
+            Select an animation from the dropdown above<br>
+            to start previewing.
+          </p>
+        </div>
+
+        <!-- Keyboard shortcuts hint -->
+        <div class="mg-shortcuts-hint">
+          <span><kbd>Space</kbd> Play / Pause</span>
+          <span><kbd>←</kbd> Rewind</span>
+          <span><kbd>→</kbd> Skip +5s</span>
+          <span><kbd>R</kbd> Restart</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- ═══════ TIMELINE ═══════ -->
+    <footer class="mg-timeline">
+      <!-- Transport -->
+      <div class="mg-transport">
+        <button class="mg-btn mg-btn--icon" id="rewind-btn" data-tooltip="Rewind">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11,19 2,12 11,5" fill="currentColor"/>
+            <polygon points="22,19 13,12 22,5" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon mg-play-btn" id="play-btn" data-tooltip="Play / Pause">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6,4 20,12 6,20"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon" id="stop-btn" data-tooltip="Stop">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon" id="skip-forward-btn" data-tooltip="Skip +5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13,19 22,12 13,5" fill="currentColor"/>
+            <polygon points="2,19 11,12 2,5" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="mg-toolbar-divider"></div>
+
+      <!-- Timeline Track -->
+      <div class="mg-timeline-track">
+        <div class="mg-time-display" id="time-display">
+          <span class="current">00:00.00</span>
+        </div>
+
+        <div class="mg-scrubber-wrap" id="scrubber-wrap">
+          <div class="mg-scrubber-track">
+            <div class="mg-scrubber-fill" id="scrubber-fill"></div>
+            <div class="mg-scrubber-head" id="scrubber-head"></div>
+          </div>
+        </div>
+
+        <div class="mg-fps-display" id="fps-display">— fps</div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

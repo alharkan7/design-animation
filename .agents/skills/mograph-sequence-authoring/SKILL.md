@@ -1,0 +1,93 @@
+---
+name: mograph-sequence-authoring
+description: Use when the user wants to create a new motion graphics animation HTML sequence for the Mograph Player application. Covers best practices for CSS animation timing, responsiveness, design aesthetics, and the Mograph export contract.
+---
+
+# Mograph Sequence Authoring
+
+This skill guides the creation of motion graphics sequences for the Mograph Player (`/mograph/sequences/`). The Mograph Player is a custom viewer and video exporter that renders HTML sequences perfectly frame-by-frame. 
+
+To ensure the sequences work smoothly and can be exported as video, strict rules regarding layout, CSS animations, and design must be followed.
+
+## 1. The Architecture Contract (WAAPI / CSS)
+
+The Mograph Player uses the **Web Animations API** (`document.getAnimations()`) to step through frames perfectly during video export. 
+Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) or the native Web Animations API (`element.animate`).
+
+**Never do the following:**
+- 🚫 **No GSAP or external animation libraries** unless explicitly requested and tested. Stick to CSS `@keyframes` or WAAPI.
+- 🚫 **No `infinite` animations**. Video export calculates duration based on the longest animation end time. If an animation is infinite, the duration will default to maximum and the recording will capture endless loops. Use fixed repeats (`animation-iteration-count: 3`) or forwards fills.
+- 🚫 **No `requestAnimationFrame` or `setInterval`**. JS-driven custom timing loops will break during the frame-stepping export process.
+- 🚫 **No videos or heavy external assets** that load unpredictably.
+- 🚫 **Don't calculate layout dynamically at runtime** (e.g. `getBoundingClientRect()`). Measure everything with CSS relative units (`vw`, `vh`, `%`) so it's deterministic.
+
+## 2. Animation & Timing Rules
+
+1. **Use `animation-fill-mode: both` or `forwards`**: All animations should hold their final frame state.
+2. **Chain with `animation-delay`**: Orchestrate your scenes by staggering `animation-delay` across elements.
+   ```css
+   .word-1 { animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+   .word-2 { animation: scaleIn 0.8s 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+   ```
+3. **End State First (Layout Before Animation)**: 
+   - Position elements where they belong in their final visible state using static CSS.
+   - Animate *from* a hidden/offset state (`opacity: 0`, `transform: translateY(80px)`) *to* the normal state (`opacity: 1`, `transform: translateY(0)`).
+   - This ensures layout doesn't break regardless of screen size.
+4. **Don't start at t=0**: Offset the first animation by 0.1-0.3s. A zero-delay entrance feels like a jump cut.
+5. **Vary your entrances**: Do not enter every element from the same direction (e.g., everything sliding up). Mix it up: slide from left, scale up, opacity fade, blur reveal. Use at least 3 different directions/eases per scene.
+6. **Asymmetry in Speed**: 
+   - Entrances should take longer (0.4s - 0.8s) than exits (0.2s - 0.3s). 
+   - Use `ease-out` (starts fast, decelerates) for entrances.
+   - Use `ease-in` (starts slow, accelerates) for exits.
+7. **Stagger with Overlap**: Don't wait for one animation to finish before starting the next. Overlap them to create fluid choreography.
+
+## 3. Video Composition & Scale
+
+Video frames are not web pages. Web sizes are invisible on video.
+
+1. **Scale Everything Up**:
+   - Headlines: `64px` - `120px` (use `clamp(4rem, 10vw, 8rem)`)
+   - Body Text: `28px` - `42px` (use `clamp(1.5rem, 4vw, 3rem)`)
+   - Padding: `60px` - `140px`
+   - Borders: `2px` - `4px`
+2. **Density (8-10 elements per scene)**: A frame with 3 elements feels empty. Every scene needs:
+   - **Background texture**: Radial glow, grain, grid, oversized ghost type. *Never solid flat color.*
+   - **Midground content**: The actual message.
+   - **Foreground accents**: Dividers, labels, data bars, registration marks, monospace metadata. These make it feel "produced".
+3. **Frame Composition**:
+   - Minimum two focal points so the eye can travel.
+   - Anchor content to edges (left/top or right/bottom) rather than always floating in the center.
+   - Use structural elements like rules and border panels to guide the eye.
+
+## 4. Design Aesthetics & Color
+
+1. **Typography**: Use modern Google Fonts. Pair a bold, expressive font (e.g., `Space Grotesk`, `Outfit`, `Syne`) with a clean sans-serif (`Inter`, `Roboto`).
+2. **Color Presence**: 
+   - Muted is fine, flat is not. Every scene must have a highly visible accent color.
+   - Favor dark modes (`#0a0a0f`) for maximum contrast.
+   - **WARNING:** Do NOT use full-screen linear gradients on dark backgrounds (they cause banding under video compression). Use radial gradients or solid fills + localized glows instead.
+   - Use CSS text gradients for premium typography:
+     ```css
+     background: linear-gradient(135deg, #ff6600, #ffcc00);
+     -webkit-background-clip: text;
+     -webkit-text-fill-color: transparent;
+     ```
+3. **Ambient Motion**: Static decoratives feel dead. Every decorative element (glows, lines, grids) should have slow ambient motion (breathe, drift, pulse). 
+4. **Custom Easing**: Never use standard `ease` or `linear` for primary motion. Subtle reads as static at 30fps. Use custom `cubic-bezier` curves for snappy, professional motion.
+   ```css
+   /* Snappy entrance */
+   cubic-bezier(0.16, 1, 0.3, 1)
+   /* Bouncy entrance */
+   cubic-bezier(0.34, 1.56, 0.64, 1)
+   ```
+
+## Workflow / Checklist
+
+When adding a new sequence:
+1. Create the new HTML file in `/mograph/sequences/<name>.html`.
+2. Follow the design and animation rules above.
+3. Update `/mograph/sequences/manifest.json` by adding the new sequence to the array:
+   ```json
+   { "file": "<name>.html", "name": "Beautiful Name" }
+   ```
+4. Inform the user they can test it in the Mograph player and export it as video.

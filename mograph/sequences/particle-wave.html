@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: #050510;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const w = () => window.innerWidth;
+  const h = () => window.innerHeight;
+
+  const particles = [];
+  const cols = 80;
+  const rows = 40;
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      particles.push({
+        baseX: (i / cols) * 1.2 - 0.1,
+        baseY: (j / rows) * 1.2 - 0.1,
+        x: 0, y: 0, z: 0,
+        hue: (i / cols) * 60 + 200,
+      });
+    }
+  }
+
+  let time = 0;
+  const startTime = performance.now();
+
+  function animate() {
+    const elapsed = (performance.now() - startTime) / 1000;
+    time = elapsed * 0.8;
+
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.15)';
+    ctx.fillRect(0, 0, w(), h());
+
+    for (const p of particles) {
+      const dist = Math.sqrt(
+        (p.baseX - 0.5) ** 2 + (p.baseY - 0.5) ** 2
+      );
+
+      p.z = Math.sin(dist * 12 - time * 3) * 0.15 +
+            Math.sin(p.baseX * 8 + time * 2) * 0.08 +
+            Math.cos(p.baseY * 6 + time * 1.5) * 0.05;
+
+      const perspective = 1 / (1 - p.z * 0.5);
+      p.x = (p.baseX - 0.5) * perspective * w() * 0.8 + w() / 2;
+      p.y = (p.baseY - 0.5) * perspective * h() * 0.8 + h() / 2;
+
+      const brightness = 0.3 + p.z * 2.5;
+      const size = (1.5 + p.z * 4) * Math.min(w(), h()) / 800;
+      const alpha = Math.max(0.1, Math.min(1, brightness));
+
+      const hue = p.hue + p.z * 80 + time * 20;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, size), 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 80%, ${50 + p.z * 30}%, ${alpha})`;
+      ctx.fill();
+
+      if (p.z > 0.05) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size * 3, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${hue}, 90%, 60%, ${alpha * 0.08})`;
+        ctx.fill();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
+</body>
+</html>

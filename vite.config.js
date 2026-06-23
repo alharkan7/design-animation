@@ -741,7 +741,7 @@ function motionGraphicsExportPlugin() {
 
     try {
       const body = await readJsonBody(req, 10_000_000);
-      const { html, resolution = '1080p', layout = 'landscape' } = body;
+      const { html, resolution = '1080p', layout = 'landscape', width: reqWidth, height: reqHeight } = body;
 
       if (!html) {
         res.statusCode = 400;
@@ -750,16 +750,24 @@ function motionGraphicsExportPlugin() {
         return;
       }
 
-      // Calculate dimensions based on resolution and layout
-      const getDimensions = () => {
+      // Calculate dimensions: prefer explicit width/height, fall back to resolution+layout
+      let width, height;
+      if (reqWidth && reqHeight) {
+        width = Math.round(reqWidth);
+        height = Math.round(reqHeight);
+      } else {
         const baseRes = resolution === '720p' ? 720 : resolution === '4k' ? 2160 : 1080;
         if (layout === 'portrait') {
-          return { width: Math.round(baseRes * 9 / 16), height: baseRes };
+          width = Math.round(baseRes * 9 / 16);
+          height = baseRes;
+        } else {
+          width = baseRes;
+          height = Math.round(baseRes * 9 / 16);
         }
-        return { width: baseRes, height: Math.round(baseRes * 9 / 16) };
-      };
-
-      const { width, height } = getDimensions();
+      }
+      // Ensure even dimensions for video encoding
+      width = width % 2 === 0 ? width : width + 1;
+      height = height % 2 === 0 ? height : height + 1;
 
       const br = await getBrowser();
       const page = await br.newPage();
@@ -769,33 +777,93 @@ function motionGraphicsExportPlugin() {
       // Inject the HTML
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
-      // Wait a bit for animations to start
+      // Wait for resources (fonts, images) to fully load
       await new Promise(r => setTimeout(r, 500));
 
-      // Get animation duration (capped at 5 seconds for performance)
-      let duration = await getAnimationDuration(page);
-      const maxDuration = 5000; // 5 seconds max
-      duration = Math.min(duration, maxDuration);
-      console.log(`Recording for ${duration}ms (${duration / 1000}s)`);
+      // ── Frame-perfect capture via Web Animations API ──
+      // Instead of recording in real-time (where screenshot latency
+      // causes drift), we PAUSE every CSS animation and manually step
+      // through the timeline, taking a screenshot at each exact frame.
 
-      // Capture frames using screenshots
-      const fps = 30;
-      const totalFrames = Math.min(Math.ceil(duration / 1000 * fps), 150); // Max 150 frames (5 seconds)
-      const frameDelay = 1000 / fps;
-
-      console.log(`Capturing ${totalFrames} frames...`);
-      const frames = [];
-      for (let i = 0; i < totalFrames; i++) {
-        const screenshot = await page.screenshot({
-          type: 'png',
-          clip: { x: 0, y: 0, width, height }
-        });
-        frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
-        if (i < totalFrames - 1) {
-          await new Promise(r => setTimeout(r, frameDelay));
+      const animInfo = await page.evaluate(() => {
+        const animations = document.getAnimations();
+        if (animations.length === 0) {
+          return { hasCSSAnimations: false, duration: 5000 };
         }
-        if (i % 30 === 0) {
-          console.log(`Captured ${i}/${totalFrames} frames`);
+
+        // Calculate the latest animation end time
+        let maxEnd = 0;
+        for (const anim of animations) {
+          const timing = anim.effect?.getComputedTiming?.();
+          if (timing) {
+            const end = (timing.delay || 0) + (timing.activeDuration || 0);
+            if (end > maxEnd) maxEnd = end;
+          }
+        }
+
+        // Pause all animations at time 0
+        for (const anim of animations) {
+          anim.pause();
+          anim.currentTime = 0;
+        }
+
+        return {
+          hasCSSAnimations: true,
+          duration: maxEnd > 0 ? maxEnd : 5000,
+          count: animations.length,
+        };
+      });
+
+      const maxDuration = 10000; // 10 seconds max
+      let duration = Math.min(animInfo.duration + 500, maxDuration); // +500ms buffer
+      const fps = 30;
+      const totalFrames = Math.ceil(duration / 1000 * fps);
+      const frameDuration = 1000 / fps; // ms per frame in the output video
+
+      console.log(`Animations: ${animInfo.count || 0}, duration: ${animInfo.duration}ms, capturing ${totalFrames} frames at ${fps}fps`);
+
+      const frames = [];
+
+      if (animInfo.hasCSSAnimations) {
+        // ── CSS animation path: step through the timeline precisely ──
+        for (let i = 0; i < totalFrames; i++) {
+          const timeMs = i * frameDuration;
+
+          // Advance every animation to exactly this point in time
+          await page.evaluate((t) => {
+            for (const anim of document.getAnimations()) {
+              anim.currentTime = t;
+            }
+          }, timeMs);
+
+          // Let the browser composite the frame
+          await new Promise(r => setTimeout(r, 10));
+
+          const screenshot = await page.screenshot({
+            type: 'png',
+            clip: { x: 0, y: 0, width, height },
+          });
+          frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
+
+          if (i % 30 === 0) {
+            console.log(`Captured ${i}/${totalFrames} frames`);
+          }
+        }
+      } else {
+        // ── Fallback for JS/canvas animations: real-time capture ──
+        const frameDelay = 1000 / fps;
+        for (let i = 0; i < totalFrames; i++) {
+          const screenshot = await page.screenshot({
+            type: 'png',
+            clip: { x: 0, y: 0, width, height },
+          });
+          frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
+          if (i < totalFrames - 1) {
+            await new Promise(r => setTimeout(r, frameDelay));
+          }
+          if (i % 30 === 0) {
+            console.log(`Captured ${i}/${totalFrames} frames`);
+          }
         }
       }
 
@@ -981,6 +1049,7 @@ export default defineConfig(({ mode }) => {
           'motion-graphics': resolve(__dirname, 'motion-graphics/index.html'),
           'image-sequencer': resolve(__dirname, 'image-sequencer/index.html'),
           'map3d': resolve(__dirname, 'map3d/index.html'),
+          'mograph': resolve(__dirname, 'mograph/index.html'),
         },
       },
     },

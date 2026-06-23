@@ -1,0 +1,826 @@
+/* ================================================================
+   MOGRAPH PLAYER — Professional Graphics Software UI
+   Inspired by After Effects / DaVinci Resolve / Figma
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Surface system — dark layered panels */
+  --mg-bg-base:       #111116;
+  --mg-bg-panel:      #1a1a22;
+  --mg-bg-surface:    #222230;
+  --mg-bg-elevated:   #2a2a38;
+  --mg-bg-input:      #16161e;
+
+  /* Border system */
+  --mg-border:        #2d2d3a;
+  --mg-border-subtle: #232330;
+  --mg-border-strong: #3a3a4a;
+
+  /* Text hierarchy */
+  --mg-text-primary:   #e8e8f0;
+  --mg-text-secondary: #8888a0;
+  --mg-text-tertiary:  #5c5c72;
+  --mg-text-label:     #6e6e86;
+
+  /* Accent — vibrant cyan / blue */
+  --mg-accent:         #3b82f6;
+  --mg-accent-hover:   #60a5fa;
+  --mg-accent-muted:   rgba(59, 130, 246, 0.15);
+  --mg-accent-glow:    rgba(59, 130, 246, 0.3);
+
+  /* Status colors */
+  --mg-success:    #22c55e;
+  --mg-warning:    #f59e0b;
+  --mg-danger:     #ef4444;
+
+  /* Playhead / timeline */
+  --mg-playhead:   #3b82f6;
+  --mg-timeline-bg: #16161e;
+
+  /* Font */
+  --mg-font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mg-font-mono:  'JetBrains Mono', monospace;
+
+  /* Sizing */
+  --mg-radius:     8px;
+  --mg-radius-sm:  4px;
+  --mg-radius-lg:  12px;
+
+  /* Toolbar height */
+  --mg-toolbar-h:  44px;
+  --mg-timeline-h: 72px;
+  --mg-sidebar-w:  280px;
+}
+
+/* ---- RESET ---- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--mg-font);
+  background: var(--mg-bg-base);
+  color: var(--mg-text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ================================================================
+   LAYOUT — 3-zone: header + main (sidebar + viewport) + timeline
+   ================================================================ */
+
+.mg-app {
+  display: grid;
+  grid-template-rows: var(--mg-toolbar-h) 1fr var(--mg-timeline-h);
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ---- HEADER / TOOLBAR ---- */
+.mg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+  background: var(--mg-bg-panel);
+  border-bottom: 1px solid var(--mg-border);
+  z-index: 100;
+}
+
+.mg-toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mg-toolbar-section + .mg-toolbar-section {
+  margin-left: 8px;
+}
+
+.mg-toolbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--mg-border);
+  margin: 0 8px;
+}
+
+.mg-toolbar-spacer {
+  flex: 1;
+}
+
+/* TOOLBAR BUTTON */
+.mg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--mg-radius-sm);
+  background: transparent;
+  color: var(--mg-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.mg-btn:hover {
+  background: var(--mg-bg-surface);
+  color: var(--mg-text-primary);
+}
+
+.mg-btn:active {
+  background: var(--mg-bg-elevated);
+}
+
+.mg-btn.active {
+  background: var(--mg-accent-muted);
+  color: var(--mg-accent-hover);
+}
+
+.mg-btn--icon {
+  width: 30px;
+  padding: 0;
+}
+
+.mg-btn--primary {
+  background: var(--mg-accent);
+  color: #fff;
+}
+
+.mg-btn--primary:hover {
+  background: var(--mg-accent-hover);
+  color: #fff;
+}
+
+.mg-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ---- MAIN AREA ---- */
+.mg-main {
+  display: flex;
+  overflow: hidden;
+  background: var(--mg-bg-base);
+}
+
+/* ---- SIDEBAR / CONTROLS PANEL ---- */
+.mg-sidebar {
+  width: var(--mg-sidebar-w);
+  min-width: var(--mg-sidebar-w);
+  background: var(--mg-bg-panel);
+  border-right: 1px solid var(--mg-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.mg-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mg-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mg-sidebar::-webkit-scrollbar-thumb {
+  background: var(--mg-border);
+  border-radius: 3px;
+}
+
+.mg-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--mg-border-subtle);
+}
+
+.mg-panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mg-text-label);
+}
+
+.mg-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* FORM ELEMENTS */
+.mg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mg-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mg-text-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mg-select-wrap {
+  position: relative;
+}
+
+.mg-select {
+  width: 100%;
+  height: 32px;
+  padding: 0 30px 0 10px;
+  background: var(--mg-bg-input);
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm);
+  color: var(--mg-text-primary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.15s ease;
+}
+
+.mg-select:hover {
+  border-color: var(--mg-border-strong);
+}
+
+.mg-select:focus {
+  outline: none;
+  border-color: var(--mg-accent);
+  box-shadow: 0 0 0 2px var(--mg-accent-muted);
+}
+
+.mg-select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--mg-text-tertiary);
+  pointer-events: none;
+}
+
+.mg-select option {
+  background: var(--mg-bg-panel);
+  color: var(--mg-text-primary);
+}
+
+/* ASPECT RATIO BUTTON GROUP */
+.mg-btn-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  background: var(--mg-bg-input);
+  border-radius: var(--mg-radius-sm);
+  padding: 3px;
+  border: 1px solid var(--mg-border);
+}
+
+.mg-btn-group .mg-ratio-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 40px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--mg-text-tertiary);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mg-btn-group .mg-ratio-btn:hover {
+  background: var(--mg-bg-surface);
+  color: var(--mg-text-secondary);
+}
+
+.mg-btn-group .mg-ratio-btn.active {
+  background: var(--mg-accent-muted);
+  color: var(--mg-accent-hover);
+}
+
+.mg-btn-group .mg-ratio-btn .ratio-icon {
+  width: 14px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 1.5px;
+}
+
+.mg-btn-group .mg-ratio-btn .ratio-icon.landscape {
+  width: 18px;
+  height: 10px;
+}
+
+.mg-btn-group .mg-ratio-btn .ratio-icon.portrait {
+  width: 10px;
+  height: 16px;
+}
+
+.mg-btn-group .mg-ratio-btn .ratio-icon.square {
+  width: 13px;
+  height: 13px;
+}
+
+/* Export Section */
+.mg-export-section {
+  border-top: 1px solid var(--mg-border-subtle);
+  margin-top: 4px;
+}
+
+.mg-export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 14px;
+  background: var(--mg-accent);
+  border: none;
+  border-radius: var(--mg-radius-sm);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mg-export-btn:hover {
+  background: var(--mg-accent-hover);
+  box-shadow: 0 2px 12px var(--mg-accent-glow);
+}
+
+.mg-export-btn:active {
+  transform: scale(0.98);
+}
+
+.mg-export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.mg-export-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Export progress */
+.mg-export-progress {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mg-export-progress.active {
+  display: flex;
+}
+
+.mg-progress-bar {
+  height: 4px;
+  background: var(--mg-bg-input);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mg-progress-bar-fill {
+  height: 100%;
+  background: var(--mg-accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.mg-progress-text {
+  font-size: 11px;
+  color: var(--mg-text-secondary);
+  text-align: center;
+  font-family: var(--mg-font-mono);
+}
+
+/* ---- VIEWPORT ---- */
+.mg-viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(30, 30, 45, 0.5), transparent 70%),
+    repeating-conic-gradient(var(--mg-bg-base) 0% 25%, #141420 0% 50%) 50% / 24px 24px;
+}
+
+.mg-viewport-frame {
+  position: relative;
+  background: #000;
+  border-radius: var(--mg-radius);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--mg-border),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.mg-viewport-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
+}
+
+/* Viewport info badge */
+.mg-viewport-info {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--mg-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--mg-font-mono);
+  font-size: 10px;
+  color: var(--mg-text-secondary);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mg-viewport:hover .mg-viewport-info {
+  opacity: 1;
+}
+
+/* Empty state */
+.mg-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--mg-text-tertiary);
+  text-align: center;
+}
+
+.mg-empty-state svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+}
+
+.mg-empty-state p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.mg-empty-state p strong {
+  color: var(--mg-text-secondary);
+  font-weight: 600;
+}
+
+/* ---- TIMELINE BAR ---- */
+.mg-timeline {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--mg-bg-panel);
+  border-top: 1px solid var(--mg-border);
+  padding: 0 16px;
+  z-index: 100;
+}
+
+/* Transport Controls */
+.mg-transport {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.mg-transport .mg-btn--icon {
+  width: 32px;
+  height: 32px;
+}
+
+.mg-transport .mg-btn--icon.mg-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mg-accent-muted);
+  color: var(--mg-accent);
+}
+
+.mg-transport .mg-btn--icon.mg-play-btn:hover {
+  background: var(--mg-accent);
+  color: #fff;
+}
+
+/* Timeline Track */
+.mg-timeline-track {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+}
+
+.mg-time-display {
+  font-family: var(--mg-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mg-text-secondary);
+  min-width: 72px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mg-time-display .current {
+  color: var(--mg-text-primary);
+}
+
+.mg-time-display .separator {
+  color: var(--mg-text-tertiary);
+  margin: 0 2px;
+}
+
+/* Scrubber */
+.mg-scrubber-wrap {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.mg-scrubber-track {
+  width: 100%;
+  height: 4px;
+  background: var(--mg-bg-input);
+  border-radius: 2px;
+  position: relative;
+  overflow: visible;
+}
+
+.mg-scrubber-fill {
+  height: 100%;
+  background: var(--mg-accent);
+  border-radius: 2px;
+  width: 0%;
+  transition: none;
+}
+
+.mg-scrubber-head {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: var(--mg-accent);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.mg-scrubber-wrap:hover .mg-scrubber-head {
+  opacity: 1;
+}
+
+/* FPS indicator */
+.mg-fps-display {
+  font-family: var(--mg-font-mono);
+  font-size: 10px;
+  color: var(--mg-text-tertiary);
+  min-width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 860px) {
+  .mg-main {
+    flex-direction: column;
+  }
+
+  .mg-sidebar {
+    width: 100%;
+    min-width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--mg-border);
+    max-height: 220px;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .mg-sidebar .mg-panel-body {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .mg-sidebar .mg-field {
+    min-width: 160px;
+  }
+
+  .mg-viewport {
+    padding: 12px;
+  }
+
+  :root {
+    --mg-toolbar-h: 40px;
+    --mg-timeline-h: 60px;
+  }
+}
+
+/* ================================================================
+   ANIMATIONS
+   ================================================================ */
+@keyframes mg-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.mg-recording-indicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mg-danger);
+}
+
+.mg-recording-indicator.active {
+  display: flex;
+}
+
+.mg-recording-indicator .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--mg-danger);
+  border-radius: 50%;
+  animation: mg-pulse 1s ease-in-out infinite;
+}
+
+/* ================================================================
+   LOGO / BRAND
+   ================================================================ */
+.mg-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.mg-brand-logo {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, var(--mg-accent), #8b5cf6);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mg-brand-logo svg {
+  width: 13px;
+  height: 13px;
+  color: #fff;
+}
+
+.mg-brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mg-text-primary);
+}
+
+.mg-brand-name span {
+  color: var(--mg-text-tertiary);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* ================================================================
+   TOOLTIP
+   ================================================================ */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--mg-bg-elevated);
+  border: 1px solid var(--mg-border);
+  border-radius: var(--mg-radius-sm);
+  font-size: 11px;
+  color: var(--mg-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 1000;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* ================================================================
+   KEYBOARD SHORTCUTS HINT
+   ================================================================ */
+.mg-shortcuts-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--mg-radius);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  color: var(--mg-text-tertiary);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 10;
+}
+
+.mg-viewport:hover .mg-shortcuts-hint {
+  opacity: 0.7;
+}
+
+.mg-shortcuts-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  font-family: var(--mg-font-mono);
+  font-size: 10px;
+  margin-right: 4px;
+}

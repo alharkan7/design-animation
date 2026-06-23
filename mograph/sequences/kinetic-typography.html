@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&family=Space+Grotesk:wght@700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: #0a0a0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .scene {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .word {
+    position: absolute;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  .word-1 {
+    font-size: clamp(3rem, 12vw, 10rem);
+    color: #ff3366;
+    animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .word-2 {
+    font-size: clamp(2rem, 8vw, 6rem);
+    color: #33ccff;
+    font-family: 'Space Grotesk', sans-serif;
+    animation: scaleIn 0.8s 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .word-3 {
+    font-size: clamp(4rem, 15vw, 14rem);
+    background: linear-gradient(135deg, #ff6600, #ffcc00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rotateIn 1s 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .word-4 {
+    font-size: clamp(1.5rem, 5vw, 4rem);
+    color: #00ff88;
+    letter-spacing: 0.5em;
+    font-family: 'Space Grotesk', sans-serif;
+    animation: fadeSlide 0.6s 4s ease-out forwards;
+  }
+
+  .word-5 {
+    font-size: clamp(5rem, 18vw, 16rem);
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.3);
+    animation: strokeIn 1.5s 4.8s ease-out forwards;
+  }
+
+  .bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+  }
+
+  .bg-circle-1 {
+    width: clamp(200px, 40vw, 500px);
+    height: clamp(200px, 40vw, 500px);
+    background: radial-gradient(circle, rgba(255, 51, 102, 0.15), transparent);
+    animation: pulseIn 2s 0s ease-out forwards;
+  }
+
+  .bg-circle-2 {
+    width: clamp(300px, 60vw, 800px);
+    height: clamp(300px, 60vw, 800px);
+    background: radial-gradient(circle, rgba(51, 204, 255, 0.1), transparent);
+    animation: pulseIn 2s 1.5s ease-out forwards;
+  }
+
+  .line {
+    position: absolute;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ff3366, transparent);
+    opacity: 0;
+  }
+
+  .line-1 {
+    width: 60%;
+    top: 30%;
+    animation: lineSlide 0.8s 1s ease-out forwards;
+  }
+
+  .line-2 {
+    width: 40%;
+    bottom: 35%;
+    animation: lineSlide 0.8s 3.5s ease-out forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(80px); }
+    40% { opacity: 1; }
+    to { opacity: 1; transform: translateY(-20px); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.3) rotate(-5deg); }
+    to { opacity: 1; transform: scale(1) rotate(0deg) translateY(60px); }
+  }
+
+  @keyframes rotateIn {
+    from { opacity: 0; transform: rotate(-15deg) scale(0.5); }
+    to { opacity: 1; transform: rotate(0deg) scale(1); }
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateX(-40px) translateY(-80px); }
+    to { opacity: 1; transform: translateX(0) translateY(-80px); }
+  }
+
+  @keyframes strokeIn {
+    from { opacity: 0; transform: scale(1.3); }
+    to { opacity: 0.4; transform: scale(1) translateY(30px); }
+  }
+
+  @keyframes pulseIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes lineSlide {
+    from { opacity: 0; transform: scaleX(0); }
+    to { opacity: 0.6; transform: scaleX(1); }
+  }
+</style>
+</head>
+<body>
+  <div class="scene">
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
+    <div class="line line-1"></div>
+    <div class="line line-2"></div>
+    <div class="word word-5">BOLD</div>
+    <div class="word word-1">CREATE</div>
+    <div class="word word-2">without limits</div>
+    <div class="word word-3">DESIGN</div>
+    <div class="word word-4">INSPIRE OTHERS</div>
+  </div>
+</body>
+</html>

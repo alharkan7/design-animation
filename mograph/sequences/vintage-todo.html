@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Caveat:wght@700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+    background-color: transparent;
+    font-family: 'Special Elite', monospace;
+    color: #2e2a24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scene {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Registration Marks */
+  .reg-mark {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    opacity: 0;
+    animation: fadeInOut 7.5s 0.1s both;
+  }
+  .reg-mark::before, .reg-mark::after {
+    content: '';
+    position: absolute;
+    background: #a63a2c;
+  }
+  .reg-mark::before { top: 0; left: 14px; width: 1px; height: 100%; }
+  .reg-mark::after { left: 0; top: 14px; height: 1px; width: 100%; }
+
+  .top-left { top: 40px; left: 40px; }
+  .top-right { top: 40px; right: 40px; }
+  .bottom-left { bottom: 40px; left: 40px; }
+  .bottom-right { bottom: 40px; right: 40px; }
+
+  .metadata {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Special Elite', monospace;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #8c8375;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    animation: fadeInOut 7.5s 0.2s both;
+  }
+
+  #todo-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    max-width: 900px;
+    background: transparent;
+    padding: clamp(25px, 5vmin, 50px) clamp(20px, 6vmin, 60px);
+  }
+
+  .todo-title-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: clamp(25px, 6vmin, 50px);
+    
+    --enter-delay: 0.2s;
+    --exit-delay: 6s;
+    animation: slideUpEnter 1.2s var(--enter-delay) cubic-bezier(0.25, 1, 0.25, 1) both,
+               slideUpExit 0.8s var(--exit-delay) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .todo-title {
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 7vmin, 5rem);
+    font-weight: 800;
+    font-style: italic;
+    color: #2e2a24;
+    letter-spacing: 0.02em;
+  }
+
+  .title-underline {
+    width: 60%;
+    height: 2px;
+    background-color: #a63a2c;
+    margin-top: 15px;
+    transform-origin: center;
+    animation: scaleXIn 1s 0.6s cubic-bezier(0.25, 1, 0.25, 1) both;
+  }
+
+  .todo-list-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .todo-row {
+    display: grid;
+    grid-template-columns: 1fr clamp(50px, 12vmin, 100px) clamp(50px, 12vmin, 100px);
+    column-gap: clamp(10px, 3vmin, 40px);
+    align-items: end;
+    padding: clamp(15px, 3vmin, 25px) 0;
+    border-bottom: 1px solid #e0d8c3;
+    
+    --enter-delay: calc(0.3s + var(--index) * 0.15s);
+    --exit-delay: calc(6.1s + var(--index) * 0.1s);
+    animation: fadeSlideUpEnter 1s var(--enter-delay) cubic-bezier(0.25, 1, 0.25, 1) both,
+               fadeSlideUpExit 0.7s var(--exit-delay) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  
+  .todo-row:last-child {
+    border-bottom: none;
+  }
+
+  .todo-header-row {
+    border-bottom: 2px solid #c8bea8;
+    padding-bottom: 10px;
+    padding-top: 0;
+    align-items: center;
+  }
+
+  .todo-header {
+    font-size: clamp(0.7rem, 2vmin, 1.2rem);
+    font-weight: 700;
+    color: #8c8375;
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+
+  .todo-text {
+    font-size: clamp(1rem, 3.5vmin, 1.8rem);
+    font-weight: 400;
+    line-height: 1.3;
+    padding-bottom: 2px;
+  }
+
+  .checkbox-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding-bottom: 2px;
+  }
+
+  .checkbox-box {
+    width: clamp(16px, 4vmin, 26px);
+    height: clamp(16px, 4vmin, 26px);
+    border: 1.5px solid #a8a08f;
+    border-radius: 2px;
+    background: transparent;
+  }
+
+  .checkbox-mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: clamp(2rem, 6vmin, 4rem);
+    color: #a63a2c;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    
+    --delay: calc(1.5s + var(--check-delay) * 0.2s);
+    animation: drawCheck 0.6s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes drawCheck {
+    from { opacity: 0; transform: translate(-50%, -60%) scale(0.5) rotate(-20deg); }
+    to { opacity: 1; transform: translate(-50%, -60%) scale(1) rotate(0deg); }
+  }
+
+  @keyframes fadeSlideUpEnter {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeSlideUpExit {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-40px); }
+  }
+
+  @keyframes slideUpEnter {
+    from { opacity: 0; transform: translateY(60px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUpExit {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-60px); }
+  }
+
+  @keyframes scaleXIn {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+  
+
+</style>
+</head>
+<body>
+  <div class="reg-mark top-left"></div>
+  <div class="reg-mark top-right"></div>
+  <div class="reg-mark bottom-left"></div>
+  <div class="reg-mark bottom-right"></div>
+
+  
+  <div class="scene">
+    <div id="todo-wrapper"></div>
+  </div>
+
+  <script>
+    const data = {
+      title: "Project Tasks",
+      items: [
+        { text: "Wireframe layout design", done: true, shared: true },
+        { text: "Setup database schema", done: true, shared: false },
+        { text: "Implement OAuth flow", done: false, shared: true },
+        { text: "Deploy to production", done: false, shared: false }
+      ]
+    };
+
+    const wrapper = document.getElementById('todo-wrapper');
+    
+    let html = `
+      <div class="todo-title-container">
+        <div class="todo-title">${data.title}</div>
+        <div class="title-underline"></div>
+      </div>
+      
+      <div class="todo-list-container">
+        <div class="todo-row todo-header-row" style="--index: 0">
+          <div class="todo-header"></div>
+          <div class="todo-header">DONE</div>
+          <div class="todo-header">SHARED</div>
+        </div>
+    `;
+    
+    data.items.forEach((item, i) => {
+      const index = i + 1;
+      html += `
+        <div class="todo-row" style="--index: ${index}">
+          <div class="todo-text">${item.text}</div>
+          <div class="checkbox-wrapper">
+            <div class="checkbox-box"></div>
+            ${item.done ? `<div class="checkbox-mark" style="--check-delay: ${index}">✓</div>` : ''}
+          </div>
+          <div class="checkbox-wrapper">
+            <div class="checkbox-box"></div>
+            ${item.shared ? `<div class="checkbox-mark" style="--check-delay: ${index + 0.5}">✓</div>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+    wrapper.innerHTML = html;
+  </script>
+</body>
+</html>

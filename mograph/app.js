@@ -16,6 +16,7 @@ const state = {
   startTime: 0,
   elapsedTime: 0,
   timerInterval: null,
+  duration: 0,
 };
 
 // ---- DOM Refs ----
@@ -49,6 +50,8 @@ function cacheDom() {
 
   // Aspect ratio buttons
   dom.ratioButtons = document.querySelectorAll('.mg-ratio-btn');
+  dom.bgColorPicker = document.getElementById('bg-color-picker');
+  dom.bgColorPresets = document.getElementById('bg-color-presets');
 }
 
 // ---- Sequence Discovery ----
@@ -65,6 +68,13 @@ async function discoverSequences() {
     }));
 
     populateSequenceSelect();
+    
+    // Automatically select the latest sequence
+    if (state.sequences.length > 0) {
+      const latestSequence = state.sequences[state.sequences.length - 1];
+      dom.sequenceSelect.value = latestSequence.url;
+      loadSequence(latestSequence.url);
+    }
   } catch (err) {
     console.warn('Could not load sequence manifest:', err);
     state.sequences = [];
@@ -105,6 +115,8 @@ function loadSequence(url) {
   // Once loaded, hook keyboard forwarding from the iframe
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
+    applyBackgroundColor();
+    calculateDuration();
   };
 
   applyAspectRatio();
@@ -218,6 +230,8 @@ function rewindPlayback() {
   dom.viewportIframe.src = state.currentSequence;
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
+    applyBackgroundColor();
+    calculateDuration();
   };
 
   state.isPlaying = true;
@@ -245,6 +259,8 @@ function handleStop() {
   dom.viewportIframe.src = state.currentSequence;
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
+    applyBackgroundColor();
+    calculateDuration();
     // Small delay so the first frame renders, then freeze
     setTimeout(() => pauseIframeAnimations(), 50);
   };
@@ -256,27 +272,33 @@ function handleStop() {
  */
 function skipForward() {
   if (!state.currentSequence) return;
-
   const skipMs = 5000;
+  seekTo(Math.min(state.elapsedTime + skipMs, state.duration || state.elapsedTime + skipMs));
+}
 
-  // Advance CSS animations via the Web Animations API
+function seekTo(targetMs) {
+  if (!state.currentSequence) return;
+  state.elapsedTime = targetMs;
+  state.startTime = performance.now() - state.elapsedTime;
+  updateTimeDisplay();
+  
+  if (state.duration > 0) {
+    updateScrubber((state.elapsedTime / state.duration) * 100);
+  }
+  
   try {
     const iframeDoc = dom.viewportIframe.contentDocument || dom.viewportIframe.contentWindow.document;
+    if (!iframeDoc) return;
     const animations = iframeDoc.getAnimations();
     animations.forEach(anim => {
       if (anim.currentTime != null) {
-        anim.currentTime += skipMs;
+        anim.currentTime = targetMs;
       }
     });
-  } catch (e) {
-    console.warn('Could not skip iframe animations:', e);
-  }
-
-  // Update our timer to match
-  state.elapsedTime += skipMs;
-  state.startTime = performance.now() - state.elapsedTime;
-  updateTimeDisplay();
+  } catch (e) {}
 }
+
+
 
 function stopPlayback() {
   state.isPlaying = false;
@@ -300,7 +322,16 @@ function startTimer() {
   state.timerInterval = setInterval(() => {
     if (state.isPlaying) {
       state.elapsedTime = performance.now() - state.startTime;
+      
+      // Auto-loop
+      if (state.duration > 0 && state.elapsedTime >= state.duration) {
+        seekTo(0);
+      }
+      
       updateTimeDisplay();
+      if (state.duration > 0) {
+        updateScrubber((state.elapsedTime / state.duration) * 100);
+      }
     }
   }, 100);
 }
@@ -371,6 +402,43 @@ function updateViewportInfo() {
   const w = parseInt(dom.viewportFrame.style.width) || 0;
   const h = parseInt(dom.viewportFrame.style.height) || 0;
   dom.viewportInfo.textContent = `${state.aspectRatio}  •  ${w}×${h}`;
+}
+
+function applyBackgroundColor() {
+  if (!dom.viewportIframe) return;
+  try {
+    const iframeDoc = dom.viewportIframe.contentDocument;
+    if (iframeDoc && iframeDoc.body) {
+      const color = dom.bgColorPicker ? dom.bgColorPicker.value : '#ffffff';
+      iframeDoc.body.style.backgroundColor = color;
+      iframeDoc.body.style.backgroundImage = 'none';
+    }
+  } catch(e) {}
+}
+
+function calculateDuration() {
+  state.duration = 0;
+  try {
+    const iframeDoc = dom.viewportIframe.contentDocument;
+    if (!iframeDoc) return;
+    const animations = iframeDoc.getAnimations();
+    let maxEnd = 0;
+    animations.forEach(anim => {
+      const effect = anim.effect;
+      if (effect) {
+        const timing = effect.getTiming();
+        const delay = timing.delay || 0;
+        const duration = timing.duration === 'auto' ? 0 : timing.duration;
+        const iterations = timing.iterations || 1;
+        if (iterations === Infinity) return;
+        const end = delay + (duration * iterations);
+        if (end > maxEnd) maxEnd = end;
+      }
+    });
+    if (maxEnd > 0) {
+      state.duration = maxEnd + 500; // Add 500ms buffer at the end
+    }
+  } catch (e) {}
 }
 
 // ---- Video Export (Server-side via Puppeteer) ----
@@ -552,14 +620,51 @@ function bindEvents() {
     });
   });
 
+  // Background Color
+  if (dom.bgColorPresets && dom.bgColorPicker) {
+    dom.bgColorPresets.addEventListener('change', (e) => {
+      if (e.target.value !== 'custom') {
+        dom.bgColorPicker.value = e.target.value;
+        applyBackgroundColor();
+      }
+    });
+
+    dom.bgColorPicker.addEventListener('input', () => {
+      dom.bgColorPresets.value = 'custom';
+      applyBackgroundColor();
+    });
+  }
+
   // Export
   dom.exportBtn.addEventListener('click', exportVideo);
 
-  // Scrubber (for future interactive scrubbing — currently informational)
-  dom.scrubberWrap.addEventListener('click', (e) => {
+  // Scrubber interactive dragging
+  let isScrubbing = false;
+  
+  function handleScrub(e) {
     const rect = dom.scrubberWrap.getBoundingClientRect();
-    const pct = ((e.clientX - rect.left) / rect.width) * 100;
-    updateScrubber(Math.min(100, Math.max(0, pct)));
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    pct = Math.min(100, Math.max(0, pct));
+    updateScrubber(pct);
+    if (state.duration > 0) {
+      seekTo((pct / 100) * state.duration);
+    }
+  }
+
+  dom.scrubberWrap.addEventListener('mousedown', (e) => {
+    isScrubbing = true;
+    handleScrub(e);
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (isScrubbing) {
+      e.preventDefault();
+      handleScrub(e);
+    }
+  });
+  
+  document.addEventListener('mouseup', () => {
+    isScrubbing = false;
   });
 }
 

@@ -36,61 +36,81 @@
   .camera {
     width: 100vw; height: 100vh;
     transform-origin: center center;
-    animation: cameraPan 36s linear both;
+    animation: cameraPanLandscape 36s linear both;
   }
 
   .canvas {
-    width: 260vmin; height: 320vmin;
     position: absolute; top: 50%; left: 50%;
-    margin-top: -160vmin; margin-left: -130vmin;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr 1fr;
-  }
-
-  @keyframes cameraPan {
-    0% { transform: scale(0) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
-    1.44% { transform: scale(0.3) translate(0, 0); animation-timing-function: linear; }
-    2.88% { transform: scale(0.3) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    5.77% { transform: scale(0.9) translate(0vmin, -120vmin); animation-timing-function: linear; }
-    7.22% { transform: scale(0.9) translate(0vmin, -120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    10.11% { transform: scale(0.7) translate(65vmin, -40vmin); animation-timing-function: linear; }
-    15.88% { transform: scale(0.7) translate(65vmin, -40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    18.77% { transform: scale(0.8) translate(65vmin, 40vmin); animation-timing-function: linear; }
-    24.55% { transform: scale(0.8) translate(65vmin, 40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    27.44% { transform: scale(0.75) translate(65vmin, -40vmin); animation-timing-function: linear; }
-    40.16% { transform: scale(0.75) translate(65vmin, -40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    43.05% { transform: scale(0.8) translate(65vmin, 40vmin); animation-timing-function: linear; }
-    52.33% { transform: scale(0.8) translate(65vmin, 40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    55.22% { transform: scale(0.8) translate(0vmin, 120vmin); animation-timing-function: linear; }
-    61.0% { transform: scale(0.8) translate(0vmin, 120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    63.88% { transform: scale(0.7) translate(-65vmin, 40vmin); animation-timing-function: linear; }
-    72.55% { transform: scale(0.7) translate(-65vmin, 40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    75.44% { transform: scale(0.7) translate(-65vmin, -40vmin); animation-timing-function: linear; }
-    85.55% { transform: scale(0.7) translate(-65vmin, -40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    
-    89.16% { transform: scale(0.3) translate(0, 0); animation-timing-function: linear; }
-    95.66% { transform: scale(0.3) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); }
-    
-    100% { transform: scale(0) translate(0, 0); }
   }
 
   @media (orientation: portrait) {
     .camera { animation-name: cameraPanPortrait; }
+    .canvas {
+      width: 260vmin; height: 320vmin;
+      margin-top: -160vmin; margin-left: -130vmin;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr 1fr;
+    }
+    .diagram-lines-landscape { display: none !important; }
+    .n-user { grid-column: 1 / span 2; grid-row: 4; }
+    .n-input { grid-column: 1; grid-row: 3; }
+    .n-optimize { grid-column: 1; grid-row: 2; }
+    .n-database { grid-column: 1 / span 2; grid-row: 1; }
+    .n-scanning { grid-column: 2; grid-row: 2; }
+    .n-ranked { grid-column: 2; grid-row: 3; }
+  }
+
+  @media (orientation: landscape) {
+    .camera { animation-name: cameraPanLandscape; }
+    .canvas {
+      width: 360vmin; height: 240vmin;
+      margin-top: -120vmin; margin-left: -180vmin;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+    }
+    .diagram-lines-portrait { display: none !important; }
+  }
+
+  @keyframes cameraPanLandscape {
+    0% { transform: scale(1.2) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    1.44% { transform: scale(1.2) translate(0, 0); animation-timing-function: linear; }
+    2.88% { transform: scale(1.2) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    5.77% { transform: scale(0.9) translate(135vmin, 0vmin); animation-timing-function: linear; }
+    7.22% { transform: scale(0.9) translate(135vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    10.11% { transform: scale(0.7) translate(45vmin, -80vmin); animation-timing-function: linear; }
+    15.88% { transform: scale(0.7) translate(45vmin, -80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    18.77% { transform: scale(0.8) translate(-45vmin, -80vmin); animation-timing-function: linear; }
+    24.55% { transform: scale(0.8) translate(-45vmin, -80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    27.44% { transform: scale(0.75) translate(45vmin, -80vmin); animation-timing-function: linear; }
+    40.16% { transform: scale(0.75) translate(45vmin, -80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    43.05% { transform: scale(0.8) translate(-45vmin, -80vmin); animation-timing-function: linear; }
+    52.33% { transform: scale(0.8) translate(-45vmin, -80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    55.22% { transform: scale(0.8) translate(-135vmin, 0vmin); animation-timing-function: linear; }
+    61.0% { transform: scale(0.8) translate(-135vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    63.88% { transform: scale(0.7) translate(-45vmin, 80vmin); animation-timing-function: linear; }
+    72.55% { transform: scale(0.7) translate(-45vmin, 80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    75.44% { transform: scale(0.7) translate(45vmin, 80vmin); animation-timing-function: linear; }
+    85.55% { transform: scale(0.7) translate(45vmin, 80vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    89.16% { transform: scale(0.9) translate(135vmin, 0vmin); animation-timing-function: linear; }
+    92.0% { transform: scale(0.9) translate(135vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    96.0% { transform: scale(0.3) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); }
+    100% { transform: scale(0) translate(0, 0); }
   }
 
   @keyframes cameraPanPortrait {
-    0% { transform: scale(0) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
-    1.44% { transform: scale(0.35) translate(0, 0); animation-timing-function: linear; }
-    2.88% { transform: scale(0.35) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    0% { transform: scale(1.2) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    1.44% { transform: scale(1.2) translate(0, 0); animation-timing-function: linear; }
+    2.88% { transform: scale(1.2) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
     5.77% { transform: scale(0.95) translate(0vmin, -120vmin); animation-timing-function: linear; }
     7.22% { transform: scale(0.95) translate(0vmin, -120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
     10.11% { transform: scale(0.8) translate(65vmin, -40vmin); animation-timing-function: linear; }
@@ -107,13 +127,14 @@
     72.55% { transform: scale(0.8) translate(-65vmin, 40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
     75.44% { transform: scale(0.8) translate(-65vmin, -40vmin); animation-timing-function: linear; }
     85.55% { transform: scale(0.8) translate(-65vmin, -40vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
-    89.16% { transform: scale(0.35) translate(0, 0); animation-timing-function: linear; }
-    95.66% { transform: scale(0.35) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); }
+    89.16% { transform: scale(0.95) translate(0vmin, -120vmin); animation-timing-function: linear; }
+    92.0% { transform: scale(0.95) translate(0vmin, -120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    96.0% { transform: scale(0.35) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); }
     100% { transform: scale(0) translate(0, 0); }
   }
 
   /* --- SVG LINES --- */
-  .diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .diagram-lines-portrait, .diagram-lines-landscape { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
   .trace { stroke-dasharray: 200; stroke-dashoffset: 200; }
   @keyframes traceDraw { 0% { stroke-dashoffset: 200; } 100% { stroke-dashoffset: 0; } }
   
@@ -273,6 +294,16 @@
   .ri-title.short { width: 70%; }
   .ri-desc { height: 1vmin; background: var(--border); border-radius: 1vmin; width: 100%; margin-bottom: 0.8vmin; }
   .ri-desc.short { width: 50%; }
+
+  /* --- LANDSCAPE COMPONENT PLACEMENT --- */
+  @media (orientation: landscape) {
+    .n-user { grid-column: 1; grid-row: 2; }
+    .n-input { grid-column: 2; grid-row: 3; }
+    .n-optimize { grid-column: 3; grid-row: 3; }
+    .n-database { grid-column: 4; grid-row: 2; }
+    .n-scanning { grid-column: 3; grid-row: 1; }
+    .n-ranked { grid-column: 2; grid-row: 1; }
+  }
 </style>
 </head>
 <body>
@@ -280,8 +311,8 @@
   <div class="camera">
     <div class="canvas">
 
-      <!-- SVG Traces -->
-      <svg class="diagram-lines" viewBox="0 0 260 320" preserveAspectRatio="none">
+      <!-- SVG Traces Portrait -->
+      <svg class="diagram-lines-portrait" viewBox="0 0 260 320" preserveAspectRatio="none">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-thick)" />
@@ -304,6 +335,32 @@
         <path class="trace t4" d="M 145 40 C 195 40, 195 70, 195 102" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated)" />
         <path class="trace t5" d="M 195 138 L 195 179" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated)" />
         <path class="trace t6" d="M 195 221 C 195 280, 170 280, 140 280" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated)" />
+      </svg>
+      
+      <!-- SVG Traces Landscape -->
+      <svg class="diagram-lines-landscape" viewBox="0 0 360 240" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrow-landscape" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-thick)" />
+          </marker>
+          <marker id="arrow-animated-landscape" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-2)" />
+          </marker>
+        </defs>
+
+        <path d="M 57 120 C 90 120, 90 200, 110 200" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+        <path d="M 155 200 L 205 200" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+        <path d="M 240 200 C 275 200, 275 120, 297 120" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+        <path d="M 302 120 C 275 120, 275 40, 247 40" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+        <path d="M 208 40 L 158 40" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+        <path d="M 117 40 C 90 40, 90 120, 62 120" fill="none" stroke="var(--border-thick)" stroke-width="0.6" stroke-dasharray="2 2" marker-end="url(#arrow-landscape)"/>
+
+        <path class="trace t1" d="M 57 120 C 90 120, 90 200, 110 200" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
+        <path class="trace t2" d="M 155 200 L 205 200" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
+        <path class="trace t3" d="M 240 200 C 275 200, 275 120, 297 120" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
+        <path class="trace t4" d="M 302 120 C 275 120, 275 40, 247 40" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
+        <path class="trace t5" d="M 208 40 L 158 40" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
+        <path class="trace t6" d="M 117 40 C 90 40, 90 120, 62 120" fill="none" stroke="var(--accent-2)" stroke-width="1.0" marker-end="url(#arrow-animated-landscape)" />
       </svg>
 
       <!-- Nodes -->

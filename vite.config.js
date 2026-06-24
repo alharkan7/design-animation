@@ -686,6 +686,7 @@ function motionGraphicsGeneratorPlugin() {
 
 function motionGraphicsExportPlugin() {
   let browser = null;
+  const exportProgressMap = new Map();
 
   async function getBrowser() {
     if (!browser) {
@@ -741,7 +742,11 @@ function motionGraphicsExportPlugin() {
 
     try {
       const body = await readJsonBody(req, 10_000_000);
-      const { html, resolution = '1080p', layout = 'landscape', width: reqWidth, height: reqHeight, bgColor, bgPreset } = body;
+      const { html, resolution = '1080p', layout = 'landscape', width: reqWidth, height: reqHeight, bgColor, bgPreset, taskId } = body;
+      
+      if (taskId) {
+        exportProgressMap.set(taskId, { current: 0, total: 100, stage: 'initializing' });
+      }
 
       if (!html) {
         res.statusCode = 400;
@@ -908,6 +913,7 @@ function motionGraphicsExportPlugin() {
 
           if (i % 30 === 0) {
             console.log(`Captured ${i}/${totalFrames} frames`);
+            if (taskId) exportProgressMap.set(taskId, { current: i, total: totalFrames, stage: 'capturing' });
           }
         }
       } else {
@@ -921,12 +927,14 @@ function motionGraphicsExportPlugin() {
           }
           if (i % 30 === 0) {
             console.log(`Captured ${i}/${totalFrames} frames`);
+            if (taskId) exportProgressMap.set(taskId, { current: i, total: totalFrames, stage: 'capturing' });
           }
         }
       }
 
       await page.close();
       console.log('Frames captured, encoding video...');
+      if (taskId) exportProgressMap.set(taskId, { current: totalFrames, total: totalFrames, stage: 'encoding' });
 
       // Encode video using a separate page with timeout
       const encodePage = await br.newPage();
@@ -1082,6 +1090,15 @@ function motionGraphicsExportPlugin() {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.end(JSON.stringify({ error: err?.message || 'Export failed' }));
+    } finally {
+      // Clean up progress after it finishes or fails
+      // We do it after a small delay to allow the client's final poll to get the latest state
+      setTimeout(() => {
+        try {
+          const body = JSON.parse(req.body);
+          if (body && body.taskId) exportProgressMap.delete(body.taskId);
+        } catch(e){}
+      }, 10000);
     }
   }
 
@@ -1095,11 +1112,27 @@ function motionGraphicsExportPlugin() {
   return {
     name: 'motion-graphics-export-api',
     configureServer(server) {
+      server.middlewares.use('/api/export-mograph-progress', (req, res) => {
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const taskId = url.searchParams.get('taskId');
+        const progress = exportProgressMap.get(taskId) || { current: 0, total: 100, stage: 'unknown' };
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(progress));
+      });
       server.middlewares.use('/api/export-motion-graphics-video', (req, res) => {
         handler(req, res);
       });
     },
     configurePreviewServer(server) {
+      server.middlewares.use('/api/export-mograph-progress', (req, res) => {
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const taskId = url.searchParams.get('taskId');
+        const progress = exportProgressMap.get(taskId) || { current: 0, total: 100, stage: 'unknown' };
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(progress));
+      });
       server.middlewares.use('/api/export-motion-graphics-video', (req, res) => {
         handler(req, res);
       });

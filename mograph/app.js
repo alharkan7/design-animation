@@ -571,24 +571,50 @@ async function exportVideo() {
       if (preset === 'dots') bgColor = '#2a2a2a';
     }
 
-    const exportResp = await fetch('/api/export-motion-graphics-video', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        html,
-        width: exportW,
-        height: exportH,
-        bgColor,
-        bgPreset: includeBg ? preset : 'transparent'
-      }),
-    });
+    const taskId = 'task_' + Math.random().toString(36).substr(2, 9);
+    
+    // Start polling progress
+    const progressInterval = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/export-mograph-progress?taskId=${taskId}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.stage === 'initializing') {
+            updateExportProgress(15, `Rendering ${exportW}×${exportH} video on server...`);
+          } else if (data.stage === 'capturing') {
+            const pct = 15 + Math.round((data.current / data.total) * 75); // scales 0-100 to 15-90
+            updateExportProgress(pct, `Capturing frames: ${data.current}/${data.total}`);
+          } else if (data.stage === 'encoding') {
+            updateExportProgress(90, `Encoding video...`);
+          }
+        }
+      } catch (e) {}
+    }, 500);
+
+    let exportResp;
+    try {
+      exportResp = await fetch('/api/export-motion-graphics-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          html,
+          width: exportW,
+          height: exportH,
+          bgColor,
+          bgPreset: includeBg ? preset : 'transparent',
+          taskId
+        }),
+      });
+    } finally {
+      clearInterval(progressInterval);
+    }
 
     if (!exportResp.ok) {
       const errJson = await exportResp.json().catch(() => ({}));
       throw new Error(errJson.error || `Server error: ${exportResp.status}`);
     }
 
-    updateExportProgress(85, 'Downloading video...');
+    updateExportProgress(95, 'Downloading video...');
 
     // 3. Download the returned WebM blob
     const videoBlob = await exportResp.blob();

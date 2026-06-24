@@ -48,11 +48,17 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
 Motion graphics often involve kinetic typography, data visualization, and stylish overlays. Move beyond generic "popping up" or sliding DOM nodes by applying professional broadcast techniques:
 
 ### Cinematic Reveals & Masking
-- **Clip-Path Wipes**: Do not use generic bouncing scales. Use `clip-path: inset(...)` to mask elements as they slide in. This mimics the aesthetic of text sliding out from an invisible boundary box, a staple in modern minimalist mograph.
+- **Clip-Path Wipes**: Do not use generic bouncy scales or spinning (`spinScaleIn`) for UI elements. Use `clip-path: inset(...)` or `wipeUpIn` with a snappy ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`) to mask elements as they slide in. This is much more elegant and cinematic.
 - **Iris Reveals**: Use `clip-path: circle(0% at center)` to `100%` for dramatic circular expansions that feel very "digital" or "processing" oriented.
+
+### Flowcharts & SVG Paths
+- **Orthogonal Connections**: For a clean, symmetrical flowchart aesthetic, ensure SVG bezier curves (`C`) start and end with perfectly vertical or horizontal tangents. They should connect exactly at the center of the node edges (e.g., leaving a node from the absolute bottom center and entering the next node at the top center).
+- **Beware the Default Fill**: When upgrading straight SVG lines (`L`) to Bezier curves (`C`, `Q`), the browser will automatically apply a black `fill` to the curve's interior. You MUST explicitly set `fill="none"` on all curved `<path>` elements to prevent ugly black shapes.
+- **Path Tracing Easing**: When animating SVG `stroke-dashoffset` for glowing traces or drawing paths, NEVER use bouncy easing (`cubic-bezier(0.34, 1.56...)`). This causes the drawn line to "rubber-band" and shoot past the endpoint. Always use strict `ease-in-out` or `linear` easing for path drawing to keep the coloring smooth and simple.
 
 ### The Virtual Camera (Diagram Panning)
 Instead of destroying and recreating DOM scenes chronologically, build a single massive flowchart or diagram inside a `.canvas` wrapper (e.g. `300vmin x 200vmin`). Then, animate a `.camera` wrapper using deterministic `transform: scale(...) translate(...)` to physically pan and zoom across the diagram in sync with the voiceover. Use `cubic-bezier(0.64, 0, 0.36, 1)` for buttery smooth ease-in-out camera moves.
+- **Persistent Centerpieces**: To keep a hero element or watermark visible throughout a camera pan, place it at the absolute center of the `.canvas` and omit any exit animations. It will act as a fixed focal point that only vanishes when the entire `.camera` scales to 0 at the end of the sequence.
 
 ### Design Elements & Visual Weight
 - **No Emojis**: 🚫 Do not use emojis for icons. Always use crisp, scalable inline SVGs.

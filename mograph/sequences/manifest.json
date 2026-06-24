@@ -2,10 +2,10 @@
   { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" },
   { "file": "particle-wave.html", "name": "Particle Wave (Example)" },
   { "file": "gradient-morph.html", "name": "Gradient Morph (Example" },
+  { "file": "early-draft.html", "name": "Early Draft List" },
+  { "file": "title-beeblio.html", "name": "Title: Beeblio" },
   { "file": "vintage-todo.html", "name": "Vintage Todo" },
   { "file": "semantic-search.html", "name": "Semantic Search" },
   { "file": "ai-agent-tool.html", "name": "AI Agent Tool" },
-  { "file": "ai-agent-tool-diagram.html", "name": "AI Agent Tool (Diagram Camera)" },
-  { "file": "early-draft.html", "name": "Early Draft List" },
-  { "file": "title-beeblio.html", "name": "Title: Beeblio" }
+  { "file": "ai-agent-tool-diagram.html", "name": "AI Agent Tool (Diagram Camera)" }
 ]

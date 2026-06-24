@@ -22,6 +22,12 @@ Upload PDF or DOCX files and generate beautiful HTML slides using AI. Powered by
 ### IDR Exchange Tracker (`/currency/`)
 Interactive financial visualization of Indonesian Rupiah (IDR) exchange rates against major global currencies from 1996 to 2026.
 
+### Mograph Player (`/mograph/`)
+A professional motion graphics player and exporter. Allows previewing, controlling, and exporting HTML/CSS animation sequences as frame-perfect video. Features include:
+- **Cinematic Authoring:** Strict reliance on CSS keyframes and deterministic Web Animations API.
+- **Advanced Motion Techniques:** Use of clip-path masks, iris wipes, and virtual camera diagram-panning over generic bounce animations.
+- **Broadcast Standards:** Hardcoded themes (no dynamic OS color shifts), SVGs over emojis, solid visual weights, and clean loop canvas exits.
+
 ## Development
 
 ### Prerequisites

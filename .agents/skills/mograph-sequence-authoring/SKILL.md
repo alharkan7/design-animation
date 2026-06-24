@@ -23,7 +23,8 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
 
 ## 2. Animation & Timing Rules
 
-1. **Fill Modes & Flickering Fix**: Use `animation-fill-mode: both` for entry animations! If you use `forwards`, elements will display their default visible state during the `animation-delay` period and cause a jarring flicker before starting the animation. `both` applies the 0% keyframe backwards during the delay. Use `forwards` for exit animations.
+1. **Fill Modes & 0% Keyframes**: Use `animation-fill-mode: both` for entry animations with `animation-delay`! 
+   - **CRITICAL BUG AVOIDANCE**: The `0%` keyframe MUST fully define the absolute invisible state (e.g. `transform: scale(0)` or `clip-path: inset(100% 0 0 0)`). If your `0%` keyframe is merely `scale(0.8)`, the element will sit partially visible on the screen during the delay period, creating visual bugs where it overlaps earlier scenes. Use `forwards` only for exit animations.
 2. **Chain with `animation-delay`**: Orchestrate your scenes by staggering `animation-delay` across elements.
    ```css
    .word-1 { animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -39,12 +40,23 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
    - Entrances should take longer (0.4s - 0.8s) than exits (0.2s - 0.3s). 
    - Use `ease-out` (starts fast, decelerates) for entrances.
    - Use `ease-in` (starts slow, accelerates) for exits.
-7. **Fluid Scene Transitions & Exits**: Do not use simple global container fade-outs to end a scene. Apply specific, modern exit animations (like `slideUpOut`, `scaleOut`, `shiftDownOut`) to individual elements before their scene container fades. **Always animate the exit of the final scene as well**, so the video does not abruptly end on a static frame.
+7. **Clean Loops & Fluid Exits**: Do not use simple global container fade-outs to end a scene. Apply specific, modern exit animations (like `slideUpOut`, `exitShrink`, `shiftDownOut`) to individual elements before their scene container hides. **Always animate the exit of the final scene back to a pristine blank canvas**, so the video loops seamlessly and does not abruptly end on a static frame.
 8. **Overlap Scene Transitions**: Do not wait for the disappearance animation of the previous scene to fully complete before starting the appearance animation of the next scene. The next scene's entry should begin *while* the previous scene's exit is still in motion, creating a fluid, uninterrupted sequence.
 
 ## 3. Specific Motion Graphics Patterns
 
-Motion graphics often involve kinetic typography, data visualization, and stylish overlays. Apply these specific recipes to elevate your sequences:
+Motion graphics often involve kinetic typography, data visualization, and stylish overlays. Move beyond generic "popping up" or sliding DOM nodes by applying professional broadcast techniques:
+
+### Cinematic Reveals & Masking
+- **Clip-Path Wipes**: Do not use generic bouncing scales. Use `clip-path: inset(...)` to mask elements as they slide in. This mimics the aesthetic of text sliding out from an invisible boundary box, a staple in modern minimalist mograph.
+- **Iris Reveals**: Use `clip-path: circle(0% at center)` to `100%` for dramatic circular expansions that feel very "digital" or "processing" oriented.
+
+### The Virtual Camera (Diagram Panning)
+Instead of destroying and recreating DOM scenes chronologically, build a single massive flowchart or diagram inside a `.canvas` wrapper (e.g. `300vmin x 200vmin`). Then, animate a `.camera` wrapper using deterministic `transform: scale(...) translate(...)` to physically pan and zoom across the diagram in sync with the voiceover. Use `cubic-bezier(0.64, 0, 0.36, 1)` for buttery smooth ease-in-out camera moves.
+
+### Design Elements & Visual Weight
+- **No Emojis**: 🚫 Do not use emojis for icons. Always use crisp, scalable inline SVGs.
+- **Solid Visual Weight**: Ensure animated objects (like labels, badges, or pills) have solid background fill colors mapped from the palette. Outlined elements with transparent backgrounds lack the necessary visual weight to punch through during rapid motion graphics.
 
 ### Kinetic Typography & Emphasis
 - **Karaoke Highlights**: Animate colors of words sequentially. To make it high-energy, add an accent glow and a 15% scale pop to the active word.
@@ -81,8 +93,9 @@ Video frames are not web pages. Web sizes are invisible on video.
 
 ## 5. Design Aesthetics & Color
 
-1. **Typography**: Use modern Google Fonts. Pair a bold, expressive font (e.g., `Space Grotesk`, `Outfit`, `Syne`) with a clean sans-serif (`Inter`, `Roboto`).
-2. **Color Presence**: 
+1. **Theme Locking**: 🚫 Do not leave coloring to dynamic browser/OS theme adjustments. Explicitly hardcode your CSS variables using hex colors and enforce `color-scheme: light` or `color-scheme: dark` on the body. This guarantees the video exporter renders the exact intended design regardless of the host machine's settings.
+2. **Typography**: Use modern Google Fonts. Pair a bold, expressive font (e.g., `Space Grotesk`, `Outfit`, `Syne`) with a clean sans-serif (`Inter`, `Roboto`).
+3. **Color Presence**: 
    - Muted is fine, flat is not. Every scene must have a highly visible accent color.
    - Favor dark modes (`#0a0a0f`) for maximum contrast.
    - **WARNING:** Do NOT use full-screen linear gradients on dark backgrounds (they cause banding under video compression). Use radial gradients or solid fills + localized glows instead.

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent Tool Diagram - Mograph</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&family=Fira+Code:wght@500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg-main: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --border-thick: #cbd5e1;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    
+    --accent-1: #6366f1; /* Indigo */
+    --accent-2: #2563eb; /* Blue */
+    --accent-3: #10b981; /* Emerald */
+    --accent-4: #f59e0b; /* Amber */
+    --accent-5: #ef4444; /* Red */
+  }
+
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-main);
+    background-image: radial-gradient(circle at 50% 50%, #ffffff 0%, var(--bg-main) 100%);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    color-scheme: light;
+    overflow: hidden;
+  }
+
+  /* --- CAMERA & CANVAS --- */
+  .camera {
+    width: 100vw;
+    height: 100vh;
+    transform-origin: center center;
+    animation: cameraPan 26s linear both;
+  }
+
+  .canvas {
+    width: 260vmin;
+    height: 320vmin;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -160vmin;
+    margin-left: -130vmin;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr 1fr;
+  }
+
+  @keyframes cameraPan {
+    0% { transform: scale(0) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    2% { transform: scale(0.3) translate(0, 0); animation-timing-function: linear; }
+    6% { transform: scale(0.3) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); } 
+    
+    /* Zoom User */
+    12% { transform: scale(0.9) translate(0vmin, -120vmin); animation-timing-function: linear; } 
+    14% { transform: scale(0.9) translate(0vmin, -120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); } 
+    
+    /* Pan Left (Opt + Input) */
+    19% { transform: scale(0.6) translate(65vmin, 0vmin); animation-timing-function: linear; }
+    44% { transform: scale(0.6) translate(65vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); } 
+    
+    /* Pan Top (Results) */
+    50% { transform: scale(0.8) translate(0vmin, 120vmin); animation-timing-function: linear; }
+    52% { transform: scale(0.8) translate(0vmin, 120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); } 
+    
+    /* Pan Right (Score + Ranked) */
+    58% { transform: scale(0.6) translate(-65vmin, 0vmin); animation-timing-function: linear; }
+    85% { transform: scale(0.6) translate(-65vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); } 
+    
+    /* Zoom Out Overview */
+    90% { transform: scale(0.3) translate(0, 0); animation-timing-function: linear; }
+    96% { transform: scale(0.3) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); } 
+    
+    100% { transform: scale(0) translate(0, 0); }
+  }
+
+  @media (orientation: portrait) {
+    .camera {
+      animation-name: cameraPanPortrait;
+    }
+  }
+
+  @keyframes cameraPanPortrait {
+    0% { transform: scale(0) translate(0, 0); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    2% { transform: scale(0.35) translate(0, 0); animation-timing-function: linear; }
+    6% { transform: scale(0.35) translate(0, 0); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    12% { transform: scale(0.85) translate(0vmin, -120vmin); animation-timing-function: linear; } 
+    14% { transform: scale(0.85) translate(0vmin, -120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    19% { transform: scale(0.85) translate(65vmin, 0vmin); animation-timing-function: linear; }
+    44% { transform: scale(0.85) translate(65vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    50% { transform: scale(0.85) translate(0vmin, 120vmin); animation-timing-function: linear; }
+    52% { transform: scale(0.85) translate(0vmin, 120vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    58% { transform: scale(0.85) translate(-65vmin, 0vmin); animation-timing-function: linear; }
+    85% { transform: scale(0.85) translate(-65vmin, 0vmin); animation-timing-function: cubic-bezier(0.64, 0, 0.36, 1); }
+    
+    90% { transform: scale(0.35) translate(0, 0); animation-timing-function: linear; }
+    96% { transform: scale(0.35) translate(0, 0); animation-timing-function: cubic-bezier(0.36, 0, 0.64, 1); }
+    
+    100% { transform: scale(0) translate(0, 0); }
+  }
+
+  /* --- SVG LINES --- */
+  .diagram-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+  .trace {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+  }
+  @keyframes traceDraw {
+    0% { stroke-dashoffset: 200; }
+    100% { stroke-dashoffset: 0; }
+  }
+  .t1 { animation: traceDraw 1.0s 4.0s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* User -> Input */
+  .t2 { animation: traceDraw 1.0s 4.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* Input -> Opt */
+  .t3 { animation: traceDraw 1.0s 11.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* Opt -> Results */
+  .t4 { animation: traceDraw 1.0s 13.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* Results -> Score */
+  .t5 { animation: traceDraw 1.0s 14.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* Score -> Ranked */
+  .t6 { animation: traceDraw 1.0s 21.0s cubic-bezier(0.34, 1.56, 0.64, 1) both; } /* Ranked -> User */
+
+  /* --- NODES --- */
+  .node {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2vmin;
+    z-index: 2;
+    background: var(--bg-main);
+    padding: 2vmin;
+    border-radius: 4vmin;
+    box-shadow: 0 0 0 3vmin var(--bg-main);
+    visibility: hidden;
+    align-self: center;
+    justify-self: center;
+  }
+  
+  .n-results { grid-column: 1 / span 2; grid-row: 1; animation: showScene 0.1s 12.0s both; }
+  .n-optimize { grid-column: 1; grid-row: 2; animation: showScene 0.1s 4.0s both; }
+  .n-score { grid-column: 2; grid-row: 2; animation: showScene 0.1s 14.0s both; }
+  .n-input { grid-column: 1; grid-row: 3; animation: showScene 0.1s 4.5s both; }
+  .n-ranked { grid-column: 2; grid-row: 3; animation: showScene 0.1s 14.5s both; }
+  
+  .n-user { 
+    grid-column: 1 / span 2; 
+    grid-row: 4; 
+    width: 20vmin;
+    height: 20vmin;
+    padding: 2vmin;
+    animation: showScene 0.1s 1.8s both; 
+  }
+
+  .node-title {
+    font-family: 'Fira Code', monospace;
+    font-size: 2.2vmin;
+    color: var(--accent-1);
+    letter-spacing: 0.2vmin;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* --- COMPONENTS --- */
+  .engine-box {
+    background: var(--accent-1);
+    color: #ffffff;
+    border-radius: 3vmin;
+    padding: 3vmin 4vmin;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vmin;
+    transform: scale(1.1);
+  }
+  .engine-box.score-box { background: var(--accent-2); }
+  .engine-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3vmin;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .s3-input-doc {
+    background: var(--accent-1);
+    color: #ffffff;
+    border-radius: 3vmin;
+    padding: 3vmin 5vmin;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vmin;
+  }
+  .doc-title { font-weight: 600; font-size: 2.5vmin; text-align: center; }
+
+  .s2-query {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    padding: 2.5vmin 4vmin;
+    border-radius: 6vmin;
+    font-size: 2.5vmin;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .s2-boolean {
+    background: var(--card-bg);
+    border: 4px solid var(--accent-2);
+    padding: 3vmin 4vmin;
+    border-radius: 3vmin;
+    font-family: 'Fira Code', monospace;
+    font-size: 2.5vmin;
+    line-height: 1.5;
+  }
+  .b-op { color: var(--accent-1); font-weight: 700; }
+  .b-keyword { color: var(--accent-3); }
+  .b-paren { color: var(--text-muted); }
+
+  .results-stack { position: relative; width: 34vmin; height: 32vmin; margin: 0 auto; }
+  .s4-card {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    border-radius: 2vmin;
+    padding: 4vmin;
+    width: 26vmin;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 2vmin;
+  }
+  .stack-c1 { top: 0; left: 0; z-index: 3; }
+  .stack-c2 { top: 4vmin; left: 4vmin; z-index: 2; border-color: var(--border-thick); }
+  .stack-c3 { top: 8vmin; left: 8vmin; z-index: 1; border-color: var(--border-thick); }
+
+  .s4-line { height: 1.5vmin; background: var(--border); border-radius: 1vmin; width: 100%; }
+  .s4-line.short { width: 70%; }
+
+  .s5-list { display: flex; flex-direction: column; gap: 2vmin; width: 35vmin; }
+  .s5-row {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    border-radius: 2vmin;
+    padding: 2.5vmin 3vmin;
+    display: flex;
+    align-items: center;
+    gap: 3vmin;
+  }
+  .s4-score-wrap {
+    width: 8vmin;
+    height: 8vmin;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 3.5vmin;
+    color: #ffffff;
+  }
+  .score-high { background: var(--accent-3); }
+  .score-mid { background: var(--accent-4); }
+  .score-low { background: var(--accent-5); }
+  .s5-row-content { flex: 1; display: flex; flex-direction: column; gap: 1.5vmin; }
+
+  /* --- MAIN TITLE (Overview) --- */
+  .main-title {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    animation: showScene 0.1s 0s both, hideScene 0.1s 1.5s forwards;
+  }
+  .s1-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 15vmin;
+    line-height: 1;
+    background: linear-gradient(135deg, #0f172a, #64748b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: -0.2vmin;
+    animation: wipeUpIn 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.3s 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* --- NODE ENTRY ANIMATIONS --- */
+  @keyframes showScene { 0% { visibility: hidden; } 100% { visibility: visible; } }
+  @keyframes hideScene { 0% { visibility: visible; } 100% { visibility: hidden; } }
+
+  @keyframes wipeRightIn { 
+    0% { clip-path: inset(0 100% 0 0); transform: translateX(-8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); } 
+  }
+  @keyframes wipeLeftIn { 
+    0% { clip-path: inset(0 0 0 100%); transform: translateX(8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); } 
+  }
+  @keyframes wipeUpIn { 
+    0% { clip-path: inset(100% 0 0 0); transform: translateY(8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateY(0); } 
+  }
+  @keyframes irisIn { 
+    0% { clip-path: circle(0% at center); transform: scale(0.9); } 
+    100% { clip-path: circle(100% at center); transform: scale(1); } 
+  }
+  @keyframes spinScaleIn {
+    0% { transform: rotate(-180deg) scale(0); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+  @keyframes exitShrink { 
+    0% { transform: scale(1); } 
+    100% { transform: scale(0); } 
+  }
+
+  .n-user .node-title { animation: wipeUpIn 0.8s 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .n-user svg { animation: spinScaleIn 0.8s 2.0s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .n-optimize .engine-box { animation: wipeRightIn 0.8s 4.0s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-optimize .s2-boolean { animation: wipeRightIn 0.8s 4.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  .n-input .s3-input-doc { animation: wipeUpIn 0.8s 4.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-input .s2-query { animation: wipeUpIn 0.8s 4.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  .n-results .stack-c3 { animation: wipeLeftIn 0.6s 12.0s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-results .stack-c2 { animation: wipeLeftIn 0.6s 12.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-results .stack-c1 { animation: wipeLeftIn 0.6s 12.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  .n-score .engine-box { animation: spinScaleIn 0.8s 14.0s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  .n-ranked .s5-row:nth-child(3) { animation: wipeLeftIn 0.8s 14.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-ranked .s5-row:nth-child(2) { animation: wipeLeftIn 0.8s 14.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .n-ranked .s5-row:nth-child(1) { animation: wipeLeftIn 0.8s 14.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+</style>
+</head>
+<body>
+
+  <div class="camera">
+    <div class="canvas">
+
+      <!-- SVG Lines -->
+      <svg class="diagram-lines" viewBox="0 0 260 320" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border-thick)" />
+          </marker>
+          <marker id="arrow-animated" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent-2)" />
+          </marker>
+        </defs>
+
+        <!-- Static Background Lines -->
+        <path d="M 130 280 L 79 217" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+        <path d="M 65 200 L 65 142" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+        <path d="M 65 120 L 116 57" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+        <path d="M 130 40 L 181 103" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+        <path d="M 195 120 L 195 178" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+        <path d="M 195 200 L 144 263" stroke="var(--border-thick)" stroke-width="1.0" stroke-dasharray="2 2" marker-end="url(#arrow)"/>
+
+        <!-- Animated Glowing Traces -->
+        <path class="trace t1" d="M 130 280 L 79 217" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+        <path class="trace t2" d="M 65 200 L 65 142" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+        <path class="trace t3" d="M 65 120 L 116 57" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+        <path class="trace t4" d="M 130 40 L 181 103" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+        <path class="trace t5" d="M 195 120 L 195 178" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+        <path class="trace t6" d="M 195 200 L 144 263" stroke="var(--accent-2)" stroke-width="1.5" marker-end="url(#arrow-animated)" />
+      </svg>
+
+      <!-- Nodes -->
+      <div class="node n-results">
+        <div class="node-title">RAW SEARCH RESULTS</div>
+        <div class="results-stack">
+          <div class="s4-card stack-c1"><div class="s4-line"></div><div class="s4-line short"></div></div>
+          <div class="s4-card stack-c2"><div class="s4-line"></div><div class="s4-line short"></div></div>
+          <div class="s4-card stack-c3"><div class="s4-line"></div><div class="s4-line short"></div></div>
+        </div>
+      </div>
+
+      <div class="node n-optimize">
+        <div class="node-title">QUERY OPTIMIZATION</div>
+        <div class="engine-box">
+          <svg width="6vmin" height="6vmin" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <div class="engine-title">AI Engine</div>
+        </div>
+        <div class="s2-boolean">
+          <span class="b-paren">(</span><span class="b-keyword">"AI agents"</span> <span class="b-op">OR</span> <span class="b-keyword">"autonomous"</span><span class="b-paren">)</span><br>
+          <span class="b-op">AND</span> <span class="b-keyword">"applications"</span>
+        </div>
+      </div>
+
+      <div class="node n-score">
+        <div class="node-title">AUTOMATED REVIEW / SCORING</div>
+        <div class="engine-box score-box">
+          <svg width="6vmin" height="6vmin" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+          <div class="engine-title">Scoring</div>
+        </div>
+      </div>
+
+      <div class="node n-input">
+        <div class="node-title">QUERY / INPUT</div>
+        <div class="s3-input-doc">
+          <svg width="5vmin" height="5vmin" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <div class="doc-title">Research<br>Outline</div>
+        </div>
+        <div class="s2-query">"find papers about AI agents"</div>
+      </div>
+
+      <div class="node n-ranked">
+        <div class="node-title">RANKED RESULT</div>
+        <div class="s5-list">
+          <div class="s5-row">
+            <div class="s4-score-wrap score-high">98</div>
+            <div class="s5-row-content"><div class="s4-line"></div><div class="s4-line short"></div></div>
+          </div>
+          <div class="s5-row">
+            <div class="s4-score-wrap score-mid">85</div>
+            <div class="s5-row-content"><div class="s4-line"></div><div class="s4-line short"></div></div>
+          </div>
+          <div class="s5-row">
+            <div class="s4-score-wrap score-low">42</div>
+            <div class="s5-row-content"><div class="s4-line"></div><div class="s4-line short"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="node n-user">
+        <svg width="10vmin" height="10vmin" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <div class="node-title" style="color: var(--text-main); font-size: 3vmin;">USER</div>
+      </div>
+
+      <div class="main-title">
+        <div class="s1-title">THE TOOL</div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

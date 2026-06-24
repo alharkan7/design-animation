@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent Tool - Mograph</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&family=Fira+Code:wght@500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg-main: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    
+    --accent-1: #6366f1; /* Indigo */
+    --accent-2: #2563eb; /* Blue */
+    --accent-3: #10b981; /* Emerald */
+    --accent-4: #f59e0b; /* Amber */
+    --accent-5: #ef4444; /* Red */
+  }
+
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-main);
+    background-image: radial-gradient(circle at 50% 50%, #ffffff 0%, var(--bg-main) 100%);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    color-scheme: light;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .scene-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    padding: 8vmin;
+  }
+
+  .step-label {
+    position: absolute;
+    top: 8vmin;
+    left: 8vmin;
+    font-family: 'Fira Code', monospace;
+    font-size: 3.5vmin;
+    color: #ffffff;
+    background: var(--accent-1);
+    padding: 1.5vmin 3vmin;
+    border-radius: 10vmin;
+  }
+
+  /* --- ADVANCED KEYFRAMES --- */
+  @keyframes showScene { 0% { visibility: hidden; } 100% { visibility: visible; } }
+  @keyframes hideScene { 0% { visibility: visible; } 100% { visibility: hidden; } }
+
+  /* Entrances */
+  @keyframes wipeRightIn { 
+    0% { clip-path: inset(0 100% 0 0); transform: translateX(-8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); } 
+  }
+  @keyframes wipeLeftIn { 
+    0% { clip-path: inset(0 0 0 100%); transform: translateX(8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); } 
+  }
+  @keyframes wipeUpIn { 
+    0% { clip-path: inset(100% 0 0 0); transform: translateY(8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateY(0); } 
+  }
+  @keyframes wipeDownIn { 
+    0% { clip-path: inset(0 0 100% 0); transform: translateY(-8vmin); } 
+    100% { clip-path: inset(0 0 0 0); transform: translateY(0); } 
+  }
+  @keyframes irisIn { 
+    0% { clip-path: circle(0% at center); transform: scale(0.9); } 
+    100% { clip-path: circle(100% at center); transform: scale(1); } 
+  }
+  @keyframes spinScaleIn {
+    0% { transform: rotate(-180deg) scale(0); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+  
+  /* S4 Card Dealing */
+  @keyframes dealCardLeft {
+    0% { transform: translateX(25vw) translateY(10vmin) rotate(15deg) scale(0); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); }
+  }
+  @keyframes dealCardCenter {
+    0% { transform: translateY(20vmin) scale(0); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes dealCardRight {
+    0% { transform: translateX(-25vw) translateY(10vmin) rotate(-15deg) scale(0); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg) scale(1); }
+  }
+
+  @keyframes popIn { 
+    0% { transform: scale(0); } 
+    75% { transform: scale(1.1); } 
+    100% { transform: scale(1); } 
+  }
+
+  /* Generic Exit */
+  @keyframes exitShrink { 
+    0% { transform: scale(1); } 
+    100% { transform: scale(0); } 
+  }
+
+  /* Shared Scene Logic */
+  .scene-1 { animation: showScene 0.1s 0s both, hideScene 0.1s 3.0s forwards; }
+  .scene-2 { animation: showScene 0.1s 2.8s both, hideScene 0.1s 7.5s forwards; }
+  .scene-3 { animation: showScene 0.1s 7.2s both, hideScene 0.1s 13.5s forwards; }
+  .scene-4 { animation: showScene 0.1s 13.0s both, hideScene 0.1s 18.5s forwards; }
+  .scene-5 { animation: showScene 0.1s 18.0s both, hideScene 0.1s 26.0s forwards; }
+
+  /* SCENE 1 */
+  .s1-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 15vmin;
+    line-height: 1;
+    background: linear-gradient(135deg, #0f172a, #64748b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    letter-spacing: -0.2vmin;
+  }
+  .s1-subtitle {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 8vmin;
+    color: var(--accent-2);
+    margin-top: -1vmin;
+  }
+  .s1-title { animation: wipeRightIn 0.9s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s1-subtitle { animation: wipeUpIn 0.8s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 2.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+  /* SCENE 2 */
+  .s2-query {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    padding: 3vmin 5vmin;
+    border-radius: 6vmin;
+    font-size: 4vmin;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 4vmin;
+  }
+  .s2-arrow {
+    width: 7vmin;
+    height: 7vmin;
+    background: var(--accent-1);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 3.5vmin;
+    margin-bottom: 4vmin;
+  }
+  .s2-boolean {
+    background: var(--card-bg);
+    border: 4px solid var(--accent-2);
+    padding: 4vmin 6vmin;
+    border-radius: 3vmin;
+    font-family: 'Fira Code', monospace;
+    font-size: 4vmin;
+    line-height: 1.5;
+  }
+  .b-op { color: var(--accent-1); font-weight: 700; }
+  .b-keyword { color: var(--accent-3); }
+  .b-paren { color: var(--text-muted); }
+
+  .scene-2 .step-label { animation: wipeRightIn 0.6s 2.9s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 7.1s forwards; }
+  .s2-query { animation: wipeDownIn 0.8s 3.2s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 7.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s2-arrow { animation: spinScaleIn 0.6s 3.8s cubic-bezier(0.34, 1.56, 0.64, 1) both, exitShrink 0.4s 7.3s forwards; }
+  .s2-boolean { animation: irisIn 0.8s 4.4s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 7.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+  /* SCENE 3 */
+  .s3-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80vw;
+    gap: 4vmin;
+  }
+  .s3-input-doc {
+    background: var(--card-bg);
+    border: 4px solid var(--border);
+    border-radius: 2vmin;
+    width: 25vmin;
+    height: 32vmin;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2vmin;
+  }
+  .doc-icon { 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .doc-title { font-weight: 600; font-size: 3vmin; text-align: center; color: var(--text-main); }
+
+  .s3-process {
+    display: flex;
+    gap: 1.5vmin;
+    align-items: center;
+  }
+  .process-dot {
+    width: 2vmin;
+    height: 2vmin;
+    background: var(--accent-1);
+    border-radius: 50%;
+  }
+  .s3-keywords {
+    display: flex;
+    flex-direction: column;
+    gap: 2vmin;
+  }
+  .s3-kw {
+    background: var(--accent-3);
+    color: #ffffff;
+    padding: 2vmin 4vmin;
+    border-radius: 10vmin;
+    font-size: 3.5vmin;
+    font-family: 'Fira Code', monospace;
+  }
+
+  .scene-3 .step-label { animation: wipeRightIn 0.6s 7.3s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 13.1s forwards; }
+  .s3-input-doc { animation: irisIn 0.8s 7.6s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 13.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .process-dot:nth-child(1) { animation: wipeUpIn 0.4s 8.2s both, exitShrink 0.3s 13.3s forwards; }
+  .process-dot:nth-child(2) { animation: wipeUpIn 0.4s 8.4s both, exitShrink 0.3s 13.3s forwards; }
+  .process-dot:nth-child(3) { animation: wipeUpIn 0.4s 8.6s both, exitShrink 0.3s 13.3s forwards; }
+  .s3-kw.kw1 { animation: wipeLeftIn 0.8s 9.2s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 13.4s forwards; }
+  .s3-kw.kw2 { animation: wipeLeftIn 0.8s 9.5s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 13.5s forwards; }
+  .s3-kw.kw3 { animation: wipeLeftIn 0.8s 9.8s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 13.6s forwards; }
+
+  /* SCENE 4 */
+  .s4-cards {
+    display: flex;
+    gap: 4vmin;
+    width: 85vw;
+    justify-content: center;
+  }
+  .s4-card {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    border-radius: 3vmin;
+    padding: 5vmin;
+    width: 25vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+  .s4-score-wrap {
+    position: absolute;
+    top: -4vmin;
+    width: 10vmin;
+    height: 10vmin;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 4vmin;
+    color: #ffffff;
+  }
+  .score-high { background: var(--accent-3); }
+  .score-mid { background: var(--accent-4); }
+  .score-low { background: var(--accent-5); }
+  
+  .s4-lines {
+    width: 100%;
+    margin-top: 6vmin;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vmin;
+  }
+  .s4-line {
+    height: 1.5vmin;
+    background: var(--border);
+    border-radius: 1vmin;
+    width: 100%;
+  }
+  .s4-line.short { width: 70%; }
+
+  .scene-4 .step-label { animation: wipeRightIn 0.6s 13.1s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 18.1s forwards; }
+  .s4-card.c1 { animation: dealCardLeft 1.0s 13.4s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 18.2s forwards; }
+  .s4-card.c2 { animation: dealCardCenter 1.0s 13.6s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 18.3s forwards; }
+  .s4-card.c3 { animation: dealCardRight 1.0s 13.8s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 18.4s forwards; }
+  
+  .s4-card.c1 .s4-score-wrap { animation: popIn 0.6s 14.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .s4-card.c2 .s4-score-wrap { animation: popIn 0.6s 14.8s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .s4-card.c3 .s4-score-wrap { animation: popIn 0.6s 15.0s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  /* SCENE 5 */
+  .s5-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3vmin;
+    width: 60vw;
+  }
+  .s5-row {
+    background: var(--card-bg);
+    border: 3px solid var(--border);
+    border-radius: 2vmin;
+    padding: 3vmin 4vmin;
+    display: flex;
+    align-items: center;
+    gap: 4vmin;
+  }
+  .s5-row .s4-score-wrap {
+    position: static;
+    width: 8vmin;
+    height: 8vmin;
+    font-size: 3vmin;
+  }
+  .s5-row-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vmin;
+  }
+  
+  .scene-5 .step-label { animation: wipeRightIn 0.6s 18.1s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 24.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s5-row.r1 { animation: wipeLeftIn 0.8s 18.4s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 24.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s5-row.r2 { animation: wipeLeftIn 0.8s 19.1s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 24.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s5-row.r3 { animation: wipeLeftIn 0.8s 19.8s cubic-bezier(0.16, 1, 0.3, 1) both, exitShrink 0.4s 24.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  
+  
+</style>
+</head>
+<body>
+
+  <div class="scene-container">
+    
+    <!-- SCENE 1: 0 - 3s -->
+    <div class="scene scene-1">
+      <div class="s1-title">THE TOOL</div>
+      <div class="s1-subtitle">2 WAYS</div>
+    </div>
+
+    <!-- SCENE 2: 3 - 7.5s -->
+    <div class="scene scene-2">
+      <div class="step-label">1. OPTIMIZE</div>
+      <div class="s2-query">"find some papers about AI agents doing stuff"</div>
+      <div class="s2-arrow">↓</div>
+      <div class="s2-boolean">
+        <span class="b-paren">(</span><span class="b-keyword">"AI agents"</span> <span class="b-op">OR</span> <span class="b-keyword">"autonomous agents"</span><span class="b-paren">)</span><br>
+        <span class="b-op">AND</span> <span class="b-keyword">"applications"</span>
+      </div>
+    </div>
+
+    <!-- SCENE 3: 7 - 13.5s -->
+    <div class="scene scene-3">
+      <div class="step-label">ANY INPUT</div>
+      <div class="s3-container">
+        <div class="s3-input-doc">
+          <div class="doc-icon">
+            <svg width="8vmin" height="8vmin" viewBox="0 0 24 24" fill="none" stroke="var(--accent-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div class="doc-title">Research<br>Outline</div>
+        </div>
+        <div class="s3-process">
+          <div class="process-dot"></div>
+          <div class="process-dot"></div>
+          <div class="process-dot"></div>
+        </div>
+        <div class="s3-keywords">
+          <div class="s3-kw kw1">"semantic search"</div>
+          <div class="s3-kw kw2">"vector embeddings"</div>
+          <div class="s3-kw kw3">"information retrieval"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: 13.5 - 18.5s -->
+    <div class="scene scene-4">
+      <div class="step-label">2. REVIEW & SCORE</div>
+      <div class="s4-cards">
+        <div class="s4-card c1">
+          <div class="s4-score-wrap score-mid">8.5</div>
+          <div class="s4-lines">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+        <div class="s4-card c2">
+          <div class="s4-score-wrap score-high">9.8</div>
+          <div class="s4-lines">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+        <div class="s4-card c3">
+          <div class="s4-score-wrap score-low">4.2</div>
+          <div class="s4-lines">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: 18.5 - 25.0s -->
+    <div class="scene scene-5">
+      <div class="step-label">AUTOMATIC RANKING</div>
+      <div class="s5-list">
+        <div class="s5-row r1">
+          <div class="s4-score-wrap score-high">9.8</div>
+          <div class="s5-row-content">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+        <div class="s5-row r2">
+          <div class="s4-score-wrap score-mid">8.5</div>
+          <div class="s5-row-content">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+        <div class="s5-row r3">
+          <div class="s4-score-wrap score-low">4.2</div>
+          <div class="s5-row-content">
+            <div class="s4-line"></div>
+            <div class="s4-line short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

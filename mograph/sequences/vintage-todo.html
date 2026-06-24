@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Caveat:wght@700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Caveat:wght@700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -14,10 +14,10 @@
     margin: 0;
     overflow: hidden;
     background-color: transparent;
-    font-family: 'Special Elite', monospace;
+    font-family: 'Space Mono', monospace;
     color: #2e2a24;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
   }
 
@@ -26,43 +26,24 @@
     width: 100%;
     height: 100%;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
   }
 
-  /* Registration Marks */
-  .reg-mark {
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    opacity: 0;
-    animation: fadeInOut 7.5s 0.1s both;
-  }
-  .reg-mark::before, .reg-mark::after {
-    content: '';
-    position: absolute;
-    background: #a63a2c;
-  }
-  .reg-mark::before { top: 0; left: 14px; width: 1px; height: 100%; }
-  .reg-mark::after { left: 0; top: 14px; height: 1px; width: 100%; }
 
-  .top-left { top: 40px; left: 40px; }
-  .top-right { top: 40px; right: 40px; }
-  .bottom-left { bottom: 40px; left: 40px; }
-  .bottom-right { bottom: 40px; right: 40px; }
 
   .metadata {
     position: absolute;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
-    font-family: 'Special Elite', monospace;
+    font-family: 'Space Mono', monospace;
     font-size: 1rem;
     font-weight: 400;
     color: #8c8375;
     letter-spacing: 0.1em;
-    opacity: 0;
-    animation: fadeInOut 7.5s 0.2s both;
+    visibility: hidden;
+    animation: fadeInOut 12.5s 0.2s both;
   }
 
   #todo-wrapper {
@@ -72,6 +53,8 @@
     max-width: 900px;
     background: transparent;
     padding: clamp(25px, 5vmin, 50px) clamp(20px, 6vmin, 60px);
+    margin-top: 5vh;
+    animation: panDown 6s 3s forwards;
   }
 
   .todo-title-container {
@@ -81,7 +64,7 @@
     margin-bottom: clamp(25px, 6vmin, 50px);
     
     --enter-delay: 0.2s;
-    --exit-delay: 6s;
+    --exit-delay: 11s;
     animation: slideUpEnter 1.2s var(--enter-delay) cubic-bezier(0.25, 1, 0.25, 1) both,
                slideUpExit 0.8s var(--exit-delay) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
@@ -96,14 +79,7 @@
     letter-spacing: 0.02em;
   }
 
-  .title-underline {
-    width: 60%;
-    height: 2px;
-    background-color: #a63a2c;
-    margin-top: 15px;
-    transform-origin: center;
-    animation: scaleXIn 1s 0.6s cubic-bezier(0.25, 1, 0.25, 1) both;
-  }
+
 
   .todo-list-container {
     display: flex;
@@ -119,7 +95,7 @@
     border-bottom: 1px solid #e0d8c3;
     
     --enter-delay: calc(0.3s + var(--index) * 0.15s);
-    --exit-delay: calc(6.1s + var(--index) * 0.1s);
+    --exit-delay: calc(11.1s + var(--index) * 0.1s);
     animation: fadeSlideUpEnter 1s var(--enter-delay) cubic-bezier(0.25, 1, 0.25, 1) both,
                fadeSlideUpExit 0.7s var(--exit-delay) cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
@@ -145,7 +121,7 @@
 
   .todo-text {
     font-size: clamp(1rem, 3.5vmin, 1.8rem);
-    font-weight: 400;
+    font-weight: 700;
     line-height: 1.3;
     padding-bottom: 2px;
   }
@@ -180,28 +156,28 @@
   }
 
   @keyframes drawCheck {
-    from { opacity: 0; transform: translate(-50%, -60%) scale(0.5) rotate(-20deg); }
-    to { opacity: 1; transform: translate(-50%, -60%) scale(1) rotate(0deg); }
+    from { visibility: hidden; transform: translate(-50%, -60%) scale(0) rotate(-20deg); }
+    to { visibility: visible; transform: translate(-50%, -60%) scale(1) rotate(0deg); }
   }
 
   @keyframes fadeSlideUpEnter {
-    from { opacity: 0; transform: translateY(40px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { visibility: hidden; transform: translateY(40px) scale(0.95); }
+    to { visibility: visible; transform: translateY(0) scale(1); }
   }
 
   @keyframes fadeSlideUpExit {
     from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-40px); }
+    to { opacity: 0; transform: translateY(-20px); }
   }
 
   @keyframes slideUpEnter {
-    from { opacity: 0; transform: translateY(60px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { visibility: hidden; transform: translateY(60px) scale(0.95); }
+    to { visibility: visible; transform: translateY(0) scale(1); }
   }
 
   @keyframes slideUpExit {
     from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-60px); }
+    to { opacity: 0; transform: translateY(-30px); }
   }
 
   @keyframes scaleXIn {
@@ -210,20 +186,24 @@
   }
 
   @keyframes fadeInOut {
-    0% { opacity: 0; }
-    10% { opacity: 0.6; }
-    90% { opacity: 0.6; }
-    100% { opacity: 0; }
+    0% { visibility: hidden; }
+    5% { visibility: visible; }
+    95% { visibility: visible; }
+    100% { visibility: hidden; }
+  }
+  
+  @keyframes panDown {
+    0% { transform: translateY(0); animation-timing-function: cubic-bezier(0.45, 0, 0.15, 1); }
+    85% { transform: translateY(calc(-100% + 88vh)); animation-timing-function: ease-in-out; }
+    93% { transform: translateY(calc(-100% + 90.5vh)); animation-timing-function: ease-in-out; }
+    100% { transform: translateY(calc(-100% + 90vh)); }
   }
   
 
 </style>
 </head>
 <body>
-  <div class="reg-mark top-left"></div>
-  <div class="reg-mark top-right"></div>
-  <div class="reg-mark bottom-left"></div>
-  <div class="reg-mark bottom-right"></div>
+
 
   
   <div class="scene">
@@ -232,12 +212,26 @@
 
   <script>
     const data = {
-      title: "Project Tasks",
+      title: "Beeblio Tasks",
       items: [
-        { text: "Wireframe layout design", done: true, shared: true },
-        { text: "Setup database schema", done: true, shared: false },
-        { text: "Implement OAuth flow", done: false, shared: true },
-        { text: "Deploy to production", done: false, shared: false }
+        { text: "Visual Brainstorming", done: true, shared: true },
+        { text: "Chat with Paper", done: true, shared: true },
+        { text: "Data Visualizer & Chart Creator (Mermaid)", done: true, shared: true },
+        { text: "Automated Systematic Literature Review (SLR)", done: true, shared: false },
+        { text: "Reference Finder & Library Manager", done: true, shared: false },
+        { text: "Statistical Analysis & Report Generation", done: true, shared: false },
+        { text: "Contextual Writing Assistance", done: true, shared: false },
+        { text: "Outline Templates", done: true, shared: false },
+        { text: "Editing Agent", done: true, shared: false },
+        { text: "Citation & Reference Style Manager", done: true, shared: false },
+        { text: "Word Processor", done: true, shared: false },
+        { text: "Export (Docs, Word, Markdown, LaTeX, BibTeX)", done: true, shared: false },
+        { text: "Presentation Builder (Graphics & Slides)", done: true, shared: false },
+        { text: "Reference Analysis (Compare by Subject, etc.)", done: false, shared: false },
+        { text: "Research Gap Identifier", done: false, shared: false },
+        { text: "Deep Research", done: false, shared: false },
+        { text: "Parallel Data Search (via API)", done: false, shared: false },
+        { text: "Version Control & History", done: false, shared: false }
       ]
     };
 
@@ -246,7 +240,6 @@
     let html = `
       <div class="todo-title-container">
         <div class="todo-title">${data.title}</div>
-        <div class="title-underline"></div>
       </div>
       
       <div class="todo-list-container">

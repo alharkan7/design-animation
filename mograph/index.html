@@ -85,16 +85,15 @@
             </div>
             
             <div class="mg-field" style="margin-top: 20px;">
-              <span class="mg-label">Background Color</span>
+              <span class="mg-label">Background</span>
               <div class="mg-select-wrap" style="display: flex; gap: 8px;">
                 <input type="color" id="bg-color-picker" value="#ffffff" style="width: 40px; height: 32px; padding: 0; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; background: transparent;">
-                <select id="bg-color-presets" class="mg-select" style="flex: 1;">
-                  <option value="#ffffff">White</option>
-                  <option value="#00ff00">Green Screen</option>
-                  <option value="#0000ff">Blue Screen</option>
-                  <option value="#ff00ff">Magenta Screen</option>
-                  <option value="#000000">Black</option>
-                  <option value="custom">Custom...</option>
+                <select id="bg-preset-select" class="mg-select" style="flex: 1;">
+                  <option value="transparent">Transparent (None)</option>
+                  <option value="solid" selected>Solid Color</option>
+                  <option value="paper">Vintage Paper</option>
+                  <option value="grid">Blueprint Grid</option>
+                  <option value="dots">Polka Dots</option>
                 </select>
               </div>
             </div>
@@ -113,6 +112,7 @@
                 <select id="quality-select" class="mg-select">
                   <option value="720p">720p (HD)</option>
                   <option value="1080p" selected>1080p (Full HD)</option>
+                  <option value="2k">2K (QHD)</option>
                   <option value="4k">4K (Ultra HD)</option>
                 </select>
               </div>
@@ -127,6 +127,13 @@
                   <option value="60">60 fps (Smooth)</option>
                 </select>
               </div>
+            </div>
+
+            <div class="mg-field" style="margin-top: 15px; margin-bottom: 20px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted); font-size: 13px;">
+                <input type="checkbox" id="export-bg-checkbox" checked style="accent-color: var(--accent);">
+                Include Background
+              </label>
             </div>
 
             <button class="mg-export-btn" id="export-btn" disabled>

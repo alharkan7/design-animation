@@ -23,7 +23,7 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
 
 ## 2. Animation & Timing Rules
 
-1. **Use `animation-fill-mode: both` or `forwards`**: All animations should hold their final frame state.
+1. **Fill Modes & Flickering Fix**: Use `animation-fill-mode: both` for entry animations! If you use `forwards`, elements will display their default visible state during the `animation-delay` period and cause a jarring flicker before starting the animation. `both` applies the 0% keyframe backwards during the delay. Use `forwards` for exit animations.
 2. **Chain with `animation-delay`**: Orchestrate your scenes by staggering `animation-delay` across elements.
    ```css
    .word-1 { animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -39,7 +39,8 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
    - Entrances should take longer (0.4s - 0.8s) than exits (0.2s - 0.3s). 
    - Use `ease-out` (starts fast, decelerates) for entrances.
    - Use `ease-in` (starts slow, accelerates) for exits.
-7. **Stagger with Overlap**: Don't wait for one animation to finish before starting the next. Overlap them to create fluid choreography.
+7. **Fluid Scene Transitions & Exits**: Do not use simple global container fade-outs to end a scene. Apply specific, modern exit animations (like `slideUpOut`, `scaleOut`, `shiftDownOut`) to individual elements before their scene container fades. **Always animate the exit of the final scene as well**, so the video does not abruptly end on a static frame.
+8. **Overlap Scene Transitions**: Do not wait for the disappearance animation of the previous scene to fully complete before starting the appearance animation of the next scene. The next scene's entry should begin *while* the previous scene's exit is still in motion, creating a fluid, uninterrupted sequence.
 
 ## 3. Specific Motion Graphics Patterns
 
@@ -99,6 +100,22 @@ Video frames are not web pages. Web sizes are invisible on video.
    /* Bouncy entrance */
    cubic-bezier(0.34, 1.56, 0.64, 1)
    ```
+
+## 6. Chroma Key (Green Screen) Safe Design
+
+To support users who edit videos in basic NLEs like CapCut (which do not support WebM alpha channels), sequences must be perfectly compatible with Green Screen / Chroma Key removal.
+
+1. **No Opacity Fades**: 
+   - 🚫 Do NOT use `opacity` transitions (`fadeIn`, `fadeOut`).
+   - Fading elements blend with the green background, creating a muddy green ghosting effect when keyed out.
+   - ✅ Instead, make elements appear and disappear physically using `transform: scale()` (scaling 0 to 1) or sliding them off-screen.
+   - ✅ Use `visibility: hidden` to `visibility: visible` for scene containers instead of `opacity: 0` to `1`.
+2. **No Soft Shadows**:
+   - 🚫 Remove all `box-shadow` properties from objects. Soft, semi-transparent drop shadows cannot be cleanly keyed out and will leave dark green fringes.
+   - ✅ Use solid, hard borders (`border: 2px solid`) to provide contrast and separation instead of shadows.
+3. **Safe Colors & Contrast**:
+   - 🚫 Avoid using greens or any colors that are close to standard chroma key green (`#00FF00`, `#00B140`).
+   - ✅ Ensure all text and graphics have strong contrast against bright backgrounds so the edges key out with absolute sharpness.
 
 ## Workflow / Checklist
 

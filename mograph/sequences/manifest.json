@@ -2,5 +2,6 @@
   { "file": "kinetic-typography.html", "name": "Kinetic Typography" },
   { "file": "particle-wave.html", "name": "Particle Wave" },
   { "file": "gradient-morph.html", "name": "Gradient Morph" },
-  { "file": "vintage-todo.html", "name": "Vintage Todo" }
+  { "file": "vintage-todo.html", "name": "Vintage Todo" },
+  { "file": "semantic-search.html", "name": "Semantic Search" }
 ]

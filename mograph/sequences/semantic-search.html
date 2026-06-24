@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semantic Search Mograph - Modern Minimalist</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-light: #eff6ff;
+    --error: #ef4444;
+    --error-light: #fef2f2;
+    --highlight-bg: #f59e0b;
+    --highlight-text: #ffffff;
+    --border: #e2e8f0;
+    --card-bg: #ffffff;
+  }
+
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .scene-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    padding: 8vmin;
+  }
+
+  /* S1: Search Box */
+  .s1-search {
+    display: flex;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10vmin;
+    padding: 3vmin 5vmin;
+    width: 60vw;
+    gap: 2vmin;
+  }
+  .s1-icon {
+    width: 5vmin;
+    height: 5vmin;
+    color: var(--text-muted);
+  }
+  .s1-query-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  .s1-query-hidden {
+    visibility: hidden;
+    font-family: 'Fira Code', monospace;
+    font-size: 4vmin;
+    font-weight: 500;
+  }
+  .s1-query {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    font-family: 'Fira Code', monospace;
+    font-size: 4vmin;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    width: 0;
+    color: var(--text-main);
+    border-right: 0.3vmin solid var(--accent);
+  }
+
+  /* S2 & S3: Cards */
+  .cards-grid {
+    display: flex;
+    gap: 4vmin;
+  }
+  .m-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 2.5vmin;
+    padding: 5vmin;
+    width: 30vw;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5vmin;
+  }
+  .m-card-title {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 400;
+    font-size: 3.5vmin;
+    line-height: 1.3;
+    color: #1a0dab;
+  }
+  .m-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2vmin;
+  }
+  .m-line {
+    height: 1vmin;
+    background: #f1f5f9;
+    border-radius: 0.5vmin;
+    width: 100%;
+  }
+  .m-line.short { width: 65%; }
+
+  .m-highlight {
+    background: var(--highlight-bg);
+    color: var(--highlight-text);
+    padding: 0.2vmin 0.8vmin;
+    border-radius: 0.8vmin;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    display: inline-block;
+  }
+
+  /* S3: Excluded Card */
+  .s3-card { position: relative; }
+  .s3-card.excluded {
+    border-color: var(--error);
+    background: var(--error-light);
+  }
+  .s3-card.excluded .m-card-title { color: var(--error); }
+  .s3-card.excluded .m-line { background: #fecaca; }
+
+  .badge-excluded {
+    position: absolute;
+    top: -3vmin;
+    right: -3vmin;
+    background: var(--error);
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 2.5vmin;
+    padding: 1.5vmin 3vmin;
+    border-radius: 10vmin;
+    transform: scale(0);
+  }
+
+  /* S4: Boolean Code */
+  .s4-boolean {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 2.5vmin;
+    padding: 6vmin;
+    width: 80vw;
+    font-family: 'Fira Code', monospace;
+    font-size: 3.5vmin;
+    line-height: 1.8;
+    color: var(--text-muted);
+  }
+  .b-keyword { color: var(--text-main); font-weight: 500; }
+  .b-operator { color: var(--accent); font-weight: 600; }
+  .b-paren { color: #94a3b8; }
+  
+  .b-error-op {
+    color: var(--error);
+    position: relative;
+    display: inline-block;
+  }
+  .s4-error-line {
+    position: absolute;
+    bottom: -0.2vmin;
+    left: 0;
+    width: 0;
+    height: 0.4vmin;
+    background: var(--error);
+    border-radius: 0.2vmin;
+  }
+
+  /* Animations */
+  @keyframes fadeIn { 0% { visibility: hidden; } 100% { visibility: visible; } }
+  @keyframes fadeOut { 0% { visibility: visible; } 100% { visibility: hidden; } }
+  @keyframes slideUpIn { 0% { transform: translateY(8vmin) scale(0); } 100% { transform: translateY(0) scale(1); } }
+  @keyframes scaleInBouncy { 
+    0% { transform: scale(0); } 
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); } 
+  }
+  @keyframes typeText { 0% { width: 0; } 100% { width: 100%; } }
+  @keyframes blink { 0%, 100% { border-color: transparent; } 50% { border-color: var(--accent); } }
+  @keyframes highlightSweep { 0% { background-color: transparent; color: inherit; } 100% { background-color: var(--highlight-bg); color: var(--highlight-text); } }
+  @keyframes popIn { 
+    0% { transform: scale(0); } 
+    80% { transform: scale(1.1); } 
+    100% { transform: scale(1); } 
+  }
+  @keyframes shiftDown {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(4vmin) scale(0.95); }
+  }
+  @keyframes drawLine { 0% { width: 0; } 100% { width: 100%; } }
+  @keyframes errorPulse {
+    0% { transform: scale(1); border-color: var(--border); }
+    30% { transform: scale(1.02); border-color: var(--error); border-width: 3px; }
+    100% { transform: scale(1); border-color: rgba(239, 68, 68, 0.4); border-width: 1px; }
+  }
+  @keyframes slideUpOut {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-8vmin) scale(0); }
+  }
+  @keyframes shiftDownOut {
+    0% { transform: translateY(4vmin) scale(0.95); }
+    100% { transform: translateY(12vmin) scale(0); }
+  }
+
+  /* Timing Sequence */
+  /* S1: 0 - 4.8s */
+  .scene-1 { animation: fadeIn 0.4s 0.2s both, fadeOut 0.4s 4.4s forwards; }
+  .s1-search { animation: scaleInBouncy 0.8s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, slideUpOut 0.6s 3.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s1-query { animation: typeText 1.5s 1.0s steps(20, end) both, blink 0.5s 1.0s 6 forwards; }
+
+  /* S2: 4.0s - 8.9s (Overlaps with S1 exit) */
+  .scene-2 { animation: fadeIn 0.4s 4.0s both, fadeOut 0.4s 8.5s forwards; }
+  .s2-card-1 { animation: slideUpIn 0.8s 4.1s cubic-bezier(0.16, 1, 0.3, 1) both, slideUpOut 0.6s 7.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s2-card-2 { animation: slideUpIn 0.8s 4.3s cubic-bezier(0.16, 1, 0.3, 1) both, slideUpOut 0.6s 8.0s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .s2-card-1 .m-highlight { animation: highlightSweep 0.5s 5.1s both; }
+  .s2-card-2 .m-highlight { animation: highlightSweep 0.5s 5.3s both; }
+
+  /* S3: 8.0s - 12.7s (Overlaps with S2 exit) */
+  .scene-3 { animation: fadeIn 0.4s 8.0s both, fadeOut 0.4s 12.3s forwards; }
+  .s3-card { animation: slideUpIn 0.8s 8.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .s3-card-left-out { 
+    animation: 
+      slideUpIn 0.8s 8.1s cubic-bezier(0.16, 1, 0.3, 1) both, 
+      shiftDown 0.8s 9.2s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+      shiftDownOut 0.6s 11.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+  }
+  .s3-card-left-out .badge-excluded { animation: popIn 0.5s 9.2s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  /* S4: 12.0s - 16.0s (Overlaps with S3 exit) */
+  .scene-4 { animation: fadeIn 0.4s 12.0s both, fadeOut 0.4s 15.6s forwards; }
+  .s4-boolean { animation: scaleInBouncy 0.8s 12.2s cubic-bezier(0.16, 1, 0.3, 1) both, errorPulse 0.8s 13.0s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, slideUpOut 0.6s 15.0s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .b-error-op .s4-error-line { animation: drawLine 0.6s 13.0s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  /* Responsive Portrait Mode (Mobile Vertical) */
+  @media (max-aspect-ratio: 1/1) {
+    .s1-search {
+      width: 90vw;
+      padding: 3vmin 5vmin;
+    }
+    .s1-query-hidden, .s1-query { font-size: 5vw; }
+    .cards-grid { flex-direction: column; gap: 2.5vmin; }
+    .m-card {
+      width: 85vw;
+      padding: 5vmin;
+    }
+    .m-card-title { font-size: 5vmin; }
+    .badge-excluded {
+      font-size: 3.5vmin;
+      padding: 2vmin 4vmin;
+      top: -4vmin;
+      right: -4vmin;
+    }
+    .s4-boolean {
+      width: 90vw;
+      padding: 5vmin;
+      font-size: 4vmin;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="scene-container">
+    
+    <!-- SCENE 1: 0 - 4.5s -->
+    <div class="scene scene-1">
+      <div class="s1-search">
+        <svg class="s1-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <div class="s1-query-wrapper">
+          <span class="s1-query-hidden">"treatment efficacy"</span>
+          <div class="s1-query">"treatment efficacy"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 2: 4.5s - 9.0s -->
+    <div class="scene scene-2">
+      <div class="cards-grid">
+        <div class="m-card s2-card-1">
+          <div class="m-card-title">Study on <span class="m-highlight">treatment efficacy</span></div>
+          <div class="m-lines">
+            <div class="m-line"></div>
+            <div class="m-line"></div>
+            <div class="m-line short"></div>
+          </div>
+        </div>
+        <div class="m-card s2-card-2">
+          <div class="m-card-title">Evaluating <span class="m-highlight">treatment efficacy</span></div>
+          <div class="m-lines">
+            <div class="m-line"></div>
+            <div class="m-line"></div>
+            <div class="m-line short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 3: 9.0s - 13.5s -->
+    <div class="scene scene-3">
+      <div class="cards-grid">
+        <div class="m-card s3-card s3-card-left-out excluded">
+          <div class="badge-excluded">MISSED</div>
+          <div class="m-card-title">Analysis of clinical outcomes</div>
+          <div class="m-lines">
+            <div class="m-line"></div>
+            <div class="m-line"></div>
+            <div class="m-line short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: 13.5s - 18.0s -->
+    <div class="scene scene-4">
+      <div class="s4-boolean">
+        <span class="b-paren">(</span><span class="b-keyword">"treatment efficacy"</span> <span class="b-operator">OR</span> <span class="b-keyword">"clinical outcomes"</span><span class="b-paren">)</span><br>
+        <span class="b-operator b-error-op">AND NOT<div class="s4-error-line"></div></span> <span class="b-paren">(</span><span class="b-keyword">"animal models"</span> <span class="b-operator">OR</span> <span class="b-keyword">"in vitro"</span><span class="b-paren">)</span><br>
+        <span class="b-operator">AND</span> <span class="b-paren">(</span><span class="b-keyword">"human trials"</span> <span class="b-operator">OR</span> <span class="b-keyword">"randomized"</span><span class="b-paren">)</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

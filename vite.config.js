@@ -741,7 +741,7 @@ function motionGraphicsExportPlugin() {
 
     try {
       const body = await readJsonBody(req, 10_000_000);
-      const { html, resolution = '1080p', layout = 'landscape', width: reqWidth, height: reqHeight } = body;
+      const { html, resolution = '1080p', layout = 'landscape', width: reqWidth, height: reqHeight, bgColor, bgPreset } = body;
 
       if (!html) {
         res.statusCode = 400;
@@ -756,7 +756,7 @@ function motionGraphicsExportPlugin() {
         width = Math.round(reqWidth);
         height = Math.round(reqHeight);
       } else {
-        const baseRes = resolution === '720p' ? 720 : resolution === '4k' ? 2160 : 1080;
+        const baseRes = resolution === '720p' ? 720 : resolution === '2k' ? 1440 : resolution === '4k' ? 2160 : 1080;
         if (layout === 'portrait') {
           width = Math.round(baseRes * 9 / 16);
           height = baseRes;
@@ -776,6 +776,62 @@ function motionGraphicsExportPlugin() {
 
       // Inject the HTML
       await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+
+      if (bgPreset && bgPreset !== 'transparent' && bgPreset !== 'solid') {
+        const BG_PAPER_HTML = `
+        <svg width="0" height="0" style="position: absolute; pointer-events: none;"><defs><filter id="paperNoise" x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="5" seed="7" stitchTiles="stitch" result="noise" /><feColorMatrix type="matrix" values="0.28 0.28 0.28 0 0 0.28 0.28 0.28 0 0 0.28 0.28 0.28 0 0 0 0 0 0.9 0" result="grayscaleNoise" /><feComponentTransfer in="grayscaleNoise" result="finalNoise"><feFuncR type="linear" slope="0.75" intercept="0.12"/><feFuncG type="linear" slope="0.75" intercept="0.12"/><feFuncB type="linear" slope="0.75" intercept="0.12"/></feComponentTransfer></filter></defs></svg>
+        <div class="paper-anim-wrapper"><div class="noise"></div><div class="crease crease-1"></div><div class="crease crease-2"></div><div class="crease crease-3"></div><div class="crease crease-4"></div><div class="crease crease-5"></div><div class="crease crease-6"></div><div class="vignette"></div></div>
+        `;
+
+        const BG_PRESET_CSS = `
+        #mg-bg-container { position: fixed; inset: 0; z-index: -9999; pointer-events: none; background: #f8f6f1; overflow: hidden; }
+        .paper-anim-wrapper { position: absolute; width: 150vmax; height: 150vmax; top: 50%; left: 50%; margin-left: -75vmax; margin-top: -75vmax; animation: paperRotate 0.8s steps(1) infinite; }
+        @keyframes paperRotate { 0% { transform: rotate(0deg) scaleX(1); } 33% { transform: rotate(90deg) scaleX(-1); } 66% { transform: rotate(180deg) scaleX(1); } 100% { transform: rotate(270deg) scaleX(-1); } }
+        .noise { position: absolute; inset: 0; background-color: #ffffff; filter: url(#paperNoise); mix-blend-mode: multiply; opacity: 0.42; }
+        .crease { position: absolute; inset: -30%; mix-blend-mode: multiply; }
+        .crease-1 { background: linear-gradient(138deg, transparent 22%, rgba(0,0,0,0.035) 32%, rgba(0,0,0,0.085) 38%, rgba(0,0,0,0.055) 45%, transparent 58%); transform: rotate(-32deg) translate(-12%, -18%); opacity: 0.95; }
+        .crease-2 { background: linear-gradient(42deg, transparent 35%, rgba(255,255,255,0.28) 46%, rgba(0,0,0,0.045) 52%, transparent 68%); transform: rotate(18deg) translate(8%, 22%); opacity: 0.9; }
+        .crease-3 { background: linear-gradient(155deg, transparent 28%, rgba(0,0,0,0.095) 42%, rgba(0,0,0,0.12) 48%, rgba(0,0,0,0.06) 56%, transparent 72%); transform: rotate(-8deg) translate(15%, 25%); opacity: 0.85; }
+        .crease-4 { background: linear-gradient(92deg, transparent 30%, rgba(0,0,0,0.04) 42%, rgba(255,255,255,0.18) 48%, rgba(0,0,0,0.035) 55%, transparent 70%); transform: rotate(72deg) translate(-5%, -8%); opacity: 0.75; }
+        .crease-5 { background: radial-gradient(circle at 72% 18%, transparent 25%, rgba(0,0,0,0.07) 42%, rgba(0,0,0,0.04) 55%, transparent 75%); transform: rotate(12deg); opacity: 0.8; }
+        .crease-6 { background: linear-gradient(205deg, transparent 18%, rgba(0,0,0,0.065) 35%, rgba(255,255,255,0.12) 42%, rgba(0,0,0,0.03) 52%, transparent 68%); transform: rotate(-48deg) translate(-18%, 32%); opacity: 0.7; }
+        .vignette { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 55%, rgba(0,0,0,0.035) 82%); mix-blend-mode: multiply; }
+
+        @keyframes gridPan { 0% { background-position: 0px 0px; } 100% { background-position: 40px 40px; } }
+        .bg-preset-grid { background-color: #1a1a1a !important; background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px) !important; background-size: 40px 40px !important; animation: gridPan 4s linear infinite !important; }
+        @keyframes dotsPan { 0% { background-position: 0px 0px; } 100% { background-position: 30px 30px; } }
+        .bg-preset-dots { background-color: #2a2a2a !important; background-image: radial-gradient(rgba(255, 255, 255, 0.2) 2px, transparent 2px) !important; background-size: 30px 30px !important; animation: dotsPan 6s linear infinite !important; }
+        `;
+        await page.evaluate(({ css, preset, paperHtml }) => {
+          const style = document.createElement('style');
+          style.textContent = css;
+          document.head.appendChild(style);
+          
+          let bgContainer = document.getElementById('mg-bg-container');
+          if (!bgContainer) {
+            bgContainer = document.createElement('div');
+            bgContainer.id = 'mg-bg-container';
+            document.body.prepend(bgContainer);
+          }
+          
+          if (preset === 'paper') {
+            bgContainer.style.display = 'block';
+            bgContainer.innerHTML = paperHtml;
+          } else {
+            document.body.classList.add(`bg-preset-${preset}`);
+          }
+        }, { css: BG_PRESET_CSS, preset: bgPreset, paperHtml: BG_PAPER_HTML });
+      } else if (bgColor && bgColor !== 'transparent') {
+        await page.evaluate((c) => { 
+          document.body.style.backgroundColor = c; 
+          document.body.style.backgroundImage = 'none'; 
+        }, bgColor);
+      } else {
+        await page.evaluate(() => { 
+          document.body.style.backgroundColor = 'transparent'; 
+          document.body.style.backgroundImage = 'none'; 
+        });
+      }
 
       // Wait for resources (fonts, images) to fully load
       await new Promise(r => setTimeout(r, 500));
@@ -824,6 +880,14 @@ function motionGraphicsExportPlugin() {
 
       const frames = [];
 
+      const isTransparent = !bgColor || bgColor === 'transparent';
+      const frameFormat = isTransparent ? 'png' : 'jpeg';
+      const screenshotOptions = {
+        type: frameFormat,
+        clip: { x: 0, y: 0, width, height },
+        ...(isTransparent ? { omitBackground: true } : { quality: 90 })
+      };
+
       if (animInfo.hasCSSAnimations) {
         // ── CSS animation path: step through the timeline precisely ──
         for (let i = 0; i < totalFrames; i++) {
@@ -839,11 +903,8 @@ function motionGraphicsExportPlugin() {
           // Let the browser composite the frame
           await new Promise(r => setTimeout(r, 10));
 
-          const screenshot = await page.screenshot({
-            type: 'png',
-            clip: { x: 0, y: 0, width, height },
-          });
-          frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
+          const screenshot = await page.screenshot(screenshotOptions);
+          frames.push(`data:image/${frameFormat};base64,${screenshot.toString('base64')}`);
 
           if (i % 30 === 0) {
             console.log(`Captured ${i}/${totalFrames} frames`);
@@ -853,11 +914,8 @@ function motionGraphicsExportPlugin() {
         // ── Fallback for JS/canvas animations: real-time capture ──
         const frameDelay = 1000 / fps;
         for (let i = 0; i < totalFrames; i++) {
-          const screenshot = await page.screenshot({
-            type: 'png',
-            clip: { x: 0, y: 0, width, height },
-          });
-          frames.push(`data:image/png;base64,${screenshot.toString('base64')}`);
+          const screenshot = await page.screenshot(screenshotOptions);
+          frames.push(`data:image/${frameFormat};base64,${screenshot.toString('base64')}`);
           if (i < totalFrames - 1) {
             await new Promise(r => setTimeout(r, frameDelay));
           }
@@ -873,16 +931,27 @@ function motionGraphicsExportPlugin() {
       // Encode video using a separate page with timeout
       const encodePage = await br.newPage();
 
-      // Increase the default timeout for this page (2 minutes)
-      encodePage.setDefaultTimeout(120000);
+      // Increase the default timeout for this page (5 minutes)
+      encodePage.setDefaultTimeout(300000);
+
+      // Pass frames in chunks to avoid string length limits and slow CDP overhead
+      await encodePage.evaluate(() => { window.frameDataUrls = []; });
+      
+      const chunkSize = 50;
+      for (let i = 0; i < frames.length; i += chunkSize) {
+        const chunk = frames.slice(i, i + chunkSize);
+        await encodePage.evaluate((chunkData) => {
+          window.frameDataUrls.push(...chunkData);
+        }, chunk);
+      }
 
       // Set a longer timeout for video encoding
-      const videoDataUrl = await encodePage.evaluate(async (frameDataUrls) => {
-        return new Promise((resolve, reject) => {
+      const videoDataUrl = await encodePage.evaluate(async (totalFrames) => {
+        return new Promise(async (resolve, reject) => {
           // Add timeout to prevent hanging
           const timeout = setTimeout(() => {
-            reject(new Error('Video encoding timed out after 60 seconds'));
-          }, 60000);
+            reject(new Error('Video encoding timed out after 5 minutes'));
+          }, 300000);
 
           const canvas = document.createElement('canvas');
           const firstImg = new Image();
@@ -941,13 +1010,20 @@ function motionGraphicsExportPlugin() {
 
             // Draw each frame
             let frameIndex = 0;
-            const drawFrame = () => {
-              if (frameIndex < frameDataUrls.length) {
+            const startTime = performance.now();
+            const drawFrame = async () => {
+              if (frameIndex < totalFrames) {
                 const img = new Image();
                 img.onload = () => {
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
                   ctx.drawImage(img, 0, 0);
                   frameIndex++;
-                  setTimeout(drawFrame, 1000 / fps);
+                  
+                  const expectedTime = frameIndex * (1000 / fps);
+                  const elapsed = performance.now() - startTime;
+                  const delay = Math.max(0, expectedTime - elapsed);
+                  
+                  setTimeout(drawFrame, delay);
                 };
                 img.onerror = () => {
                   console.error(`Failed to load frame ${frameIndex}`);
@@ -955,7 +1031,7 @@ function motionGraphicsExportPlugin() {
                   // Continue even if a frame fails
                   setTimeout(drawFrame, 1000 / fps);
                 };
-                img.src = frameDataUrls[frameIndex];
+                img.src = window.frameDataUrls[frameIndex];
               } else {
                 // Give it time to finish recording
                 setTimeout(() => {
@@ -975,9 +1051,13 @@ function motionGraphicsExportPlugin() {
             clearTimeout(timeout);
             reject(new Error('Failed to load first frame'));
           };
-          firstImg.src = frameDataUrls[0];
+          try {
+            firstImg.src = window.frameDataUrls[0];
+          } catch (err) {
+            firstImg.onerror();
+          }
         });
-      }, frames);
+      }, frames.length);
 
       // Close encode page after successful encoding
       try {

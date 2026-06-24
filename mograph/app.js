@@ -51,7 +51,7 @@ function cacheDom() {
   // Aspect ratio buttons
   dom.ratioButtons = document.querySelectorAll('.mg-ratio-btn');
   dom.bgColorPicker = document.getElementById('bg-color-picker');
-  dom.bgColorPresets = document.getElementById('bg-color-presets');
+  dom.bgPresetSelect = document.getElementById('bg-preset-select');
 }
 
 // ---- Sequence Discovery ----
@@ -115,7 +115,7 @@ function loadSequence(url) {
   // Once loaded, hook keyboard forwarding from the iframe
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
-    applyBackgroundColor();
+    applyBackground();
     calculateDuration();
   };
 
@@ -230,7 +230,7 @@ function rewindPlayback() {
   dom.viewportIframe.src = state.currentSequence;
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
-    applyBackgroundColor();
+    applyBackground();
     calculateDuration();
   };
 
@@ -259,7 +259,7 @@ function handleStop() {
   dom.viewportIframe.src = state.currentSequence;
   dom.viewportIframe.onload = () => {
     hookIframeKeyboard();
-    applyBackgroundColor();
+    applyBackground();
     calculateDuration();
     // Small delay so the first frame renders, then freeze
     setTimeout(() => pauseIframeAnimations(), 50);
@@ -404,14 +404,93 @@ function updateViewportInfo() {
   dom.viewportInfo.textContent = `${state.aspectRatio}  •  ${w}×${h}`;
 }
 
-function applyBackgroundColor() {
+const BG_PAPER_HTML = `
+<svg width="0" height="0" style="position: absolute; pointer-events: none;">
+  <defs>
+    <filter id="paperNoise" x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="5" seed="7" stitchTiles="stitch" result="noise" />
+      <feColorMatrix type="matrix" values="0.28 0.28 0.28 0 0  0.28 0.28 0.28 0 0  0.28 0.28 0.28 0 0  0 0 0 0.9 0" result="grayscaleNoise" />
+      <feComponentTransfer in="grayscaleNoise" result="finalNoise">
+        <feFuncR type="linear" slope="0.75" intercept="0.12"/>
+        <feFuncG type="linear" slope="0.75" intercept="0.12"/>
+        <feFuncB type="linear" slope="0.75" intercept="0.12"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+</svg>
+<div class="paper-anim-wrapper">
+  <div class="noise"></div>
+  <div class="crease crease-1"></div>
+  <div class="crease crease-2"></div>
+  <div class="crease crease-3"></div>
+  <div class="crease crease-4"></div>
+  <div class="crease crease-5"></div>
+  <div class="crease crease-6"></div>
+  <div class="vignette"></div>
+</div>
+`;
+
+const BG_PRESET_CSS = `
+#mg-bg-container { position: fixed; inset: 0; z-index: -9999; pointer-events: none; background: #f8f6f1; overflow: hidden; }
+.paper-anim-wrapper { position: absolute; width: 150vmax; height: 150vmax; top: 50%; left: 50%; margin-left: -75vmax; margin-top: -75vmax; animation: paperRotate 0.8s steps(1) infinite; }
+@keyframes paperRotate { 0% { transform: rotate(0deg) scaleX(1); } 33% { transform: rotate(90deg) scaleX(-1); } 66% { transform: rotate(180deg) scaleX(1); } 100% { transform: rotate(270deg) scaleX(-1); } }
+.noise { position: absolute; inset: 0; background-color: #ffffff; filter: url(#paperNoise); mix-blend-mode: multiply; opacity: 0.42; }
+.crease { position: absolute; inset: -30%; mix-blend-mode: multiply; }
+.crease-1 { background: linear-gradient(138deg, transparent 22%, rgba(0,0,0,0.035) 32%, rgba(0,0,0,0.085) 38%, rgba(0,0,0,0.055) 45%, transparent 58%); transform: rotate(-32deg) translate(-12%, -18%); opacity: 0.95; }
+.crease-2 { background: linear-gradient(42deg, transparent 35%, rgba(255,255,255,0.28) 46%, rgba(0,0,0,0.045) 52%, transparent 68%); transform: rotate(18deg) translate(8%, 22%); opacity: 0.9; }
+.crease-3 { background: linear-gradient(155deg, transparent 28%, rgba(0,0,0,0.095) 42%, rgba(0,0,0,0.12) 48%, rgba(0,0,0,0.06) 56%, transparent 72%); transform: rotate(-8deg) translate(15%, 25%); opacity: 0.85; }
+.crease-4 { background: linear-gradient(92deg, transparent 30%, rgba(0,0,0,0.04) 42%, rgba(255,255,255,0.18) 48%, rgba(0,0,0,0.035) 55%, transparent 70%); transform: rotate(72deg) translate(-5%, -8%); opacity: 0.75; }
+.crease-5 { background: radial-gradient(circle at 72% 18%, transparent 25%, rgba(0,0,0,0.07) 42%, rgba(0,0,0,0.04) 55%, transparent 75%); transform: rotate(12deg); opacity: 0.8; }
+.crease-6 { background: linear-gradient(205deg, transparent 18%, rgba(0,0,0,0.065) 35%, rgba(255,255,255,0.12) 42%, rgba(0,0,0,0.03) 52%, transparent 68%); transform: rotate(-48deg) translate(-18%, 32%); opacity: 0.7; }
+.vignette { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 55%, rgba(0,0,0,0.035) 82%); mix-blend-mode: multiply; }
+
+@keyframes gridPan { 0% { background-position: 0px 0px; } 100% { background-position: 40px 40px; } }
+.bg-preset-grid { background-color: #1a1a1a !important; background-image: linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px) !important; background-size: 40px 40px !important; animation: gridPan 4s linear infinite !important; }
+@keyframes dotsPan { 0% { background-position: 0px 0px; } 100% { background-position: 30px 30px; } }
+.bg-preset-dots { background-color: #2a2a2a !important; background-image: radial-gradient(rgba(255, 255, 255, 0.2) 2px, transparent 2px) !important; background-size: 30px 30px !important; animation: dotsPan 6s linear infinite !important; }
+`;
+
+function applyBackground() {
   if (!dom.viewportIframe) return;
   try {
     const iframeDoc = dom.viewportIframe.contentDocument;
     if (iframeDoc && iframeDoc.body) {
-      const color = dom.bgColorPicker ? dom.bgColorPicker.value : '#ffffff';
-      iframeDoc.body.style.backgroundColor = color;
+      // Inject CSS
+      let styleTag = iframeDoc.getElementById('mg-bg-presets');
+      if (!styleTag) {
+        styleTag = iframeDoc.createElement('style');
+        styleTag.id = 'mg-bg-presets';
+        styleTag.textContent = BG_PRESET_CSS;
+        iframeDoc.head.appendChild(styleTag);
+      }
+      
+      // Inject complex background container for paper
+      let bgContainer = iframeDoc.getElementById('mg-bg-container');
+      if (!bgContainer) {
+        bgContainer = iframeDoc.createElement('div');
+        bgContainer.id = 'mg-bg-container';
+        iframeDoc.body.prepend(bgContainer);
+      }
+
+      const preset = dom.bgPresetSelect.value;
+      const color = dom.bgColorPicker.value;
+
+      iframeDoc.body.className = '';
+      iframeDoc.body.style.backgroundColor = 'transparent';
       iframeDoc.body.style.backgroundImage = 'none';
+      iframeDoc.body.style.animation = 'none';
+      
+      bgContainer.innerHTML = '';
+      bgContainer.style.display = 'none';
+
+      if (preset === 'solid') {
+        iframeDoc.body.style.backgroundColor = color;
+      } else if (preset === 'paper') {
+        bgContainer.style.display = 'block';
+        bgContainer.innerHTML = BG_PAPER_HTML;
+      } else if (preset !== 'transparent') {
+        iframeDoc.body.classList.add(`bg-preset-${preset}`);
+      }
     }
   } catch(e) {}
 }
@@ -458,6 +537,7 @@ async function exportVideo() {
   let exportH;
   switch (quality) {
     case '720p':  exportH = 720;  break;
+    case '2k':    exportH = 1440; break;
     case '4k':    exportH = 2160; break;
     case '1080p':
     default:      exportH = 1080; break;
@@ -478,6 +558,19 @@ async function exportVideo() {
     updateExportProgress(15, `Rendering ${exportW}×${exportH} video on server...`);
 
     // 2. POST to the server-side Puppeteer export endpoint
+    const includeBg = document.getElementById('export-bg-checkbox').checked;
+    const preset = dom.bgPresetSelect.value;
+    const color = dom.bgColorPicker.value;
+    
+    // Determine the solid bgColor to pass to backend if they want it compressed as JPEG
+    let bgColor = null;
+    if (includeBg) {
+      if (preset === 'solid') bgColor = color;
+      if (preset === 'paper') bgColor = '#f8f6f1';
+      if (preset === 'grid') bgColor = '#1a1a1a';
+      if (preset === 'dots') bgColor = '#2a2a2a';
+    }
+
     const exportResp = await fetch('/api/export-motion-graphics-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -485,6 +578,8 @@ async function exportVideo() {
         html,
         width: exportW,
         height: exportH,
+        bgColor,
+        bgPreset: includeBg ? preset : 'transparent'
       }),
     });
 
@@ -621,17 +716,21 @@ function bindEvents() {
   });
 
   // Background Color
-  if (dom.bgColorPresets && dom.bgColorPicker) {
-    dom.bgColorPresets.addEventListener('change', (e) => {
-      if (e.target.value !== 'custom') {
-        dom.bgColorPicker.value = e.target.value;
-        applyBackgroundColor();
-      }
-    });
+  dom.bgPresetSelect.addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val === 'solid') {
+      dom.bgColorPicker.style.visibility = 'visible';
+    } else {
+      dom.bgColorPicker.style.visibility = 'hidden';
+    }
+    applyBackground();
+  });
 
+  if (dom.bgColorPicker) {
     dom.bgColorPicker.addEventListener('input', () => {
-      dom.bgColorPresets.value = 'custom';
-      applyBackgroundColor();
+      if (dom.bgPresetSelect.value === 'solid') {
+        applyBackground();
+      }
     });
   }
 

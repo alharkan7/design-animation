@@ -870,7 +870,7 @@ function motionGraphicsExportPlugin() {
         };
       });
 
-      const maxDuration = 10000; // 10 seconds max
+      const maxDuration = 60000; // 60 seconds max
       let duration = Math.min(animInfo.duration + 500, maxDuration); // +500ms buffer
       const fps = 30;
       const totalFrames = Math.ceil(duration / 1000 * fps);

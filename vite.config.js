@@ -862,6 +862,11 @@ function motionGraphicsExportPlugin() {
           }
         }
 
+        // Store references globally so they persist across evaluate calls
+        // (document.getAnimations() could theoretically return different
+        // sets if animations finish/cancel between calls).
+        window.__mgAnims = animations;
+
         // Pause all animations at time 0
         for (const anim of animations) {
           anim.pause();
@@ -895,18 +900,46 @@ function motionGraphicsExportPlugin() {
 
       if (animInfo.hasCSSAnimations) {
         // ── CSS animation path: step through the timeline precisely ──
+        // GPU-composited transform animations (like camera pans) may
+        // not visually update when currentTime is set on a *paused*
+        // animation, because the compositor skips sampling paused
+        // animations.  To force the compositor to render each frame:
+        //   1. Set currentTime to the target time
+        //   2. Briefly play() — this puts the animation back in the
+        //      compositor's "running" list so it gets sampled
+        //   3. Wait for requestAnimationFrame (guarantees the browser
+        //      runs its full rendering pipeline: style → layout →
+        //      paint → composite)
+        //   4. Immediately pause() and pin currentTime so it doesn't
+        //      drift, then wait for one more rAF to commit the paused
+        //      state before taking the screenshot
         for (let i = 0; i < totalFrames; i++) {
           const timeMs = i * frameDuration;
 
-          // Advance every animation to exactly this point in time
           await page.evaluate((t) => {
-            for (const anim of document.getAnimations()) {
-              anim.currentTime = t;
-            }
+            return new Promise(resolve => {
+              const anims = window.__mgAnims || document.getAnimations();
+              // Set time and play to force compositor to sample the
+              // new values on the next rendering opportunity
+              for (const anim of anims) {
+                anim.currentTime = t;
+                anim.play();
+              }
+              // First rAF: the rendering pipeline runs, compositor
+              // samples the "playing" animations at time t
+              requestAnimationFrame(() => {
+                // Immediately re-pause and pin to the exact time
+                // (prevents any drift from the brief play period)
+                for (const anim of anims) {
+                  anim.pause();
+                  anim.currentTime = t;
+                }
+                // Second rAF: ensures the paused state is fully
+                // composited before the screenshot fires
+                requestAnimationFrame(resolve);
+              });
+            });
           }, timeMs);
-
-          // Let the browser composite the frame
-          await new Promise(r => setTimeout(r, 10));
 
           const screenshot = await page.screenshot(screenshotOptions);
           frames.push(`data:image/${frameFormat};base64,${screenshot.toString('base64')}`);
@@ -969,6 +1002,7 @@ function motionGraphicsExportPlugin() {
             canvas.height = firstImg.height;
             const ctx = canvas.getContext('2d');
             const fps = 30;
+            const frameDurationMs = 1000 / fps;
 
             // Try different MIME types
             let mimeType = 'video/webm;codecs=vp9';
@@ -979,7 +1013,12 @@ function motionGraphicsExportPlugin() {
               }
             }
 
-            const stream = canvas.captureStream(fps);
+            // Use captureStream(0) for manual frame control.
+            // With fps=0, the stream only captures a new frame when
+            // requestFrame() is called on the video track, ensuring
+            // every drawn frame is captured regardless of decode speed.
+            const stream = canvas.captureStream(0);
+            const videoTrack = stream.getVideoTracks()[0];
             const mediaRecorder = new MediaRecorder(stream, {
               mimeType,
               videoBitsPerSecond: 5000000
@@ -1016,32 +1055,38 @@ function motionGraphicsExportPlugin() {
 
             mediaRecorder.start();
 
-            // Draw each frame
+            // Draw each frame sequentially, waiting for each image to
+            // decode before moving on. We use requestFrame() to tell the
+            // MediaRecorder to capture each drawn frame explicitly,
+            // then wait frameDurationMs so the recorder timestamps the
+            // frame correctly in the output video.
             let frameIndex = 0;
-            const startTime = performance.now();
-            const drawFrame = async () => {
+            const drawFrame = () => {
               if (frameIndex < totalFrames) {
                 const img = new Image();
                 img.onload = () => {
                   ctx.clearRect(0, 0, canvas.width, canvas.height);
                   ctx.drawImage(img, 0, 0);
+
+                  // Explicitly tell the stream to capture this frame
+                  if (videoTrack.requestFrame) {
+                    videoTrack.requestFrame();
+                  }
+
                   frameIndex++;
-                  
-                  const expectedTime = frameIndex * (1000 / fps);
-                  const elapsed = performance.now() - startTime;
-                  const delay = Math.max(0, expectedTime - elapsed);
-                  
-                  setTimeout(drawFrame, delay);
+
+                  // Wait one frame-duration so the MediaRecorder
+                  // records this frame with the correct timestamp
+                  setTimeout(drawFrame, frameDurationMs);
                 };
                 img.onerror = () => {
                   console.error(`Failed to load frame ${frameIndex}`);
                   frameIndex++;
-                  // Continue even if a frame fails
-                  setTimeout(drawFrame, 1000 / fps);
+                  setTimeout(drawFrame, frameDurationMs);
                 };
                 img.src = window.frameDataUrls[frameIndex];
               } else {
-                // Give it time to finish recording
+                // Give it time to finish recording the last frame
                 setTimeout(() => {
                   try {
                     mediaRecorder.stop();

@@ -1,5 +1,4 @@
 [
-  { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" },
   { "file": "particle-wave.html", "name": "Particle Wave (Example)" },
   { "file": "gradient-morph.html", "name": "Gradient Morph (Example" },
   { "file": "early-draft.html", "name": "Early Draft List" },
@@ -11,5 +10,6 @@
   { "file": "momentum-cut.html", "name": "Velocity Match Cut Demo" },
   { "file": "particle-morph.html", "name": "Particle Morphing Data" },
   { "file": "flowchart-paths.html", "name": "Glowing Flowchart & Paths" },
-  { "file": "virtual-camera-pan.html", "name": "Virtual Camera Macro Pan" }
+  { "file": "virtual-camera-pan.html", "name": "Virtual Camera Macro Pan" },
+  { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" }
 ]

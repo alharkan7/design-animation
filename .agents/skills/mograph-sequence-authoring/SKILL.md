@@ -43,6 +43,7 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
    - Use `ease-in` (starts slow, accelerates) for exits.
 7. **Clean Loops & Fluid Exits**: Do not use simple global container fade-outs to end a scene. Apply specific, modern exit animations (like `slideUpOut`, `exitShrink`, `shiftDownOut`) to individual elements before their scene container hides. **Always animate the exit of the final scene back to a pristine blank canvas**, so the video loops seamlessly and does not abruptly end on a static frame.
 8. **Overlap Scene Transitions**: Do not wait for the disappearance animation of the previous scene to fully complete before starting the appearance animation of the next scene. The next scene's entry should begin *while* the previous scene's exit is still in motion, creating a fluid, uninterrupted sequence.
+9. **The Stage Pattern (Multi-Scene Choreography)**: To manage overlapping scenes elegantly, wrap entire scenes in a `.stage` container. The stage itself can be animated on and off screen (e.g., `animation: stageInRight 0.8s 3.2s both, stageOutUp 0.6s 7s forwards`). The `both` fill mode naturally keeps the stage fully off-screen during the `0s` to `3.2s` waiting period without needing manual `visibility` toggles.
 
 ## 3. Specific Motion Graphics Patterns
 
@@ -74,7 +75,9 @@ Instead of destroying and recreating DOM scenes chronologically, build a single 
 - **Karaoke Highlights**: Animate colors of words sequentially. To make it high-energy, add an accent glow and a 15% scale pop to the active word.
 - **Marker Sweep (Highlight Mode)**: A yellow (or accent color) marker sweep behind text. Achieve this with an absolutely positioned `.highlight-bar` behind the text, `transform-origin: left center;`, and animating `transform: scaleX(0)` to `scaleX(1)`.
 - **Hand-drawn Circle (Circle Mode)**: Create an organic circle around a key metric or word. Use `border-radius: 50%`, slightly rotate it (`rotate(-3deg)`), and animate `transform: scale(0)` to `scale(1)` with a bouncy `cubic-bezier(0.34, 1.56, 0.64, 1)` ease.
-- **Burst Lines**: Radiating lines from the center of a text element to add impact ("WOW"). Use multiple absolutely positioned `.burst-line` elements rotated around the center, animating their `scaleY` and `opacity`.
+- **Burst Lines**: Radiating lines from the center of a text element to add impact ("WOW"). Use multiple absolutely positioned `.burst-line` elements rotated around the center, animating their `scaleY` (and translating them outward) rather than using `opacity` fades to keep them chroma-safe.
+- **Marquee Backgrounds**: To create infinitely scrolling typography bands without using the banned `infinite` keyword, create a long flex row of duplicate words and apply a linear translation (e.g., `scrollLeft 4s linear both`) that covers a large fixed distance before the scene exits. For chroma-safe background texture, style them with `-webkit-text-stroke: 2px var(--grid); color: transparent;`.
+- **Cascades & Staircases**: Build momentum by aligning words in a diagonal staircase (using staggered `margin-left` offsets) and staggering their entrance animations by rapid 0.15s increments (e.g., `slideUpFloor`). This forces the viewer's eye to travel down the screen in time with the animation.
 
 ### Data in Motion (Stats & Charts)
 - **Visual Weight**: A number on its own floats in empty space. Pair every metric with a visual element that gives it presence—a proportional fill bar, a background color shift, or a progress ring.

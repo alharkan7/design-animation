@@ -7,5 +7,8 @@
   { "file": "vintage-todo.html", "name": "Vintage Todo" },
   { "file": "semantic-search.html", "name": "Semantic Search" },
   { "file": "ai-agent-tool.html", "name": "AI Agent Tool" },
-  { "file": "ai-agent-tool-diagram.html", "name": "AI Agent Tool (Diagram Camera)" }
+  { "file": "ai-agent-tool-diagram.html", "name": "AI Agent Tool (Diagram Camera)" },
+  { "file": "momentum-cut.html", "name": "Velocity Match Cut Demo" },
+  { "file": "particle-morph.html", "name": "Particle Morphing Data" },
+  { "file": "flowchart-paths.html", "name": "Glowing Flowchart & Paths" }
 ]

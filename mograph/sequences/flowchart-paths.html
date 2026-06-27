@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowchart Paths - Professional</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030712; 
+      --node-bg: rgba(15, 23, 42, 0.7);
+      --node-border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --path-base: #475569; /* Brighter slate for visibility */
+      --laser-accent: #38bdf8;
+      --success: #10b981;
+    }
+    
+    body {
+      margin: 0; overflow: hidden;
+      background: var(--bg);
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      width: 100vw; height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    .scene {
+      width: 100vw; height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      animation: sceneExit 0.5s cubic-bezier(0.5, 0, 1, 1) 8.5s forwards;
+    }
+    @keyframes sceneExit {
+      to { opacity: 0; visibility: hidden; transform: scale(0.95); }
+    }
+    
+    .diagram {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1920px; 
+      height: 1080px;
+      transform-origin: center center;
+      /* Scaled dynamically via JS to ensure perfect responsive fitting */
+      transform: translate(-50%, -50%) scale(1); 
+      z-index: 1; /* Establish stacking context */
+    }
+    
+    .lines-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+      z-index: 1;
+    }
+    
+    .track {
+      fill: none;
+      stroke: var(--path-base);
+      stroke-width: 6; /* Slightly thicker for a physical cable look */
+      stroke-linecap: round;
+      /* Using exact pixel lengths with calc() ensures universal browser compatibility */
+      stroke-dasharray: calc(var(--len) * 1px);
+      stroke-dashoffset: calc(var(--len) * 1px);
+      animation: drawTrack 1.0s cubic-bezier(0.64, 0, 0.36, 1) forwards;
+      /* Makes the lines float in 3D space! */
+      filter: drop-shadow(0 12px 16px rgba(0,0,0,0.6));
+    }
+    @keyframes drawTrack {
+      to { stroke-dashoffset: 0; }
+    }
+    
+    .socket {
+      fill: var(--bg);
+      stroke: var(--path-base);
+      stroke-width: 4;
+      opacity: 0;
+      animation: fade 0.5s ease forwards;
+    }
+    @keyframes fade { to { opacity: 1; } }
+    @keyframes socketHit {
+      0% { fill: var(--bg); stroke: var(--path-base); stroke-width: 4; }
+      20% { fill: #fff; stroke: var(--laser-accent); stroke-width: 6; filter: drop-shadow(0 0 16px var(--laser-accent)); }
+      100% { fill: var(--laser-accent); stroke: var(--laser-accent); stroke-width: 4; }
+    }
+
+    .node {
+      position: absolute;
+      z-index: 10; /* Forces boxes to always be on top of lines and packets */
+      width: 260px; height: 90px;
+      /* Premium 3D Bezel & Glassmorphism */
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+      border-radius: 16px;
+      
+      /* 3D Extrusion + Floating Drop Shadow */
+      box-shadow: 
+        inset 0 1px 1px rgba(255, 255, 255, 0.2), 
+        inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+        0 8px 0 #090e17, 
+        0 9px 0 rgba(255,255,255,0.1), 
+        0 24px 32px rgba(0, 0, 0, 0.6);
+
+      color: var(--text);
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      display: flex; justify-content: center; align-items: center;
+      margin-left: -130px; 
+      margin-top: -45px;  
+      animation: nodeEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    @keyframes nodeEnter {
+      0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    
+    @keyframes flashAccent {
+      0% { 
+        border-color: rgba(255, 255, 255, 0.15); 
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+      }
+      15% { 
+        border-color: var(--laser-accent); 
+        background: linear-gradient(180deg, rgba(56, 189, 248, 0.3), rgba(12, 74, 110, 0.8));
+        box-shadow: 
+          inset 0 1px 1px rgba(255, 255, 255, 0.4), 
+          inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+          0 8px 0 #0c4a6e, 
+          0 9px 0 var(--laser-accent),
+          0 0 40px rgba(56, 189, 248, 0.4),
+          0 32px 40px rgba(0, 0, 0, 0.8);
+        transform: translateY(-4px) scale(1.02); /* 3D lift effect */
+      }
+      100% { 
+        border-color: rgba(56, 189, 248, 0.4); 
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+      }
+    }
+    @keyframes flashSuccess {
+      0% { 
+        border-color: rgba(255, 255, 255, 0.15); 
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+      }
+      15% { 
+        border-color: var(--success); 
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.3), rgba(6, 78, 59, 0.8));
+        box-shadow: 
+          inset 0 1px 1px rgba(255, 255, 255, 0.4), 
+          inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+          0 8px 0 #064e3b, 
+          0 9px 0 var(--success),
+          0 0 40px rgba(16, 185, 129, 0.4),
+          0 32px 40px rgba(0, 0, 0, 0.8);
+        transform: translateY(-4px) scale(1.02);
+      }
+      100% { 
+        border-color: rgba(16, 185, 129, 0.6); 
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95));
+      }
+    }
+    
+    /* 3D Glass Pill Data Stream */
+    .packet {
+      position: absolute;
+      z-index: 5; /* Sandwiched between lines (1) and boxes (10) */
+      left: 0; top: 0;
+      width: 48px; height: 12px;
+      
+      background: linear-gradient(90deg, 
+        rgba(14, 165, 233, 0.8) 0%, 
+        #38bdf8 60%,
+        #ffffff 100%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-right: 2px solid #fff; /* Bright leading edge */
+      border-radius: 12px;
+      
+      box-shadow: 
+        inset 0 2px 2px rgba(255, 255, 255, 0.8), /* Top highlight */
+        inset 0 -2px 2px rgba(0, 0, 0, 0.3),      /* Bottom shadow for 3D roundness */
+        0 0 20px var(--laser-accent),             /* Glow */
+        0 12px 24px rgba(0, 0, 0, 0.8);           /* Deep drop shadow */
+        
+      /* offset-anchor naturally centers the bead on the line */
+      offset-anchor: auto; 
+      /* offset-rotate: auto automatically rotates the element to point its right edge perfectly along the bezier curve path! */
+      offset-rotate: auto; 
+      opacity: 0; 
+    }
+    
+    @keyframes firePacket {
+      0% { 
+        offset-distance: 0%; 
+        opacity: 0; 
+        transform: scale(0.2); 
+      }
+      15% { 
+        opacity: 1; 
+        transform: scale(1); /* Normal bead size as it accelerates */
+      }
+      50% {
+        /* Max speed: Velocity-based squash and stretch! Stretches out dynamically along the line! */
+        transform: scaleX(2.5) scaleY(0.6); 
+      }
+      85% { 
+        opacity: 1; 
+        transform: scale(1); /* Returns to normal bead size as it brakes */
+      }
+      100% { 
+        offset-distance: 100%; 
+        opacity: 0; 
+        transform: scale(0.2); 
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="scene">
+    <div class="diagram">
+      
+      <!-- Vector Tracks & Sockets -->
+      <svg class="lines-layer" viewBox="0 0 1920 1080">
+        <!-- Exact pixel lengths calculated to perfectly animate SVG dashoffset universally -->
+        <path class="track" style="--len: 250; animation-delay: 0.8s" d="M 380 540 L 620 540" />
+        <path class="track" style="--len: 500; animation-delay: 1.0s" d="M 880 540 C 1000 540, 1000 300, 1120 300" />
+        <path class="track" style="--len: 500; animation-delay: 1.0s" d="M 880 540 C 1000 540, 1000 780, 1120 780" />
+        <path class="track" style="--len: 500; animation-delay: 1.2s" d="M 1380 300 C 1500 300, 1500 540, 1620 540" />
+        <path class="track" style="--len: 500; animation-delay: 1.2s" d="M 1380 780 C 1500 780, 1500 540, 1620 540" />
+
+        <circle class="socket" style="animation-delay: 1.5s;" cx="380" cy="540" r="6" />
+        <circle class="socket" style="animation: fade 0.5s ease 1.5s forwards, socketHit 0.6s ease-out 3.3s forwards;" cx="620" cy="540" r="6" />
+        <circle class="socket" style="animation-delay: 1.5s;" cx="880" cy="540" r="6" />
+        <circle class="socket" style="animation: fade 0.5s ease 1.5s forwards, socketHit 0.6s ease-out 4.5s forwards;" cx="1120" cy="300" r="6" />
+        <circle class="socket" style="animation-delay: 1.5s;" cx="1380" cy="300" r="6" />
+        <circle class="socket" style="animation: fade 0.5s ease 1.5s forwards, socketHit 0.6s ease-out 4.5s forwards;" cx="1120" cy="780" r="6" />
+        <circle class="socket" style="animation-delay: 1.5s;" cx="1380" cy="780" r="6" />
+        <circle class="socket" style="animation: fade 0.5s ease 1.5s forwards, socketHit 0.6s ease-out 5.7s forwards;" cx="1620" cy="540" r="6" />
+      </svg>
+      
+      <!-- UI Nodes -->
+      <div class="node" style="left: 250px; top: 540px; animation-delay: 0.1s">Client Device</div>
+      
+      <div class="node" style="left: 750px; top: 540px; animation: nodeEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both, flashAccent 0.8s ease-out 3.3s forwards;">API Gateway</div>
+      
+      <div class="node" style="left: 1250px; top: 300px; animation: nodeEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both, flashAccent 0.8s ease-out 4.5s forwards;">Auth Service</div>
+      
+      <div class="node" style="left: 1250px; top: 780px; animation: nodeEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both, flashAccent 0.8s ease-out 4.5s forwards;">Core Engine</div>
+      
+      <div class="node" style="left: 1750px; top: 540px; animation: nodeEnter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s both, flashSuccess 1.5s ease-out 5.7s forwards;">Database</div>
+      
+      <!-- Travelling Packets -->
+      <div class="packet" style="offset-path: path('M 380 540 L 620 540'); animation: firePacket 0.8s cubic-bezier(0.4, 0, 0.2, 1) 2.5s both;"></div>
+      
+      <div class="packet" style="offset-path: path('M 880 540 C 1000 540, 1000 300, 1120 300'); animation: firePacket 1.0s cubic-bezier(0.4, 0, 0.2, 1) 3.5s both;"></div>
+      <div class="packet" style="offset-path: path('M 880 540 C 1000 540, 1000 780, 1120 780'); animation: firePacket 1.0s cubic-bezier(0.4, 0, 0.2, 1) 3.5s both;"></div>
+      
+      <div class="packet" style="offset-path: path('M 1380 300 C 1500 300, 1500 540, 1620 540'); animation: firePacket 1.0s cubic-bezier(0.4, 0, 0.2, 1) 4.7s both;"></div>
+      <div class="packet" style="offset-path: path('M 1380 780 C 1500 780, 1500 540, 1620 540'); animation: firePacket 1.0s cubic-bezier(0.4, 0, 0.2, 1) 4.7s both;"></div>
+
+    </div>
+  </div>
+
+  <!-- 
+    Bulletproof Responsive Scaling: 
+    Calculates the exact scale factor to fit the 1920x1080 diagram into any viewport.
+    This runs synchronously on load, keeping the layout perfectly deterministic for video export.
+  -->
+  <script>
+    function fitToScreen() {
+      const diagram = document.querySelector('.diagram');
+      // 0.95 adds a 5% padding around the edges
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080) * 0.95;
+      diagram.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    window.addEventListener('resize', fitToScreen);
+    fitToScreen();
+  </script>
+</body>
+</html>

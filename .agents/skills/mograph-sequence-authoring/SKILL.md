@@ -25,6 +25,7 @@ Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) 
 
 1. **Fill Modes & 0% Keyframes**: Use `animation-fill-mode: both` for entry animations with `animation-delay`! 
    - **CRITICAL BUG AVOIDANCE**: The `0%` keyframe MUST fully define the absolute invisible state (e.g. `transform: scale(0)` or `clip-path: inset(100% 0 0 0)`). If your `0%` keyframe is merely `scale(0.8)`, the element will sit partially visible on the screen during the delay period, creating visual bugs where it overlaps earlier scenes. Use `forwards` only for exit animations.
+   - **Multiple Animations Gotcha**: If you chain an entry AND an exit animation on the same element (e.g. `animation: enter 1s both, exit 1s forwards`), NEVER use `both` on the exit animation! If you do, the exit animation's `0%` state will leak backward and override your entry animation during the initial delay period, blocking the screen. Always use `both` for enters and `forwards` for exits.
 2. **Chain with `animation-delay`**: Orchestrate your scenes by staggering `animation-delay` across elements.
    ```css
    .word-1 { animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -49,6 +50,7 @@ Motion graphics often involve kinetic typography, data visualization, and stylis
 
 ### Cinematic Reveals & Masking
 - **Clip-Path Wipes**: Do not use generic bouncy scales or spinning (`spinScaleIn`) for UI elements. Use `clip-path: inset(...)` or `wipeUpIn` with a snappy ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`) to mask elements as they slide in. This is much more elegant and cinematic.
+- **The SaaS Wipe (Momentum Cut)**: To transition seamlessly between two full-screen UI states, use a clip-path mask combined with parallax scaling. Scene 1 wipes away (`clip-path: inset(0 100% 0 0)`) while slightly scaling down and sliding left. Scene 2 perfectly unmasks (`clip-path: inset(0 0 0 100%)` to `inset(0 0 0 0)`) while sliding in from the right. Bind both to a sharp Expo In-Out curve (e.g., `cubic-bezier(0.76, 0, 0.24, 1)`) overlapping at the exact same time.
 - **Iris Reveals**: Use `clip-path: circle(0% at center)` to `100%` for dramatic circular expansions that feel very "digital" or "processing" oriented.
 
 ### Flowcharts & SVG Paths
@@ -83,7 +85,9 @@ Instead of destroying and recreating DOM scenes chronologically, build a single 
 
 Video frames are not web pages. Web sizes are invisible on video.
 
-1. **Scale Everything Up**:
+1. **Scale Everything Up & Use Full Viewport Containers**:
+   - Sequences should use `100vw` and `100vh` for their root `.scene` containers rather than fixed max heights (like `900px`).
+   - Use viewport-relative units (`vh`, `vw`, `clamp()`) for all padding, margins, and dimensions. Fixed pixels will cause content to overflow and clip aggressively if the user previews the sequence on a smaller aspect ratio.
    - Headlines: `64px` - `120px` (use `clamp(4rem, 10vw, 8rem)`)
    - Body Text: `28px` - `42px` (use `clamp(1.5rem, 4vw, 3rem)`)
    - Padding: `60px` - `140px`
@@ -135,6 +139,22 @@ To support users who edit videos in basic NLEs like CapCut (which do not support
 3. **Safe Colors & Contrast**:
    - 🚫 Avoid using greens or any colors that are close to standard chroma key green (`#00FF00`, `#00B140`).
    - ✅ Ensure all text and graphics have strong contrast against bright backgrounds so the edges key out with absolute sharpness.
+
+## 7. Technical Lessons & Gotchas (From Flowchart & 3D Morphs)
+
+1. **Bulletproof Responsive Scaling (The Flexbox Squish Bug):**
+   - 🚫 Do NOT use CSS `transform: scale(calc(...vw...))` to dynamically scale a 1920x1080 canvas. `scale()` strictly accepts a unitless number, and passing dimension-based math into it causes fatal CSS parsing errors that drop the entire `transform` property.
+   - 🚫 Do NOT rely on Flexbox to center an oversized (1920x1080) fixed canvas in a smaller viewport. `flex-shrink` will aggressively squish the DOM layout out of sync with the SVG `viewBox`, causing severe coordinate misalignment and clipping.
+   - ✅ **The Fix:** Absolutely center the `.diagram` wrapper (`position: absolute; left: 50%; top: 50%; transform-origin: center`) to bypass Flexbox limits entirely. Then, use a tiny, synchronous Javascript block on load (e.g. `const scale = Math.min(window.innerWidth / 1920, ...)`) to calculate the raw decimal and apply it to `transform: scale()`.
+
+2. **SVG Path Drawing & Particle Routing (`offset-path`):**
+   - 🚫 Avoid using `pathLength="100"` in SVGs for percentage-based line drawing, as it fails in specific headless browser engines. Instead, manually declare the exact pixel length (`--len: 500`) and enforce unit casting (`stroke-dasharray: calc(var(--len) * 1px)`).
+   - ✅ When animating `.packet` elements along an SVG path using `offset-path`, do **not** use manual `margin` values to center the shape. Simply apply `offset-anchor: auto`, which mathematically centers the element (including its borders) over the path flawlessly.
+   - ✅ **Velocity Squash & Stretch:** By enabling `offset-rotate: auto`, the particle aligns its local axis to the path tangent. You can then apply `transform: scaleX(2.5) scaleY(0.6)` in the middle of a keyframe animation to create high-end, velocity-based squash and stretch effects along the path of travel!
+
+3. **Premium 2.5D Extrusion & Depth Layering:**
+   - To achieve a tactile 3D box without massive soft shadows (which break chroma keying), use hard-offset layered drop shadows (`0 8px 0 #090e17`) paired with bright inset rim lights. Animate `translateY(-4px)` alongside an outer glow to physically lift the boxes on hit.
+   - Establish strict DOM layering with `z-index` (e.g., Lines=1, Particles=5, UI Boxes=10). By sandwiching travelling particles *between* the SVG lines and the boxes, particles dive cleanly underneath the boxes. If the boxes use `backdrop-filter: blur`, the particle's glowing core will beautifully blur out beneath the frosted surface right before it vanishes.
 
 ## Workflow / Checklist
 

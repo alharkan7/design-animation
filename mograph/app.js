@@ -176,6 +176,11 @@ function pauseIframeAnimations() {
       iframeWin.__mg_rafQueue.push(cb);
       return id;
     };
+
+    // Pause Web Animations API (element.animate)
+    if (typeof iframeDoc.getAnimations === 'function') {
+      iframeDoc.getAnimations().forEach(anim => anim.pause());
+    }
   } catch (e) {
     console.warn('Could not pause iframe animations:', e);
   }
@@ -199,6 +204,11 @@ function resumeIframeAnimations() {
       delete iframeWin.__mg_rafQueue;
       // Re-schedule any queued callbacks so the animation loop resumes
       queued.forEach(cb => origRAF(cb));
+    }
+
+    // Resume Web Animations API (element.animate)
+    if (typeof iframeDoc.getAnimations === 'function') {
+      iframeDoc.getAnimations().forEach(anim => anim.play());
     }
   } catch (e) {
     console.warn('Could not resume iframe animations:', e);

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Momentum Match Cut</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      
+      --surface-1: #111116;
+      --surface-2: #1e1e29;
+      --surface-3: #2c2c3d;
+      --accent: #3366ff;
+      --text-main: #ffffff;
+      --text-muted: #8a8a9e;
+      --border: #35354a;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-main);
+      background: var(--surface-1);
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .sequence-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* --- Shared Scene Styles --- */
+    .scene {
+      position: absolute;
+      width: 100vw; 
+      height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      visibility: hidden; 
+      overflow: hidden;
+      /* Ensure scenes stack properly during wipe */
+      z-index: 1;
+    }
+
+    /* --- SCENE 1: The UI List --- */
+    #scene1 {
+      background: var(--surface-1);
+      padding: 8vh 10vw;
+      z-index: 10; /* Top layer so it wipes over Scene 2 initially, or vice versa */
+      
+      animation: 
+        scene1Enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both,
+        scene1Exit 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.7s forwards;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6vh;
+    }
+
+    .title {
+      font-size: clamp(3rem, 6vw, 6rem);
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -2px;
+    }
+
+    .hamburger {
+      width: 8vh; 
+      height: 8vh;
+      min-width: 60px;
+      min-height: 60px;
+      border: 4px solid var(--border); 
+      border-radius: 50%; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+    }
+
+    .hamburger-lines {
+      width: 40px; 
+      height: 6px; 
+      background: var(--text-main); 
+      position: relative;
+      border-radius: 3px;
+    }
+    
+    .hamburger-lines::before,
+    .hamburger-lines::after {
+      content: '';
+      position: absolute;
+      width: 40px; 
+      height: 6px; 
+      background: var(--text-main);
+      border-radius: 3px;
+    }
+    
+    .hamburger-lines::before { top: -14px; }
+    .hamburger-lines::after { top: 14px; }
+
+    .list-item {
+      background: var(--surface-2);
+      border: 4px solid var(--surface-2);
+      border-radius: 24px;
+      padding: 4vh 4vw;
+      margin-bottom: 3vh;
+      display: flex;
+      align-items: center;
+      gap: 3vw;
+    }
+
+    .item-avatar {
+      width: 8vh;
+      height: 8vh;
+      min-width: 60px;
+      min-height: 60px;
+      border-radius: 50%;
+      background: var(--surface-3);
+    }
+
+    .item-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .item-line-1 {
+      height: 2.5vh;
+      min-height: 16px;
+      background: var(--text-main);
+      border-radius: 12px;
+    }
+
+    .item-line-2 {
+      height: 2.5vh;
+      min-height: 16px;
+      background: var(--text-muted);
+      border-radius: 12px;
+    }
+
+    /* Snappy responsive click feedback */
+    .target-item {
+      transform-origin: center;
+      animation: itemHighlight 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 2.45s both;
+    }
+
+    /* --- CURSOR --- */
+    .cursor {
+      position: absolute;
+      width: 8vh;
+      height: 8vh;
+      min-width: 60px;
+      min-height: 60px;
+      z-index: 100;
+      /* Moves faster and clicks snappier */
+      animation: 
+        cursorMove 1.0s cubic-bezier(0.25, 1, 0.5, 1) 1.2s both,
+        cursorClick 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 2.3s both;
+    }
+
+    /* --- SCENE 2: The Details View --- */
+    #scene2 {
+      background: var(--surface-1);
+      padding: 0;
+      z-index: 5;
+      
+      animation: 
+        scene2Enter 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.7s both,
+        scene2Exit 0.5s cubic-bezier(0.34, -0.2, 1, 1) 6.0s forwards;
+    }
+
+    .s2-hero {
+      flex: 0 0 40vh;
+      background: var(--surface-2);
+      display: flex;
+      align-items: flex-end;
+      padding: 6vh 10vw;
+      border-bottom: 4px solid var(--border);
+    }
+
+    .s2-hero-content {
+      display: flex;
+      align-items: center;
+      gap: 4vw;
+    }
+
+    .detail-icon {
+      width: 14vh;
+      height: 14vh;
+      min-width: 100px;
+      min-height: 100px;
+      background: var(--accent);
+      border: 6px solid var(--surface-1);
+      border-radius: 50%;
+      animation: detailIconPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 3.1s both;
+    }
+
+    .detail-title {
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 800;
+      margin: 0;
+      animation: detailTitlePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 3.2s both;
+    }
+
+    .s2-body {
+      padding: 6vh 10vw;
+      display: flex;
+      flex-direction: column;
+      gap: 3vh;
+    }
+
+    .detail-block {
+      width: 100%;
+      height: 10vh;
+      min-height: 60px;
+      background: var(--surface-2);
+      border-radius: 20px;
+      border: 4px solid var(--border);
+      animation: detailBlockPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+
+    /* --- KEYFRAMES --- */
+    
+    @keyframes scene1Enter {
+      0% {
+        visibility: hidden;
+        transform: scale(0.9) translateY(100px);
+        clip-path: inset(100% 0 0 0);
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        transform: scale(1) translateY(0);
+        clip-path: inset(0 0 0 0);
+      }
+    }
+
+    /* 
+       SaaS Wipe Exit:
+       Scales down slightly and clips from right to left,
+       while shifting left to create parallax depth. 
+    */
+    @keyframes scene1Exit {
+      0% {
+        visibility: visible;
+        transform: translateX(0) scale(1);
+        clip-path: inset(0 0 0 0);
+      }
+      100% {
+        visibility: hidden;
+        transform: translateX(-20vw) scale(0.95);
+        clip-path: inset(0 100% 0 0);
+      }
+    }
+
+    @keyframes cursorMove {
+      0% {
+        visibility: hidden;
+        bottom: -150px;
+        right: -150px;
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        bottom: 45vh;
+        right: 45vw; 
+      }
+    }
+
+    @keyframes cursorClick {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.75); }
+      100% { transform: scale(1); }
+    }
+
+    /* Highly tactile click feedback */
+    @keyframes itemHighlight {
+      0% {
+        border-color: var(--surface-2);
+        background: var(--surface-2);
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(0.97);
+      }
+      100% {
+        border-color: var(--accent);
+        background: var(--surface-3);
+        transform: scale(1);
+      }
+    }
+
+    /* 
+       SaaS Wipe Enter:
+       Unclips from right to left, matching Scene 1 exactly,
+       while pushing in from the right with scale parallax.
+    */
+    @keyframes scene2Enter {
+      0% {
+        visibility: hidden;
+        transform: translateX(20vw) scale(0.95);
+        clip-path: inset(0 0 0 100%);
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        transform: translateX(0) scale(1);
+        clip-path: inset(0 0 0 0);
+      }
+    }
+
+    @keyframes detailIconPop {
+      0% {
+        visibility: hidden;
+        transform: scale(0);
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes detailTitlePop {
+      0% {
+        visibility: hidden;
+        transform: scale(0.8) translateX(-40px);
+        clip-path: inset(0 100% 0 0);
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        transform: scale(1) translateX(0);
+        clip-path: inset(0 0 0 0);
+      }
+    }
+    
+    @keyframes detailBlockPop {
+      0% {
+        visibility: hidden;
+        transform: scaleY(0);
+        transform-origin: top;
+      }
+      1% { visibility: visible; }
+      100% {
+        visibility: visible;
+        transform: scaleY(1);
+      }
+    }
+
+    @keyframes scene2Exit {
+      0% {
+        visibility: visible;
+        transform: scale(1);
+      }
+      99% {
+        visibility: visible;
+        transform: scale(0);
+      }
+      100% {
+        visibility: hidden;
+        transform: scale(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sequence-container">
+    
+    <!-- SCENE 1: List View -->
+    <div class="scene" id="scene1">
+      <div class="header">
+        <h1 class="title">User Directory</h1>
+        <div class="hamburger">
+          <div class="hamburger-lines"></div>
+        </div>
+      </div>
+
+      <div class="list-item">
+        <div class="item-avatar"></div>
+        <div class="item-lines">
+          <div class="item-line-1" style="width: 60%;"></div>
+          <div class="item-line-2" style="width: 40%;"></div>
+        </div>
+      </div>
+
+      <!-- Target item -->
+      <div class="list-item target-item">
+        <div class="item-avatar" style="background: var(--text-muted);"></div>
+        <div class="item-lines">
+          <div class="item-line-1" style="width: 80%;"></div>
+          <div class="item-line-2" style="width: 30%;"></div>
+        </div>
+      </div>
+
+      <div class="list-item">
+        <div class="item-avatar"></div>
+        <div class="item-lines">
+          <div class="item-line-1" style="width: 50%;"></div>
+          <div class="item-line-2" style="width: 70%;"></div>
+        </div>
+      </div>
+      
+      <!-- Cursor -->
+      <svg class="cursor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5.5 3.21V20.8C5.5 21.45 6.27 21.8 6.76 21.36L11.44 17.1C11.66 16.9 11.95 16.78 12.25 16.78H18.5C19.16 16.78 19.5 15.99 19.04 15.52L6.96 3.12C6.54 2.69 5.5 2.99 5.5 3.21Z" fill="#ffffff" stroke="#1a1a24" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- SCENE 2: Detail Profile -->
+    <div class="scene" id="scene2">
+      <div class="s2-hero">
+        <div class="s2-hero-content">
+          <div class="detail-icon"></div>
+          <div>
+            <h1 class="detail-title">Eleanor Shellstrop</h1>
+            <div style="width: 120px; height: 16px; background: var(--text-muted); border-radius: 8px; margin-top: 16px; animation: detailBlockPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 3.3s both;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="s2-body">
+         <div class="detail-block" style="animation-delay: 3.4s;"></div>
+         <div class="detail-block" style="animation-delay: 3.5s;"></div>
+         <div class="detail-block" style="width: 70%; animation-delay: 3.6s;"></div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

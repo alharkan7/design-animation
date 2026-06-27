@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fake Scroll Page Tear Down</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090e17;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent1: #58a6ff;
+      --accent2: #2ea043;
+      --accent3: #d2a8ff;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      
+      --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-camera: cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      color-scheme: dark;
+    }
+
+    .viewport-scaler {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1920px;
+      height: 1080px;
+      margin-left: -960px;
+      margin-top: -540px;
+      transform-origin: center;
+      transform-style: preserve-3d;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      perspective: 2500px;
+      transform-style: preserve-3d;
+    }
+
+    .tilt-wrapper {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      animation: tiltAction 14s var(--ease-camera) both;
+    }
+
+    .scroll-camera {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      animation: scrollAction 14s var(--ease-camera) both;
+    }
+
+    @keyframes tiltAction {
+      0%, 17.8% { transform: translate3d(0, 0px, 0) rotateX(0deg) rotateZ(0deg) scale(1); }
+      32.1%, 100% { transform: translate3d(0px, 100px, -200px) rotateX(55deg) rotateZ(-35deg) scale(0.9); }
+    }
+
+    @keyframes scrollAction {
+      0%, 17.8% { transform: translateY(0); }
+      32.1%, 50% { transform: translateY(-750px); }
+      64.2%, 82% { transform: translateY(-1650px); }
+      100% { transform: translateY(-5500px); }
+    }
+
+    /* --- Page Container --- */
+    .page {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      margin-left: -700px;
+      width: 1400px;
+      height: 3200px;
+      background: var(--bg);
+      border: 4px solid var(--border);
+      border-radius: 40px;
+      transform-style: preserve-3d;
+      animation: pageEnter 1.5s var(--ease-snappy) both;
+    }
+
+    .page::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateZ(-20px);
+      background: #000;
+      border-radius: 40px;
+      border: 4px solid #000;
+    }
+    
+    .page::after {
+      content: '';
+      position: absolute;
+      inset: -30px;
+      border: 2px solid rgba(88, 166, 255, 0.15);
+      border-radius: 60px;
+      transform: translateZ(-100px);
+      pointer-events: none;
+    }
+
+    .page-grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 2px, transparent 2px);
+      background-size: 80px 80px;
+      background-position: center;
+      border-radius: 36px;
+      pointer-events: none;
+      transform: translateZ(-1px);
+    }
+
+    @keyframes pageEnter {
+      0% { transform: translateY(1500px) scale(0.5); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0) scale(1); visibility: visible; }
+    }
+
+    /* --- Shared Utilities --- */
+    @keyframes popIn {
+      0% { transform: scale(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1); visibility: visible; }
+    }
+    @keyframes slideUp {
+      0% { transform: translateY(100px); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0); visibility: visible; }
+    }
+
+    /* --- Top Nav --- */
+    .top-nav {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 80px;
+      box-sizing: border-box;
+      border-bottom: 2px solid var(--border);
+      transform-style: preserve-3d;
+      animation: slideUp 0.8s 0.5s var(--ease-snappy) both;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 28px; letter-spacing: 2px; color: #fff; transform-style: preserve-3d; }
+    .logo svg { width: 36px; height: 36px; color: var(--accent1); }
+    .nav-links { display: flex; gap: 40px; color: var(--text-muted); font-weight: 600; font-size: 18px; transform-style: preserve-3d; }
+    .nav-btn { padding: 12px 32px; background: var(--surface); border: 2px solid var(--border); border-radius: 20px; font-weight: 600; transform-style: preserve-3d; }
+
+    .top-nav > * { 
+      animation: navExplode 1.2s 4.0s var(--ease-snappy) both, navCollapse 0.8s 11.0s var(--ease-camera) forwards; 
+    }
+    @keyframes navExplode {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(80px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes navCollapse {
+      0% { transform: translateZ(80px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+    /* --- Hero Section --- */
+    .hero-content {
+      position: absolute;
+      top: 240px;
+      width: 100%;
+      text-align: center;
+      transform-style: preserve-3d;
+    }
+    
+    .hero-badge {
+      display: inline-block;
+      padding: 12px 24px;
+      background: rgba(88, 166, 255, 0.1);
+      border: 2px solid var(--accent1);
+      color: var(--accent1);
+      border-radius: 40px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: bold;
+      font-size: 24px;
+      animation: badgePop 1.2s 4.1s var(--ease-snappy) both, badgeCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes badgePop {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; background: rgba(88, 166, 255, 0.1); }
+      100% { transform: translateZ(120px); box-shadow: -15px 15px 0 rgba(0,0,0,0.6); background: #090e17; }
+    }
+    @keyframes badgeCollapse {
+      0% { transform: translateZ(120px); box-shadow: -15px 15px 0 rgba(0,0,0,0.6); background: #090e17; }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; background: rgba(88, 166, 255, 0.1); }
+    }
+
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 120px;
+      color: var(--text);
+      line-height: 1.05;
+      margin: 40px 0 20px 0;
+      text-shadow: 0 10px 0 #000;
+      transform-style: preserve-3d;
+    }
+    .hero-subtitle {
+      font-size: 28px;
+      color: var(--text-muted);
+      margin: 0;
+      font-weight: 400;
+      transform-style: preserve-3d;
+    }
+
+    .title-wrap {
+      display: block;
+      transform-style: preserve-3d;
+    }
+    .title-highlight {
+      display: inline-block;
+      color: var(--accent1);
+      animation: titlePop 1.2s 4.0s var(--ease-snappy) both, titleCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes titlePop {
+      0% { transform: translateZ(0); color: var(--accent1); text-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(100px); color: #79c0ff; text-shadow: -10px 20px 0 #000; }
+    }
+    @keyframes titleCollapse {
+      0% { transform: translateZ(100px); color: #79c0ff; text-shadow: -10px 20px 0 #000; }
+      100% { transform: translateZ(0); color: var(--accent1); text-shadow: 0 0 0 #000; }
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-top: 60px;
+      transform-style: preserve-3d;
+    }
+    .btn {
+      padding: 20px 48px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 40px;
+      transform-style: preserve-3d;
+    }
+    .btn-primary {
+      background: #fff;
+      color: #000;
+      animation: btnExplode 1.2s 4.2s var(--ease-snappy) both, btnCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    .btn-secondary {
+      background: var(--bg);
+      color: #fff;
+      border: 4px solid var(--border);
+      animation: btnExplodeSec 1.2s 4.3s var(--ease-snappy) both, btnCollapseSec 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes btnExplode {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(80px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes btnExplodeSec {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(60px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes btnCollapse {
+      0% { transform: translateZ(80px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+    @keyframes btnCollapseSec {
+      0% { transform: translateZ(60px); box-shadow: -10px 10px 0 rgba(0,0,0,0.6); }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+    /* Code Blocks */
+    .hero-code-wrapper {
+      position: absolute;
+      transform-style: preserve-3d;
+      animation: popIn 0.8s var(--ease-snappy) both;
+    }
+    .hero-code-wrapper.right { right: -150px; top: -150px; animation-delay: 1.2s; }
+    .hero-code-wrapper.left { left: -100px; top: 320px; animation-delay: 1.4s; }
+
+    .hero-code-block {
+      width: 320px;
+      background: var(--surface);
+      border: 4px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transform-style: preserve-3d;
+      animation: explodeCode 1.2s var(--ease-snappy) both, collapseCode 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    .hero-code-wrapper.right .hero-code-block { animation-delay: 4.1s, 11.0s; }
+    .hero-code-wrapper.left .hero-code-block { animation-delay: 4.2s, 11.0s; }
+
+    @keyframes explodeCode {
+      0% { transform: translateZ(0) rotateY(0) rotateX(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(250px) rotateY(-10deg) rotateX(5deg); box-shadow: -20px 20px 0 rgba(0,0,0,0.5); }
+    }
+    @keyframes collapseCode {
+      0% { transform: translateZ(250px) rotateY(-10deg) rotateX(5deg); box-shadow: -20px 20px 0 rgba(0,0,0,0.5); }
+      100% { transform: translateZ(0) rotateY(0) rotateX(0); box-shadow: 0 0 0 #000; }
+    }
+
+    .mac-dots { display: flex; gap: 8px; margin-bottom: 24px; transform-style: preserve-3d; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; transform-style: preserve-3d; }
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+
+    .code-line {
+      height: 14px;
+      background: var(--border);
+      border-radius: 7px;
+      margin-bottom: 16px;
+      transform-style: preserve-3d;
+      animation: linePop 1.2s var(--ease-snappy) both, lineCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    
+    .hero-code-wrapper.right .code-line:nth-child(2) { animation-delay: 4.3s, 11.0s; background: #ff7b72; width: 40%; }
+    .hero-code-wrapper.right .code-line:nth-child(3) { animation-delay: 4.4s, 11.0s; background: #79c0ff; width: 80%; }
+    .hero-code-wrapper.right .code-line:nth-child(4) { animation-delay: 4.5s, 11.0s; background: #d2a8ff; width: 60%; }
+    .hero-code-wrapper.right .code-line:nth-child(5) { animation-delay: 4.6s, 11.0s; background: #a5d6ff; width: 90%; }
+    
+    .hero-code-wrapper.left .code-line:nth-child(2) { animation-delay: 4.4s, 11.0s; background: #7ee787; width: 70%; }
+    .hero-code-wrapper.left .code-line:nth-child(3) { animation-delay: 4.5s, 11.0s; background: #79c0ff; width: 50%; }
+    .hero-code-wrapper.left .code-line:nth-child(4) { animation-delay: 4.6s, 11.0s; background: #ff7b72; width: 85%; }
+
+    @keyframes linePop {
+      0% { transform: translateZ(0); }
+      100% { transform: translateZ(60px); }
+    }
+    @keyframes lineCollapse {
+      0% { transform: translateZ(60px); }
+      100% { transform: translateZ(0); }
+    }
+
+
+    /* --- Features Section --- */
+    .features {
+      position: absolute;
+      top: 1050px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 0 80px;
+      box-sizing: border-box;
+      transform-style: preserve-3d;
+    }
+    .feature-card {
+      position: relative;
+      width: 360px;
+      height: 520px;
+      transform-style: preserve-3d;
+      animation: cardEnter 0.6s var(--ease-snappy) both;
+    }
+    .card-1 { animation-delay: 3.5s; }
+    .card-2 { animation-delay: 3.65s; }
+    .card-3 { animation-delay: 3.8s; }
+
+    @keyframes cardEnter {
+      0% { transform: translateY(200px) scale(0.5); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0) scale(1); visibility: visible; }
+    }
+
+    .layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      border: 4px solid var(--border);
+      background: var(--surface);
+      transform-style: preserve-3d;
+      transform: translateZ(0);
+    }
+    .layer-1 { background: var(--surface); z-index: 3; padding: 40px; box-sizing: border-box; }
+    .layer-2 { z-index: 2; }
+    .layer-3 { z-index: 1; }
+
+    .card-1 .layer-2 { background: rgba(88, 166, 255, 0.1); border-color: rgba(88, 166, 255, 0.4); }
+    .card-1 .layer-3 { background: rgba(88, 166, 255, 0.05); border-color: rgba(88, 166, 255, 0.2); }
+    
+    .card-2 .layer-2 { background: rgba(46, 160, 67, 0.1); border-color: rgba(46, 160, 67, 0.4); }
+    .card-2 .layer-3 { background: rgba(46, 160, 67, 0.05); border-color: rgba(46, 160, 67, 0.2); }
+    
+    .card-3 .layer-2 { background: rgba(210, 168, 255, 0.1); border-color: rgba(210, 168, 255, 0.4); }
+    .card-3 .layer-3 { background: rgba(210, 168, 255, 0.05); border-color: rgba(210, 168, 255, 0.2); }
+
+    .feature-card .layer-1 { animation: explodeLayer1 1.2s var(--ease-snappy) both, collapseLayer1 0.8s 11.0s var(--ease-camera) forwards; }
+    .feature-card .layer-2 { animation: explodeLayer2 1.2s var(--ease-snappy) both, collapseLayer2 0.8s 11.0s var(--ease-camera) forwards; }
+    
+    .card-1 .layer-1, .card-1 .layer-2 { animation-delay: 4.2s, 11.0s; }
+    .card-2 .layer-1, .card-2 .layer-2 { animation-delay: 4.35s, 11.0s; }
+    .card-3 .layer-1, .card-3 .layer-2 { animation-delay: 4.5s, 11.0s; }
+
+    @keyframes explodeLayer1 {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(160px); box-shadow: -30px 30px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes collapseLayer1 {
+      0% { transform: translateZ(160px); box-shadow: -30px 30px 0 rgba(0,0,0,0.6); }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+    @keyframes explodeLayer2 {
+      0% { transform: translateZ(0); }
+      100% { transform: translateZ(80px); }
+    }
+    @keyframes collapseLayer2 {
+      0% { transform: translateZ(80px); }
+      100% { transform: translateZ(0); }
+    }
+
+    .feat-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      border: 4px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      background: var(--bg);
+      transform-style: preserve-3d;
+    }
+    .feat-icon svg { width: 32px; height: 32px; }
+    
+    .feature-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 32px;
+      color: #fff;
+      margin: 0 0 20px 0;
+      transform-style: preserve-3d;
+    }
+    .feature-card p {
+      font-size: 20px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin: 0;
+      transform-style: preserve-3d;
+    }
+    .feat-bars {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      right: 40px;
+      display: flex;
+      gap: 12px;
+      transform-style: preserve-3d;
+    }
+    .f-bar {
+      height: 12px;
+      background: var(--accent1);
+      border-radius: 6px;
+      flex: 1;
+    }
+    .f-bar.b1 { flex: 2; }
+    .f-bar.b2 { flex: 0.5; }
+    .f-bar.b3 { flex: 1.5; }
+
+    .layer-1 > * {
+      animation: featInnerExplode 1.2s var(--ease-snappy) both, featInnerCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    .card-1 .layer-1 > * { animation-delay: 4.4s, 11.0s; }
+    .card-2 .layer-1 > * { animation-delay: 4.55s, 11.0s; }
+    .card-3 .layer-1 > * { animation-delay: 4.7s, 11.0s; }
+
+    @keyframes featInnerExplode {
+      0% { transform: translateZ(0); }
+      100% { transform: translateZ(60px); }
+    }
+    @keyframes featInnerCollapse {
+      0% { transform: translateZ(60px); }
+      100% { transform: translateZ(0); }
+    }
+
+    /* --- Dashboard Section --- */
+    .dashboard-section {
+      position: absolute;
+      top: 1850px;
+      left: 50%;
+      margin-left: -500px;
+      width: 1000px;
+      height: 600px;
+      transform-style: preserve-3d;
+      animation: dashEnter 0.8s var(--ease-snappy) both;
+      animation-delay: 7.2s;
+    }
+    @keyframes dashEnter {
+      0% { transform: translateY(300px) scale(0.8); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0) scale(1); visibility: visible; }
+    }
+
+    .dash-base {
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      border: 4px solid var(--border);
+      border-radius: 32px;
+      transform: translateZ(0);
+    }
+    
+    .dash-panel {
+      position: absolute;
+      background: var(--bg);
+      border: 4px solid var(--accent1);
+      border-radius: 20px;
+      transform-style: preserve-3d;
+      animation: dashPanelExplode 1.2s var(--ease-snappy) both, dashPanelCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    
+    .panel-1 { top: 40px; left: 40px; width: 440px; height: 240px; animation-delay: 7.8s, 11.0s; }
+    .panel-2 { top: 40px; right: 40px; width: 440px; height: 380px; border-color: var(--accent2); animation-delay: 7.95s, 11.0s; }
+    .panel-3 { bottom: 40px; left: 40px; width: 440px; height: 240px; border-color: var(--accent3); animation-delay: 8.1s, 11.0s; }
+
+    @keyframes dashPanelExplode {
+      0% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+      100% { transform: translateZ(120px); box-shadow: -20px 20px 0 rgba(0,0,0,0.7); }
+    }
+    @keyframes dashPanelCollapse {
+      0% { transform: translateZ(120px); box-shadow: -20px 20px 0 rgba(0,0,0,0.7); }
+      100% { transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+    .dash-header {
+      font-size: 18px;
+      color: var(--text-muted);
+      padding: 24px 24px 8px 24px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+    .dash-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 72px;
+      color: #fff;
+      padding: 0 24px;
+      line-height: 1;
+    }
+
+    /* Chart */
+    .dash-chart {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+    }
+    .dash-bar {
+      position: absolute;
+      bottom: 24px;
+      width: 44px;
+      background: var(--accent1);
+      border: 4px solid var(--bg);
+      border-radius: 8px;
+      transform-origin: bottom;
+      animation: dashBarGrow 1s var(--ease-bouncy) both, dashBarCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes dashBarGrow {
+      0% { transform: scaleY(0) translateZ(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scaleY(1) translateZ(60px); visibility: visible; box-shadow: -10px 10px 0 rgba(0,0,0,0.5); }
+    }
+    @keyframes dashBarCollapse {
+      0% { transform: scaleY(1) translateZ(60px); box-shadow: -10px 10px 0 rgba(0,0,0,0.5); }
+      100% { transform: scaleY(1) translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+    /* Map */
+    .dash-map {
+      position: absolute;
+      inset: 0;
+      top: 80px;
+      padding: 24px;
+      transform-style: preserve-3d;
+    }
+    .map-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .map-ping {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: var(--accent2);
+      border: 4px solid var(--bg);
+      border-radius: 50%;
+      animation: pingPop 1s var(--ease-bouncy) both, pingCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes pingPop {
+      0% { transform: scale(0) translateZ(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1) translateZ(80px); visibility: visible; box-shadow: -8px 8px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes pingCollapse {
+      0% { transform: scale(1) translateZ(80px); box-shadow: -8px 8px 0 rgba(0,0,0,0.6); }
+      100% { transform: scale(1) translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+    /* Latency */
+    .latency-line {
+      position: absolute;
+      bottom: 40px;
+      left: 32px;
+      right: 32px;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .latency-line::after {
+      content: '';
+      position: absolute;
+      top: -9px;
+      left: 0;
+      width: 24px;
+      height: 24px;
+      background: var(--accent3);
+      border-radius: 50%;
+      border: 4px solid var(--bg);
+      /* Make slide happen quickly so it finishes before collapse triggers at 11.0s */
+      animation: slideLatency 0.8s 7.5s var(--ease-camera) both, latencyCollapse 0.8s 11.0s var(--ease-camera) forwards;
+    }
+    @keyframes slideLatency {
+      0% { left: 0; transform: translateZ(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { left: calc(100% - 24px); transform: translateZ(60px); visibility: visible; box-shadow: -8px 8px 0 rgba(0,0,0,0.6); }
+    }
+    @keyframes latencyCollapse {
+      0% { left: calc(100% - 24px); transform: translateZ(60px); box-shadow: -8px 8px 0 rgba(0,0,0,0.6); }
+      100% { left: calc(100% - 24px); transform: translateZ(0); box-shadow: 0 0 0 #000; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="viewport-scaler">
+    <div class="scene">
+      <div class="tilt-wrapper">
+        <div class="scroll-camera">
+          
+          <!-- Main Page Container -->
+          <div class="page">
+            <div class="page-grid"></div>
+
+            <!-- Top Nav -->
+            <nav class="top-nav">
+              <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                <span>NEXUS</span>
+              </div>
+              <div class="nav-links">
+                <span>Platform</span>
+                <span>Solutions</span>
+                <span>Agents</span>
+                <span>Pricing</span>
+              </div>
+              <div class="nav-btn">Dashboard</div>
+            </nav>
+
+            <!-- Hero Section -->
+            <div class="hero-content">
+              <div style="display: inline-block; animation: popIn 0.8s 0.8s var(--ease-snappy) both; transform-style: preserve-3d;">
+                <div class="hero-badge">AGENT SWARM V2</div>
+              </div>
+              
+              <h1 class="hero-title">
+                <div class="title-wrap" style="animation: slideUp 0.8s 1.0s var(--ease-snappy) both;">Autonomous Teams.</div>
+                <div class="title-wrap" style="animation: slideUp 0.8s 1.1s var(--ease-snappy) both;"><span class="title-highlight">Infinite Scale.</span></div>
+              </h1>
+              
+              <p class="hero-subtitle">
+                <span style="display: inline-block; animation: slideUp 0.8s 1.2s var(--ease-snappy) both;">The orchestration layer for massive multi-agent workflows.</span>
+              </p>
+
+              <div class="hero-buttons">
+                <div style="animation: popIn 0.8s 1.3s var(--ease-snappy) both; transform-style: preserve-3d;">
+                  <div class="btn btn-primary">Deploy Swarm</div>
+                </div>
+                <div style="animation: popIn 0.8s 1.4s var(--ease-snappy) both; transform-style: preserve-3d;">
+                  <div class="btn btn-secondary">View Architecture</div>
+                </div>
+              </div>
+
+              <!-- Floating Code Blocks -->
+              <div class="hero-code-wrapper right">
+                <div class="hero-code-block">
+                  <div class="mac-dots">
+                    <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+                  </div>
+                  <div class="code-line"></div>
+                  <div class="code-line"></div>
+                  <div class="code-line"></div>
+                  <div class="code-line"></div>
+                </div>
+              </div>
+              
+              <div class="hero-code-wrapper left">
+                <div class="hero-code-block">
+                  <div class="mac-dots">
+                    <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+                  </div>
+                  <div class="code-line"></div>
+                  <div class="code-line"></div>
+                  <div class="code-line"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="features">
+              <!-- Card 1 -->
+              <div class="feature-card card-1">
+                <div class="layer layer-3"></div>
+                <div class="layer layer-2"></div>
+                <div class="layer layer-1">
+                  <div class="feat-icon" style="border-color: var(--accent1); color: var(--accent1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                  </div>
+                  <h3>Real-time Memory</h3>
+                  <p>Shared context across all your agents with sub-millisecond retrieval.</p>
+                  <div class="feat-bars">
+                    <div class="f-bar b1"></div>
+                    <div class="f-bar b2"></div>
+                    <div class="f-bar b3"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Card 2 -->
+              <div class="feature-card card-2">
+                <div class="layer layer-3"></div>
+                <div class="layer layer-2"></div>
+                <div class="layer layer-1">
+                  <div class="feat-icon" style="border-color: var(--accent2); color: var(--accent2);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>
+                  </div>
+                  <h3>Semantic Routing</h3>
+                  <p>Intelligently route tasks based on vector embeddings and agent skills.</p>
+                  <div class="feat-bars">
+                    <div class="f-bar b1" style="background:var(--accent2)"></div>
+                    <div class="f-bar b2" style="background:var(--accent2)"></div>
+                  </div>
+                </div>
+              </div>
+            
+              <!-- Card 3 -->
+              <div class="feature-card card-3">
+                <div class="layer layer-3"></div>
+                <div class="layer layer-2"></div>
+                <div class="layer layer-1">
+                  <div class="feat-icon" style="border-color: var(--accent3); color: var(--accent3);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <h3>Self-Healing</h3>
+                  <p>Automatic error recovery and prompt adjustments during execution.</p>
+                  <div class="feat-bars">
+                    <div class="f-bar b1" style="background:var(--accent3)"></div>
+                    <div class="f-bar b3" style="background:var(--accent3)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div class="dashboard-section">
+              <div class="dash-base"></div>
+              
+              <div class="dash-panel panel-1">
+                <div class="dash-header">Active Agents</div>
+                <div class="dash-value">12,450</div>
+                <div class="dash-chart">
+                   <div class="dash-bar" style="left: 40px; height: 70px; animation-delay: 8.2s, 11.0s"></div>
+                   <div class="dash-bar" style="left: 110px; height: 110px; animation-delay: 8.3s, 11.0s"></div>
+                   <div class="dash-bar" style="left: 180px; height: 85px; animation-delay: 8.4s, 11.0s"></div>
+                   <div class="dash-bar" style="left: 250px; height: 150px; animation-delay: 8.5s, 11.0s"></div>
+                   <div class="dash-bar" style="left: 320px; height: 125px; animation-delay: 8.6s, 11.0s"></div>
+                </div>
+              </div>
+              
+              <div class="dash-panel panel-2">
+                <div class="dash-header">Swarm Topology</div>
+                <div class="dash-map">
+                   <svg viewBox="0 0 400 200" class="map-svg">
+                     <path d="M40,100 Q80,20 160,80 T260,100 T360,60" fill="none" stroke="var(--accent2)" stroke-width="8" stroke-linecap="round" />
+                   </svg>
+                   <div class="map-ping" style="top: 88px; left: 32px; animation-delay: 8.4s, 11.0s"></div>
+                   <div class="map-ping" style="top: 68px; left: 152px; animation-delay: 8.6s, 11.0s"></div>
+                   <div class="map-ping" style="top: 48px; left: 352px; animation-delay: 8.8s, 11.0s"></div>
+                </div>
+              </div>
+              
+              <div class="dash-panel panel-3">
+                <div class="dash-header">Inference Latency</div>
+                <div class="dash-value" style="color: var(--accent3)">24ms</div>
+                <div class="latency-line"></div>
+              </div>
+            </div>
+
+          </div> <!-- /.page -->
+        </div> <!-- /.scroll-camera -->
+      </div> <!-- /.tilt-wrapper -->
+    </div>
+  </div>
+
+  <script>
+    const setScale = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / 1920, h / 1080);
+      document.querySelector('.viewport-scaler').style.transform = `scale(${scale})`;
+    };
+    setScale();
+    window.addEventListener('resize', setScale);
+  </script>
+</body>
+</html>

@@ -163,6 +163,12 @@ To support users who edit videos in basic NLEs like CapCut (which do not support
    - To achieve a tactile 3D box without massive soft shadows (which break chroma keying), use hard-offset layered drop shadows (`0 8px 0 #090e17`) paired with bright inset rim lights. Animate `translateY(-4px)` alongside an outer glow to physically lift the boxes on hit.
    - Establish strict DOM layering with `z-index` (e.g., Lines=1, Particles=5, UI Boxes=10). By sandwiching travelling particles *between* the SVG lines and the boxes, particles dive cleanly underneath the boxes. If the boxes use `backdrop-filter: blur`, the particle's glowing core will beautifully blur out beneath the frosted surface right before it vanishes.
 
+4. **Isometric 3D & "Fake Scroll" Mechanics:**
+   - 🚫 **Do NOT mix tilt and scroll:** Never apply `translateY` scroll animations and `rotateX`/`rotateZ` isometric tilts to the same DOM element. It makes framing adjustments impossible without breaking scroll offsets.
+   - ✅ **The Fix:** Separate concerns by nesting. Use an outer `.tilt-wrapper` exclusively for `rotateX(55deg) rotateZ(-35deg)` and fixed `translate3d(X,Y,Z)` framing adjustments. Use an inner `.scroll-camera` to handle the `translateY` page scroll.
+   - ✅ **Universal Exit Collapses:** To elegantly reverse a complex 3D teardown sequence, write dedicated `*Collapse` keyframes that invert the transforms (e.g. `translateZ(0)`) and shadow offsets. Chain these onto the element's `animation` property with a delayed `forwards` fill (e.g. `animation: enter 1.2s both, collapse 0.8s 11.0s forwards`).
+   - ✅ **Child Selector Delay Override:** When overriding `animation-delay` on elements that have multiple chained animations (like an enter and a collapse), you MUST supply multiple comma-separated values (`animation-delay: 4.1s, 11s;`). If you only supply one value, it overwrites the delay for ALL chained animations on that element.
+
 ## Workflow / Checklist
 
 When adding a new sequence:

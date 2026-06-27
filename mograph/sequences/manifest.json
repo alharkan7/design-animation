@@ -11,5 +11,6 @@
   { "file": "particle-morph.html", "name": "Particle Morphing Data" },
   { "file": "flowchart-paths.html", "name": "Glowing Flowchart & Paths" },
   { "file": "virtual-camera-pan.html", "name": "Virtual Camera Macro Pan" },
-  { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" }
+  { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" },
+  { "file": "fake-scroll-teardown.html", "name": "Fake Scroll Page Tear Down" }
 ]

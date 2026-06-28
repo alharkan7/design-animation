@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Data Chart</title>
+  <style>
+    /* CSS reset and base */
+    * { box-sizing: border-box; }
+    body, html { 
+      margin: 0; padding: 0; width: 100vw; height: 100vh; 
+      overflow: hidden; background: transparent; 
+      color-scheme: light;
+    }
+    
+    :root {
+      --text: #111827;
+      --text-muted: #6b7280;
+      --grid-line: rgba(0, 0, 0, 0.08);
+      
+      /* Bar 1: Blue */
+      --c1-base: #3b82f6; --c1-light: #60a5fa; --c1-dark: #2563eb; --c1-darker: #1e3a8a;
+      /* Bar 2: Purple */
+      --c2-base: #8b5cf6; --c2-light: #a78bfa; --c2-dark: #7c3aed; --c2-darker: #4c1d95;
+      /* Bar 3: Pink */
+      --c3-base: #ec4899; --c3-light: #f472b6; --c3-dark: #db2777; --c3-darker: #831843;
+      /* Bar 4: Orange */
+      --c4-base: #f97316; --c4-light: #fb923c; --c4-dark: #ea580c; --c4-darker: #7c2d12;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      animation: sceneShow 16s both;
+    }
+    .viewport {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 2500px;
+      z-index: 1; /* Render behind ui-layer */
+      transform: translateY(12vmin);
+    }
+    @keyframes wipeOut { 100% { opacity: 0; transform: translateY(-2vmin); } }
+    @keyframes panelFadeIn { 100% { opacity: 1; } }
+    @keyframes sceneShow {
+      0% { visibility: visible; }
+      100% { visibility: hidden; }
+    }
+
+    /* 2D UI Overlay */
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      padding: 8vmin;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .header {
+      font-size: 6vmin;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.1vmin;
+      clip-path: inset(0 0 0 0);
+    }
+    .header-text {
+      animation: wipeUpIn 1s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 slideUpOut 0.6s 6s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+    .subtitle {
+      font-size: 2.5vmin;
+      color: var(--text-muted);
+      margin-top: 1vmin;
+      font-weight: 400;
+      animation: wipeUpIn 1s 0.7s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 slideUpOut 0.6s 5.8s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+
+    @keyframes wipeUpIn {
+      0% { clip-path: inset(100% 0 0 0); transform: translateY(4vmin); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { clip-path: inset(0 0 0 0); transform: translateY(0); visibility: visible; }
+    }
+    @keyframes slideUpOut {
+      0% { clip-path: inset(0 0 0 0); transform: translateY(0); visibility: visible; }
+      99% { visibility: visible; }
+      100% { clip-path: inset(0 0 100% 0); transform: translateY(-4vmin); visibility: hidden; }
+    }
+
+    /* 3D World */
+    .world {
+      position: absolute;
+      width: 80vmin;
+      height: 80vmin;
+      transform-style: preserve-3d;
+      animation: panCamera 16s linear both;
+    }
+    
+    @keyframes panCamera {
+      0% { transform: rotateX(60deg) rotateZ(-25deg); }
+      100% { transform: rotateX(60deg) rotateZ(-145deg); }
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      background: 
+        linear-gradient(var(--grid-line) 2px, transparent 2px),
+        linear-gradient(90deg, var(--grid-line) 2px, transparent 2px);
+      background-size: 20vmin 20vmin;
+      border: 2px solid var(--grid-line);
+      transform-style: preserve-3d;
+      /* Chroma safe iris reveal */
+      animation: irisIn 1s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both, 
+                 irisOut 0.8s 15.2s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+    @keyframes irisIn {
+      0% { clip-path: circle(0% at center); }
+      100% { clip-path: circle(150% at center); }
+    }
+    @keyframes irisOut {
+      0% { clip-path: circle(150% at center); }
+      100% { clip-path: circle(0% at center); }
+    }
+
+    /* Floor Labels */
+    .floor-label {
+      position: absolute;
+      width: 20vmin;
+      text-align: center;
+      font-size: 3.5vmin;
+      font-weight: 700;
+      color: var(--text-muted);
+      left: 50%; margin-left: -10vmin;
+      top: 20vmin; 
+      animation: slideLabelIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 slideLabelOut 0.5s forwards;
+    }
+    @keyframes slideLabelIn {
+      0% { transform: translateY(-2vmin) scale(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0) scale(1); visibility: visible; }
+    }
+    @keyframes slideLabelOut {
+      0% { transform: translateY(0) scale(1); visibility: visible; }
+      99% { visibility: visible; transform: translateY(2vmin) scale(0); }
+      100% { visibility: hidden; transform: translateY(2vmin) scale(0); }
+    }
+
+    /* Bars */
+    .bar-wrapper {
+      position: absolute;
+      width: 10vmin;
+      height: 10vmin;
+      transform-style: preserve-3d;
+      top: 25vmin; /* Centers them in the second 20vmin row */
+    }
+    
+    .bw-1 { animation: wrapperPopIn 0.4s 1.0s cubic-bezier(0.16, 1, 0.3, 1) both, wrapperPopOut 0.4s 6.0s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-2 { animation: wrapperPopIn 0.4s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both, wrapperPopOut 0.4s 6.1s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-3 { animation: wrapperPopIn 0.4s 1.4s cubic-bezier(0.16, 1, 0.3, 1) both, wrapperPopOut 0.4s 6.2s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-4 { animation: wrapperPopIn 0.4s 1.6s cubic-bezier(0.16, 1, 0.3, 1) both, wrapperPopOut 0.4s 6.3s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    
+    @keyframes wrapperPopIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+    @keyframes wrapperPopOut { 0% { transform: scale(1); } 100% { transform: scale(0); } }
+    .bw-1 { left: 5vmin; }
+    .bw-2 { left: 25vmin; }
+    .bw-3 { left: 45vmin; }
+    .bw-4 { left: 65vmin; }
+
+    .bar {
+      position: absolute;
+      width: 100%;
+      height: 0;
+      left: 0; 
+      bottom: 0; 
+      transform-style: preserve-3d;
+      transform: rotateX(-90deg);
+      transform-origin: bottom center; 
+    }
+    
+    /* Specific animations to avoid var() in @keyframes failing */
+    .bw-1 .bar { animation: growBar1 1.4s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both, shrinkBar1 0.8s 5.4s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-2 .bar { animation: growBar2 1.4s 1.4s cubic-bezier(0.16, 1, 0.3, 1) both, shrinkBar2 0.8s 5.5s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-3 .bar { animation: growBar3 1.4s 1.6s cubic-bezier(0.16, 1, 0.3, 1) both, shrinkBar3 0.8s 5.6s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    .bw-4 .bar { animation: growBar4 1.4s 1.8s cubic-bezier(0.16, 1, 0.3, 1) both, shrinkBar4 0.8s 5.7s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+    
+    .bw-1 .floor-label { animation-delay: 1.3s, 5.3s; }
+    .bw-2 .floor-label { animation-delay: 1.5s, 5.4s; }
+    .bw-3 .floor-label { animation-delay: 1.7s, 5.5s; }
+    .bw-4 .floor-label { animation-delay: 1.9s, 5.6s; }
+
+    @keyframes growBar1 { 0% { height: 0; } 100% { height: 18vmin; } }
+    @keyframes shrinkBar1 { 0% { height: 18vmin; } 100% { height: 0; } }
+    @keyframes growBar2 { 0% { height: 0; } 100% { height: 28vmin; } }
+    @keyframes shrinkBar2 { 0% { height: 28vmin; } 100% { height: 0; } }
+    @keyframes growBar3 { 0% { height: 0; } 100% { height: 22vmin; } }
+    @keyframes shrinkBar3 { 0% { height: 22vmin; } 100% { height: 0; } }
+    @keyframes growBar4 { 0% { height: 0; } 100% { height: 45vmin; } }
+    @keyframes shrinkBar4 { 0% { height: 45vmin; } 100% { height: 0; } }
+
+    /* Bar Faces */
+    .face { position: absolute; top: 0; left: 0; }
+    
+    /* Color assignments via vars */
+    .bw-1 { --c-base: var(--c1-base); --c-light: var(--c1-light); --c-dark: var(--c1-dark); --c-darker: var(--c1-darker); }
+    .bw-2 { --c-base: var(--c2-base); --c-light: var(--c2-light); --c-dark: var(--c2-dark); --c-darker: var(--c2-darker); }
+    .bw-3 { --c-base: var(--c3-base); --c-light: var(--c3-light); --c-dark: var(--c3-dark); --c-darker: var(--c3-darker); }
+    .bw-4 { --c-base: var(--c4-base); --c-light: var(--c4-light); --c-dark: var(--c4-dark); --c-darker: var(--c4-darker); }
+
+    .side-lf { 
+      width: 100%; height: 100%; 
+      transform: translateZ(5vmin);
+      background: var(--c-dark);
+      border: 1px solid rgba(0,0,0,0.2);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 1.5vmin;
+    }
+    .side-rf {
+      width: 10vmin; height: 100%; 
+      left: 50%; margin-left: -5vmin; 
+      transform: translateX(5vmin) rotateY(90deg);
+      background: var(--c-base);
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+    .side-lb {
+      width: 10vmin; height: 100%;
+      left: 50%; margin-left: -5vmin;
+      transform: translateX(-5vmin) rotateY(-90deg);
+      background: var(--c-darker);
+    }
+    .side-rb {
+      width: 100%; height: 100%;
+      transform: translateZ(-5vmin) rotateY(180deg);
+      background: var(--c-darker);
+    }
+    .cap {
+      width: 100%; height: 10vmin;
+      top: 0; margin-top: -5vmin;
+      transform: rotateX(90deg);
+      background: var(--c-light);
+      border: 2px solid rgba(255,255,255,0.8);
+    }
+    
+    /* Shadow on floor */
+    .shadow {
+      position: absolute;
+      width: 10vmin; height: 10vmin;
+      bottom: 0; margin-bottom: -5vmin;
+      left: 50%; margin-left: -5vmin;
+      transform: rotateX(90deg);
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    /* Floating Values */
+    .value-text {
+      font-size: 3.5vmin;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      
+      animation: popIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both, 
+                 popOut 0.4s forwards;
+    }
+    
+    .bw-1 .value-text { animation-delay: 1.8s, 5.2s; }
+    .bw-2 .value-text { animation-delay: 2.0s, 5.3s; }
+    .bw-3 .value-text { animation-delay: 2.2s, 5.4s; }
+    .bw-4 .value-text { animation-delay: 2.4s, 5.5s; }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: translateY(2vmin); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popOut {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-2vmin); }
+    }
+    
+    /* 3D Donut Chart */
+    .donut-container {
+      position: absolute;
+      width: 40vmin; height: 40vmin;
+      left: 50%; top: 50%;
+      margin-left: -20vmin; margin-top: -20vmin;
+      transform-style: preserve-3d;
+      
+      animation: donutPopIn 1.2s 7.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 donutPopOut 0.8s 14.5s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+    .donut-shadow {
+      position: absolute; inset: -1vmin;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.15);
+    }
+    .donut-layer {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(
+        var(--c1-base) 0deg, var(--c1-base) 120deg,
+        var(--c3-base) 120deg, var(--c3-base) 220deg,
+        var(--c4-base) 220deg, var(--c4-base) 360deg
+      );
+      -webkit-mask: radial-gradient(transparent 45%, black 46%);
+      mask: radial-gradient(transparent 45%, black 46%);
+      filter: brightness(0.6); 
+    }
+    .donut-layer.donut-top {
+      filter: brightness(1.0); 
+      background: conic-gradient(
+        var(--c1-light) 0deg, var(--c1-light) 120deg,
+        var(--c3-light) 120deg, var(--c3-light) 220deg,
+        var(--c4-light) 220deg, var(--c4-light) 360deg
+      );
+    }
+    .donut-val {
+      position: absolute;
+      font-size: 4vmin;
+      font-weight: 700;
+      color: var(--text);
+      text-shadow: 0 4px 0 rgba(255,255,255,0.8);
+      transform: rotateX(-90deg) rotateY(45deg) translateZ(2vmin);
+      transform-style: preserve-3d;
+    }
+    @keyframes donutPopIn {
+      0% { transform: scale3d(0,0,0); }
+      100% { transform: scale3d(1,1,1); }
+    }
+    @keyframes donutPopOut {
+      0% { transform: scale3d(1,1,1); }
+      100% { transform: scale3d(0,0,0); }
+    }
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scene">
+    <!-- UI Overlay -->
+    <div class="ui-layer">
+      <div class="header-wrapper" style="position: relative; height: 12vmin;">
+        <div class="header-container" style="position: absolute; top:0; left:0; animation: wipeOut 0.6s 6.5s cubic-bezier(0.7, 0, 0.3, 1) forwards;">
+          <div class="header"><div class="header-text">Q4 Revenue Growth</div></div>
+          <div class="subtitle">Year over year performance across key sectors</div>
+        </div>
+        <div class="header-container" style="position: absolute; top:0; left:0; opacity: 0; animation: panelFadeIn 0.1s 7.0s forwards;">
+          <div class="header"><div class="header-text" style="animation-delay: 7.2s;">Market Share Distribution</div></div>
+          <div class="subtitle" style="animation-delay: 7.4s;">Q4 Global sector dominance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D World -->
+    <div class="viewport">
+      <div class="world">
+        <div class="grid"></div>
+        
+        <!-- Bar 1 -->
+        <div class="bar-wrapper bw-1">
+          <div class="floor-label">Q1</div>
+          <div class="bar">
+            <div class="shadow"></div>
+            <div class="face side-lb"></div>
+            <div class="face side-rb"></div>
+            <div class="face side-lf"><div class="value-text">32%</div></div>
+            <div class="face side-rf"></div>
+            <div class="face cap"></div>
+          </div>
+        </div>
+
+        <!-- Bar 2 -->
+        <div class="bar-wrapper bw-2">
+          <div class="floor-label">Q2</div>
+          <div class="bar">
+            <div class="shadow"></div>
+            <div class="face side-lb"></div>
+            <div class="face side-rb"></div>
+            <div class="face side-lf"><div class="value-text">54%</div></div>
+            <div class="face side-rf"></div>
+            <div class="face cap"></div>
+          </div>
+        </div>
+
+        <!-- Bar 3 -->
+        <div class="bar-wrapper bw-3">
+          <div class="floor-label">Q3</div>
+          <div class="bar">
+            <div class="shadow"></div>
+            <div class="face side-lb"></div>
+            <div class="face side-rb"></div>
+            <div class="face side-lf"><div class="value-text">41%</div></div>
+            <div class="face side-rf"></div>
+            <div class="face cap"></div>
+          </div>
+        </div>
+
+        <!-- Bar 4 -->
+        <div class="bar-wrapper bw-4">
+          <div class="floor-label">Q4</div>
+          <div class="bar">
+            <div class="shadow"></div>
+            <div class="face side-lb"></div>
+            <div class="face side-rb"></div>
+            <div class="face side-lf"><div class="value-text">89%</div></div>
+            <div class="face side-rf"></div>
+            <div class="face cap"></div>
+          </div>
+        </div>
+
+        <!-- 3D Donut Chart -->
+        <div class="donut-container">
+          <div class="donut-shadow"></div>
+          <div class="donut-layer" style="transform: translateZ(0.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(1.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(1.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(2.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(2.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(3.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(3.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(4.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(4.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(5.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(5.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(6.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(6.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(7.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(7.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(8.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(8.5vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(9.0vmin)"></div>
+          <div class="donut-layer" style="transform: translateZ(9.5vmin)"></div>
+          <div class="donut-layer donut-top" style="transform: translateZ(10.0vmin)">
+             <div class="donut-val" style="left: 75%; top: 20%;">33%</div>
+             <div class="donut-val" style="left: 20%; top: 75%;">28%</div>
+             <div class="donut-val" style="left: 20%; top: 20%;">39%</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>

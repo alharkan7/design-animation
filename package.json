@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host ::",
-    "build": "vite build",
+    "build": "vite build && mkdir -p dist/mograph/sequences && cp -r mograph/sequences/* dist/mograph/sequences/",
     "preview": "vite preview"
   },
   "devDependencies": {

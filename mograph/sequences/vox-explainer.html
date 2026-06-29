@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vox Style Documentary Explainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;1,400&family=Playfair+Display:wght@700;900&display=swap');
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; 
+    background-color: #050505;
+  }
+
+  /* --- GLOBAL CONTROLS --- */
+  .master-scene {
+    position: absolute; inset: 0; width: 100vw; height: 100vh;
+    /* Final Scene Exit at 21s */
+    animation: masterExit 1s 21s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes masterExit {
+    0% { transform: scale(1); filter: blur(0px); opacity: 1; }
+    100% { transform: scale(1.1); filter: blur(15px); opacity: 0; }
+  }
+
+  /* Authentic 35mm / Paper Noise Grain */
+  .texture-overlay {
+    position: absolute; inset: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 999;
+    opacity: 0.4; mix-blend-mode: overlay;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)"/></svg>');
+  }
+
+  /* =========================================
+     VISUAL 2: Map Background (Runs 0s - 21s) 
+     ========================================= */
+  .map-bg {
+    position: absolute; inset: -20vw; width: 140vw; height: 140vh;
+    background-color: #121316;
+    background-image: radial-gradient(circle, #333 0.15vw, transparent 0.2vw);
+    background-size: 2vw 2vw;
+    z-index: 1;
+    /* Continuous pan + focus shift at 4.5s */
+    animation: 
+      mapPan 22s linear both,
+      mapFocus 1s 4.5s cubic-bezier(0.76, 0, 0.24, 1) both;
+  }
+  @keyframes mapPan {
+    0% { transform: scale(1.0) translate(0, 0); }
+    100% { transform: scale(1.2) translate(-4vw, -2vh); }
+  }
+  @keyframes mapFocus {
+    0% { filter: blur(15px) brightness(0.6); }
+    100% { filter: blur(0px) brightness(1); }
+  }
+
+  .map-bg-vectors { width: 100%; height: 100%; position: absolute; inset: 0; }
+  .land { fill: #1a1b20; stroke: #2a2b30; stroke-width: 0.3vw; }
+  .ring { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 0.2vw; stroke-dasharray: 0.5vw 1vw; }
+  .crosshair { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 0.1vw; }
+
+  /* Map Nodes */
+  .map-point {
+    position: absolute; left: var(--px); top: var(--py);
+    display: flex; align-items: center; gap: 1vw; z-index: 10;
+    animation: pointIn 0.8s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes pointIn {
+    0% { transform: scale(0) translateY(2vh); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .point-dot { width: 1.2vw; height: 1.2vw; background: #d32f2f; border-radius: 50%; box-shadow: 0 0 1vw #d32f2f; position: relative; z-index: 2; border: 0.2vw solid #fff; }
+  .point-ping {
+    position: absolute; left: 0; top: 0; width: 1.2vw; height: 1.2vw;
+    border: 0.2vw solid #d32f2f; border-radius: 50%;
+    animation: ping 2s var(--delay) infinite cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes ping { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(4); opacity: 0; } }
+  
+  .point-label {
+    background: rgba(255,255,255,0.95); padding: 0.5vw 1vw; border-radius: 0.2vw;
+    border-left: 0.3vw solid #d32f2f; font-family: 'Inter', sans-serif;
+    box-shadow: 0 1vw 2vw rgba(0,0,0,0.2);
+  }
+  .lbl-title { font-size: 0.7vw; font-weight: 800; color: #555; letter-spacing: 0.05vw; }
+  .lbl-data { font-size: 1.5vw; font-weight: 900; color: #111; }
+  .lbl-unit { font-size: 0.8vw; color: #666; margin-left: 0.2vw; }
+
+  /* Flight Path Layer */
+  .flight-path-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; }
+  .path-anim { animation: drawMask 1s 6.5s cubic-bezier(0.64, 0, 0.36, 1) both; }
+  @keyframes drawMask { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+  .packet-anim { animation: flyPacket 2s 7.0s cubic-bezier(0.45, 0, 0.55, 1) both; }
+  @keyframes flyPacket { 0% { stroke-dashoffset: 110; } 100% { stroke-dashoffset: -10; } }
+
+
+  /* =========================================
+     VISUAL 1: The Explainer Article (0s - 4.5s)
+     ========================================= */
+  .article-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 30; }
+  .article { 
+    width: 40vw; background: #fdfcf9; padding: 4vw;
+    box-shadow: 0 2vw 4vw rgba(0,0,0,0.5); border-radius: 0.3vw;
+    animation: artIn 1s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+               artOut 0.8s 4.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes artIn { 0% { transform: translateY(15vh); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  @keyframes artOut { 0% { transform: translateX(0) scale(1); opacity: 1; } 100% { transform: translateX(-60vw) scale(0.9); opacity: 0; } }
+
+  .art-cat { font-family: 'Inter', sans-serif; font-size: 0.8vw; font-weight: 800; color: #d32f2f; margin-bottom: 1.5vh; letter-spacing: 0.1vw; }
+  .art-title { font-family: 'Playfair Display', serif; font-size: 3.2vw; font-weight: 900; line-height: 1.1; margin: 0 0 2vh 0; color: #111; }
+  .art-meta { font-family: 'Inter', sans-serif; font-size: 0.9vw; color: #666; border-bottom: 0.1vw solid #ddd; padding-bottom: 2vh; margin-bottom: 2vh; }
+  .art-text { font-family: 'Lora', serif; font-size: 1.2vw; line-height: 1.7; color: #222; margin-bottom: 2vh; }
+
+  /* Highlighter */
+  .highlight-wrap { position: relative; display: inline-block; color: #111; }
+  .hl-text { position: relative; z-index: 2; }
+  .hl-marker {
+    position: absolute; top: 15%; bottom: 10%; left: -2%; width: 104%;
+    background-color: #ffe600; mix-blend-mode: multiply; transform-origin: left center;
+    border-radius: 0.2vw; z-index: 1;
+    animation: highlightSwipe 0.7s 1.5s cubic-bezier(0.76, 0, 0.24, 1) both;
+  }
+  @keyframes highlightSwipe { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+
+  /* Red Circle */
+  .circle-wrap { position: relative; display: inline-block; }
+  .red-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 140%; height: 160%; overflow: visible; z-index: 3; pointer-events: none; }
+  .red-circle path { stroke-dasharray: 100; pathLength: 100; animation: drawCircle 0.5s 2.5s cubic-bezier(0.64, 0, 0.36, 1) both; }
+  @keyframes drawCircle { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+
+
+  /* =========================================
+     VISUAL 3: Chart Panel (9s - 13s)
+     ========================================= */
+  .chart-panel {
+    position: absolute; right: 5vw; top: 15vh; width: 25vw;
+    background: rgba(20,20,22,0.85); backdrop-filter: blur(15px);
+    border: 0.1vw solid rgba(255,255,255,0.1);
+    padding: 2.5vw; border-radius: 0.5vw; z-index: 20; color: #fff;
+    box-shadow: 0 2vw 4vw rgba(0,0,0,0.5);
+    animation: panelIn 1s 9s cubic-bezier(0.16, 1, 0.3, 1) both,
+               panelOut 1s 13s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes panelIn { 0% { transform: translateX(30vw); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+  @keyframes panelOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(20vh); opacity: 0; } }
+  
+  .chart-bars {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    height: 12vh; margin-top: 3vh; border-bottom: 0.1vw solid rgba(255,255,255,0.2); padding-bottom: 1vh;
+  }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 0.5vh; flex: 1; }
+  .bar-val { font-family: 'Inter', sans-serif; font-size: 1.2vw; font-weight: 900; opacity: 0; animation: fadeVal 0.5s calc(var(--delay) + 0.8s) forwards; }
+  .bar-track { width: 3vw; height: 100%; display: flex; align-items: flex-end; }
+  .bar-fill { width: 100%; background: #fff; transform-origin: bottom; border-radius: 0.2vw 0.2vw 0 0; animation: growBar 1s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .bar-lbl { font-family: 'Inter', sans-serif; font-size: 0.8vw; color: #aaa; text-transform: uppercase; margin-top: 1vh; font-weight: 700; }
+  @keyframes growBar { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+  @keyframes fadeVal { to { opacity: 1; } }
+
+
+  /* =========================================
+     VISUAL 4: Massive Quote (13s - 17s)
+     ========================================= */
+  .quote-scene { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+  .quote-bg-top, .quote-bg-bot { position: absolute; width: 100vw; height: 50vh; left: 0; }
+  .quote-bg-top {
+    top: 0; background: #d32f2f;
+    animation: quoteBgTop 0.8s 13s cubic-bezier(0.76, 0, 0.24, 1) both,
+               quoteBgTopOut 0.8s 16.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  .quote-bg-bot {
+    bottom: 0; background: #111;
+    animation: quoteBgBot 0.8s 13s cubic-bezier(0.76, 0, 0.24, 1) both,
+               quoteBgBotOut 0.8s 16.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes quoteBgTop { 0% { transform: translateY(-50vh); } 100% { transform: translateY(0); } }
+  @keyframes quoteBgBot { 0% { transform: translateY(50vh); } 100% { transform: translateY(0); } }
+  @keyframes quoteBgTopOut { 0% { transform: translateY(0); } 100% { transform: translateY(-50vh); } }
+  @keyframes quoteBgBotOut { 0% { transform: translateY(0); } 100% { transform: translateY(50vh); } }
+
+  .quote-text-wrap {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    animation: quoteZoom 3.5s 13s linear both;
+  }
+  @keyframes quoteZoom { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+  
+  .quote-text {
+    font-family: 'Playfair Display', serif; font-size: 8vw; font-weight: 900; line-height: 1.0; 
+    color: #fff; text-align: center; letter-spacing: -0.2vw;
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+    animation: quoteTextIn 0.8s 13.5s cubic-bezier(0.16, 1, 0.3, 1) both,
+               quoteTextOut 0.4s 16.3s forwards;
+  }
+  @keyframes quoteTextIn { 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } }
+  @keyframes quoteTextOut { 100% { opacity: 0; filter: blur(10px); } }
+
+
+  /* =========================================
+     VISUAL 5: Evidence Montage (17s - 21s)
+     ========================================= */
+  .evidence-scene { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+  .doc {
+    position: absolute; left: 50%; top: 50%; width: 22vw; height: 32vh; 
+    background: #f4f4f0; box-shadow: 0 3vw 6vw rgba(0,0,0,0.6); padding: 2vw; border-radius: 0.2vw;
+    animation: docSlam 0.6s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes docSlam {
+    0% { transform: translate(-50%, -50%) scale(2) translateY(-50vh) rotate(0deg); opacity: 0; filter: blur(10px); }
+    100% { transform: translate(-50%, -50%) scale(1) translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 1; filter: blur(0); }
+  }
+
+  .doc-head { font-family: 'Inter', sans-serif; font-weight: 900; font-size: 1.5vw; color: #111; margin-bottom: 2vh; border-bottom: 0.2vw solid #111; padding-bottom: 1vh; letter-spacing: 0.05vw;}
+  .doc-l { height: 1vh; background: #ccc; margin-bottom: 1.5vh; border-radius: 1vh; }
+  .w100 { width: 100%; } .w90 { width: 90%; } .w80 { width: 80%; } .w70 { width: 70%; } .w60 { width: 60%; } .w50 { width: 50%; } .w40 { width: 40%; }
+  .doc-img { height: 10vh; background: #333; margin-bottom: 1.5vh; border-radius: 0.2vw; }
+
+</style>
+</head>
+<body>
+  
+  <div class="master-scene">
+    
+    <div class="texture-overlay"></div>
+
+    <!-- VISUAL 2: Map Background -->
+    <div class="map-bg">
+      <svg class="map-bg-vectors" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        
+        <path class="land" d="M -100 -100 L 400 -100 Q 420 50 350 150 T 450 350 T 250 500 T 300 650 L -100 650 Z" />
+        <path class="land" d="M 1100 -50 L 600 -50 Q 550 100 650 200 T 550 400 T 700 550 Q 750 650 850 650 L 1100 650 Z" />
+        
+        <circle cx="300" cy="300" r="150" class="ring" />
+        <circle cx="300" cy="300" r="100" class="ring" />
+        <path class="crosshair" d="M 50 300 L 450 300 M 300 100 L 300 500" />
+      </svg>
+      
+      <svg class="flight-path-layer" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <mask id="pathMask">
+            <path d="M 30 50 Q 50 30 70 45" fill="none" stroke="white" stroke-width="4" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" class="path-anim" />
+          </mask>
+        </defs>
+        <path d="M 30 50 Q 50 30 70 45" fill="none" stroke="#d32f2f" stroke-width="0.2vw" stroke-dasharray="1 1.5" mask="url(#pathMask)" />
+        <path d="M 30 50 Q 50 30 70 45" fill="none" stroke="#ff5252" stroke-width="0.4vw" stroke-linecap="round" filter="url(#glow)" pathLength="100" stroke-dasharray="10 100" stroke-dashoffset="110" class="packet-anim" />
+      </svg>
+
+      <div class="map-point" style="--px: 30%; --py: 50%; --delay: 5.0s;">
+        <div class="point-ping"></div><div class="point-dot"></div>
+        <div class="point-label">
+          <div class="lbl-title">WESTERN HUB</div>
+          <div class="lbl-data">14.2<span class="lbl-unit">T</span></div>
+        </div>
+      </div>
+      
+      <div class="map-point" style="--px: 70%; --py: 45%; --delay: 6.0s;">
+        <div class="point-ping"></div><div class="point-dot"></div>
+        <div class="point-label">
+          <div class="lbl-title">EASTERN MARKET</div>
+          <div class="lbl-data">28.5<span class="lbl-unit">T</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISUAL 1: Article -->
+    <div class="article-wrap">
+      <div class="article">
+        <div class="art-cat">GLOBAL ECONOMY</div>
+        <h1 class="art-title">The Great Shift of 2024</h1>
+        <div class="art-meta">By <strong>Vox Data Team</strong> &nbsp;&nbsp;|&nbsp;&nbsp; Oct 14, 2024</div>
+        <p class="art-text">
+          For the past decade, economic models predicted a steady stabilization of emerging markets. However, recent geopolitical tensions have completely overturned these assumptions.
+        </p>
+        <p class="art-text">
+          <span class="highlight-wrap">
+            <span class="hl-marker"></span>
+            <span class="hl-text">In late 2024, the landscape shifted <span class="circle-wrap">dramatically<svg class="red-circle" viewBox="0 0 100 50"><path d="M10,25 C10,0 90,0 90,25 C90,50 10,50 15,25" fill="none" stroke="#d32f2f" stroke-width="4" stroke-linecap="round"/></svg></span>,</span>
+          </span>
+          resulting in an unprecedented migration of global supply chains.
+        </p>
+      </div>
+    </div>
+
+    <!-- VISUAL 3: Data Chart -->
+    <div class="chart-panel">
+      <div class="doc-head" style="color: #fff; font-size: 1.2vw; border-color: rgba(255,255,255,0.2); margin-bottom: 2vh; border-bottom-width: 0.1vw;">CAPITAL MIGRATION</div>
+      <div class="chart-bars">
+        <div class="bar-col">
+          <div class="bar-val">12%</div>
+          <div class="bar-track"><div class="bar-fill" style="height: 30%; --delay: 9.5s;"></div></div>
+          <div class="bar-lbl">2022</div>
+        </div>
+        <div class="bar-col">
+          <div class="bar-val">28%</div>
+          <div class="bar-track"><div class="bar-fill" style="height: 55%; --delay: 9.7s;"></div></div>
+          <div class="bar-lbl">2023</div>
+        </div>
+        <div class="bar-col">
+          <div class="bar-val" style="color: #ff5252;">84%</div>
+          <div class="bar-track"><div class="bar-fill" style="height: 100%; background: #ff5252; --delay: 9.9s; box-shadow: 0 0 1vw #ff5252;"></div></div>
+          <div class="bar-lbl" style="color: #fff;">2024</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISUAL 4: Big Quote -->
+    <div class="quote-scene">
+      <div class="quote-bg-top"></div>
+      <div class="quote-bg-bot"></div>
+      <div class="quote-text-wrap">
+        <h1 class="quote-text">THE SYSTEM<br/>IS BREAKING.</h1>
+      </div>
+    </div>
+
+    <!-- VISUAL 5: Evidence Montage -->
+    <div class="evidence-scene">
+      <div class="doc" style="--delay: 17.0s; --tx: -12vw; --ty: 6vh; --rot: -12deg;">
+        <div class="doc-head">MEMORANDUM</div>
+        <div class="doc-l w80"></div><div class="doc-l w100"></div><div class="doc-img"></div><div class="doc-l w60"></div>
+      </div>
+      <div class="doc" style="--delay: 17.4s; --tx: 14vw; --ty: -4vh; --rot: 8deg;">
+        <div class="doc-head">LEAKED DATA</div>
+        <div class="doc-l w100"></div><div class="doc-img" style="height: 12vh;"></div><div class="doc-l w40"></div>
+      </div>
+      <div class="doc" style="--delay: 17.8s; --tx: 1vw; --ty: -2vh; --rot: -2deg; z-index: 10;">
+        <div class="doc-head" style="color: #d32f2f;">FINAL REPORT</div>
+        <div class="doc-l w90"></div><div class="doc-l w70"></div><div class="doc-l w80"></div><div class="doc-l w50"></div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

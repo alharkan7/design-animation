@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vintage Science Collage</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Pinyon+Script&display=swap');
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; 
+    background-color: #050505;
+  }
+
+  /* --- CAMERA & SHAKE CONTROLS --- */
+  .master-pan {
+    position: absolute; inset: 0; width: 100vw; height: 100vh;
+    /* Slow 17s zoom out, followed by a sepia burn out */
+    animation: panIn 17s linear both,
+               burnExit 1.5s 16s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes panIn {
+    0% { transform: scale(1.0); }
+    100% { transform: scale(1.15); }
+  }
+  @keyframes burnExit {
+    0% { opacity: 1; filter: sepia(0) brightness(1) blur(0); }
+    30% { filter: sepia(0.8) brightness(0.7) blur(2px); }
+    100% { opacity: 0; filter: sepia(1) brightness(0) blur(20px); transform: scale(1.25); }
+  }
+
+  .scene-shake {
+    position: absolute; inset: 0; width: 100vw; height: 100vh;
+    /* Triggers exactly when the wax seal stamps down */
+    animation: shake 0.5s 11s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    10%, 30%, 50%, 70%, 90% { transform: translate(-0.4vw, 0.4vh) rotate(-0.5deg); }
+    20%, 40%, 60%, 80% { transform: translate(0.4vw, -0.4vh) rotate(0.5deg); }
+  }
+
+
+  /* --- PARCHMENT BACKGROUND --- */
+  .parchment-base {
+    position: absolute; inset: -10vw; width: 120vw; height: 120vh;
+    background: radial-gradient(circle at 50% 50%, #eae0d0 0%, #d4c3ab 60%, #b89f82 100%);
+  }
+  .parchment-noise {
+    position: absolute; inset: -10vw; width: 120vw; height: 120vh;
+    /* Burns the noise into the bright parchment, creating an incredibly realistic paper texture */
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+    opacity: 0.35; mix-blend-mode: color-burn; pointer-events: none;
+  }
+
+
+  /* --- CENTERPIECE: ASTROLABE SKETCH --- */
+  .center-sketch {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 45vw; height: 45vw;
+    z-index: 5;
+  }
+
+  .ink {
+    fill: none; stroke: #3e2723; stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 100; stroke-dashoffset: 100;
+    /* Ink draws itself dynamically via CSS variables */
+    animation: drawInk var(--dur) var(--del) cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+  @keyframes drawInk {
+    100% { stroke-dashoffset: 0; }
+  }
+
+
+  /* --- HANDWRITTEN ANNOTATIONS --- */
+  .annotation {
+    position: absolute; font-family: 'IM Fell English', serif;
+    font-size: 1.5vw; color: #3e2723; font-style: italic; z-index: 10;
+    transform: rotate(var(--rot));
+    opacity: 0; animation: inkFade 2s var(--delay) ease-out both;
+  }
+  @keyframes inkFade {
+    0% { opacity: 0; filter: blur(5px); }
+    /* Max opacity 0.85 makes it look absorbed by the parchment fibers */
+    100% { opacity: 0.85; filter: blur(0); } 
+  }
+
+
+  /* --- COLLAGE CUTOUTS --- */
+  .cutout {
+    position: absolute; z-index: 20;
+    animation: slamIn 0.6s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes slamIn {
+    0% { transform: scale(2) translateY(-10vh) rotate(calc(var(--rot) - 20deg)); opacity: 0; }
+    100% { transform: scale(1) translateY(0) rotate(var(--rot)); opacity: 1; }
+  }
+
+  /* Physical drop shadow on the SVG shapes to look like stacked paper */
+  .svg-cutout { filter: drop-shadow(0.4vw 0.6vw 0.5vw rgba(30,15,0,0.5)); width: 100%; height: 100%; }
+  
+  .c-leaf { width: 12vw; height: 24vw; left: 15vw; bottom: 8vh; --rot: -12deg; }
+  .c-geo { width: 16vw; height: 16vw; right: 18vw; top: 15vh; --rot: 18deg; }
+  .c-spiral { width: 14vw; height: 14vw; left: 45vw; top: 8vh; --rot: -6deg; }
+
+
+  /* --- WAX SEAL --- */
+  .seal-wrap {
+    position: absolute; right: 25vw; bottom: 15vh; width: 9vw; height: 9vw; z-index: 50;
+    /* Stamps down violently */
+    animation: stampSeal 0.3s 11s cubic-bezier(0.5, 0, 1, 1) both;
+  }
+  @keyframes stampSeal {
+    0% { transform: scale(6) rotate(45deg); opacity: 0; filter: blur(10px); }
+    50% { opacity: 1; filter: blur(0); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+</style>
+</head>
+<body>
+  
+  <div class="master-pan">
+    <div class="scene-shake">
+
+      <!-- Textures -->
+      <div class="parchment-base"></div>
+      <div class="parchment-noise"></div>
+
+      <!-- CENTER: Drawing the Astrolabe -->
+      <div class="center-sketch">
+        <svg viewBox="0 0 500 500" width="100%" height="100%">
+          <g>
+            <!-- Outer rings -->
+            <circle cx="250" cy="250" r="230" stroke-width="1.5" class="ink" style="--dur: 4s; --del: 0.2s;" pathLength="100"/>
+            <circle cx="250" cy="250" r="215" stroke-width="0.5" class="ink" style="--dur: 3s; --del: 0.5s;" pathLength="100"/>
+            <circle cx="250" cy="250" r="210" stroke-width="0.5" class="ink" style="--dur: 3s; --del: 0.7s;" pathLength="100"/>
+        
+            <!-- Inner sphere frame -->
+            <circle cx="250" cy="250" r="140" stroke-width="1.5" class="ink" style="--dur: 3s; --del: 1s;" pathLength="100"/>
+        
+            <!-- Orbital ellipses -->
+            <ellipse cx="250" cy="250" rx="140" ry="40" transform="rotate(20 250 250)" stroke-width="1" class="ink" style="--dur: 2s; --del: 1.5s;" pathLength="100"/>
+            <ellipse cx="250" cy="250" rx="140" ry="40" transform="rotate(-40 250 250)" stroke-width="1" class="ink" style="--dur: 2s; --del: 1.7s;" pathLength="100"/>
+            <ellipse cx="250" cy="250" rx="140" ry="40" transform="rotate(80 250 250)" stroke-width="1" class="ink" style="--dur: 2s; --del: 1.9s;" pathLength="100"/>
+        
+            <!-- Geometric connectors -->
+            <path d="M 20 250 L 480 250" stroke-width="0.5" class="ink" style="--dur: 1.5s; --del: 2.2s;" pathLength="100"/>
+            <path d="M 250 20 L 250 480" stroke-width="0.5" class="ink" style="--dur: 1.5s; --del: 2.3s;" pathLength="100"/>
+            
+            <!-- Inscribed octagon (Pixel Perfect) -->
+            <path d="M 250 20 L 412.6 87.4 L 480 250 L 412.6 412.6 L 250 480 L 87.4 412.6 L 20 250 L 87.4 87.4 Z" stroke-width="0.5" class="ink" style="--dur: 3s; --del: 2.5s;" pathLength="100"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- ANNOTATIONS: Latin handwritten notes -->
+      <div class="annotation" style="--delay: 2.5s; top: 20vh; left: 15vw; --rot: -4deg;">
+        Natura valde simplex est<br/>et sibi consona.
+      </div>
+      <div class="annotation" style="--delay: 3.5s; bottom: 25vh; left: 20vw; --rot: 2deg; font-size: 1vw;">
+        Liber III, Caput XIV.<br/>De Revolutionibus Orbium.
+      </div>
+      <div class="annotation" style="--delay: 4.5s; top: 25vh; right: 18vw; --rot: 5deg; font-family: 'Pinyon Script', cursive; font-size: 3vw;">
+        Proportio Divina
+      </div>
+
+      <!-- COLLAGE CUTOUTS: Slamming in -->
+      <!-- 1. The Botanical Leaf -->
+      <div class="cutout c-leaf" style="--delay: 6s;">
+        <svg viewBox="0 0 100 200" class="svg-cutout">
+          <defs>
+            <clipPath id="leafClip">
+              <path d="M50 10 C 90 50, 90 120, 50 190 C 10 120, 10 50, 50 10 Z" />
+            </clipPath>
+          </defs>
+          <path d="M50 10 C 90 50, 90 120, 50 190 C 10 120, 10 50, 50 10 Z" fill="#eee5d6" stroke="#3e2723" stroke-width="2"/>
+          <g clip-path="url(#leafClip)">
+            <path d="M50 190 L50 10" fill="none" stroke="#3e2723" stroke-width="1.5"/>
+            <path d="M50 150 Q 75 140 85 120" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M50 130 Q 25 120 15 100" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M50 110 Q 75 100 85 80" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M50 90 Q 25 80 15 60" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M50 70 Q 75 60 85 40" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M50 50 Q 25 40 15 20" fill="none" stroke="#3e2723" stroke-width="1"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 2. The Abstract Geometry -->
+      <div class="cutout c-geo" style="--delay: 7s;">
+        <svg viewBox="0 0 150 150" class="svg-cutout">
+          <defs>
+            <clipPath id="geoClip">
+              <polygon points="75,10 140,45 140,105 75,140 10,105 10,45" />
+            </clipPath>
+          </defs>
+          <polygon points="75,10 140,45 140,105 75,140 10,105 10,45" fill="#e0d1bc" stroke="#3e2723" stroke-width="2"/>
+          <g clip-path="url(#geoClip)">
+            <polygon points="75,10 140,105 10,105" fill="none" stroke="#3e2723" stroke-width="1.5"/>
+            <circle cx="75" cy="73.3" r="31.6" fill="none" stroke="#3e2723" stroke-width="1.5"/>
+            <path d="M 75 10 L 75 140" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M 10 45 L 140 105" fill="none" stroke="#3e2723" stroke-width="1"/>
+            <path d="M 140 45 L 10 105" fill="none" stroke="#3e2723" stroke-width="1"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 3. The Esoteric Lens -->
+      <div class="cutout c-spiral" style="--delay: 8s;">
+        <svg viewBox="0 0 100 100" class="svg-cutout">
+          <defs>
+            <clipPath id="lensClip">
+              <circle cx="50" cy="50" r="45" />
+            </clipPath>
+          </defs>
+          <circle cx="50" cy="50" r="45" fill="#dfd6c8" stroke="#3e2723" stroke-width="2"/>
+          <g clip-path="url(#lensClip)">
+            <path d="M 10 50 Q 50 10 90 50 Q 50 90 10 50" fill="none" stroke="#3e2723" stroke-width="1.5"/>
+            <circle cx="50" cy="50" r="15" fill="none" stroke="#3e2723" stroke-width="1.5"/>
+            <circle cx="50" cy="50" r="5" fill="#3e2723"/>
+            <line x1="50" y1="5" x2="50" y2="25" stroke="#3e2723" stroke-width="1"/>
+            <line x1="50" y1="95" x2="50" y2="75" stroke="#3e2723" stroke-width="1"/>
+            <line x1="5" y1="50" x2="25" y2="50" stroke="#3e2723" stroke-width="1"/>
+            <line x1="95" y1="50" x2="75" y2="50" stroke="#3e2723" stroke-width="1"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- THE WAX SEAL -->
+      <div class="seal-wrap">
+        <svg viewBox="0 0 100 100">
+          <defs>
+            <!-- 3D Specular Lighting turns a flat SVG into realistic physical wax -->
+            <filter id="waxy">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feSpecularLighting in="blur" surfaceScale="5" specularConstant="1.2" specularExponent="20" lighting-color="#ffffff">
+                <fePointLight x="20" y="20" z="50"/>
+              </feSpecularLighting>
+              <feComposite in2="SourceAlpha" operator="in" result="specOut"/>
+              <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+              <!-- Drop shadow for the seal itself -->
+              <feDropShadow dx="2" dy="4" stdDeviation="3" flood-opacity="0.6"/>
+            </filter>
+          </defs>
+          
+          <!-- Irregular wax blob -->
+          <path d="M 50 5 C 70 2, 90 15, 95 35 C 98 60, 85 90, 60 95 C 35 100, 5 85, 5 55 C 2 30, 20 8, 50 5 Z" fill="#7a1010" filter="url(#waxy)" />
+          
+          <!-- Crest imprinted in the wax -->
+          <path d="M 30 35 L 70 35 L 50 75 Z" fill="none" stroke="#4a0505" stroke-width="4" stroke-linejoin="round"/>
+          <circle cx="50" cy="50" r="15" fill="none" stroke="#4a0505" stroke-width="2"/>
+        </svg>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

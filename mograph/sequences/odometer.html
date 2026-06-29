@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@700&display=swap');
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at 50% 30%, #2a2a35, #08080a);
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    color-scheme: dark;
+  }
+
+  .scene {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Exit animation to pristine canvas */
+    animation: sceneExit 1s 10.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  @keyframes sceneExit {
+    0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
+    100% { opacity: 0; transform: scale(0.9) translateY(40px); filter: blur(15px); }
+  }
+
+  .machine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Enter animation */
+    animation: machineEnter 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes machineEnter {
+    0% { opacity: 0; transform: translateY(80px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .label {
+    font-size: clamp(1.2rem, 2vw, 2rem);
+    letter-spacing: 0.3em;
+    color: #8892b0;
+    font-weight: 600;
+    margin-bottom: 2.5vh;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-transform: uppercase;
+  }
+
+  /* --- ODOMETER FRAME --- */
+  .glass-panel {
+    position: relative;
+    border-radius: 24px;
+    padding: 4px; /* thick metallic rim */
+    background: linear-gradient(135deg, #444, #111);
+    box-shadow: 
+      0 30px 60px rgba(0,0,0,0.8),
+      0 10px 20px rgba(0,0,0,0.6);
+  }
+
+  /* Inner glossy overlay */
+  .glass-panel::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.03) 100%);
+    border-radius: 20px;
+    pointer-events: none;
+    box-shadow: inset 0 2px 2px rgba(255,255,255,0.15);
+    z-index: 10;
+  }
+
+  .odometer-frame {
+    background: linear-gradient(180deg, #18181a, #08080a);
+    padding: 30px 40px;
+    border-radius: 20px;
+    box-shadow: 
+      inset 0 10px 20px rgba(0,0,0,0.9),
+      inset 0 -2px 5px rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+
+  .wheel-static {
+    font-size: clamp(4rem, 8vw, 7rem);
+    font-family: 'Space Grotesk', monospace; 
+    color: #444;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0,0,0,1);
+    margin: 0 10px;
+  }
+
+  /* --- PHYSICAL WHEELS --- */
+  .wheel {
+    width: 1.2em;
+    height: 1.5em;
+    font-size: clamp(4rem, 8vw, 7rem);
+    font-family: 'Space Grotesk', monospace; 
+    background: #0f0f11;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 
+      inset 0 40px 30px -20px rgba(0,0,0,1), 
+      inset 0 -40px 30px -20px rgba(0,0,0,1),
+      inset 0 0 0 1px rgba(255,255,255,0.03);
+    border-left: 2px solid #000;
+    border-right: 2px solid #000;
+  }
+
+  .strip {
+    text-align: center;
+    line-height: 1.5em; /* Perfectly matches wheel height */
+  }
+
+  /* --- MECHANICAL BUTTON --- */
+  .button-container {
+    width: 140px; height: 140px;
+    background: #1a1a1c;
+    border-radius: 50%;
+    box-shadow: 
+      0 10px 20px rgba(0,0,0,0.5),
+      inset 0 2px 2px rgba(255,255,255,0.05),
+      inset 0 -5px 10px rgba(0,0,0,0.5),
+      0 0 0 2px #0a0a0c;
+    display: flex; justify-content: center; align-items: center;
+    margin-top: 8vh;
+  }
+
+  .button {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 20%, #ff4a4a, #aa0000);
+    box-shadow: 
+      inset 0 6px 8px rgba(255,255,255,0.4),
+      inset 0 -4px 8px rgba(0,0,0,0.4),
+      0 12px 0 #700000,
+      0 12px 2px rgba(0,0,0,0.8),
+      0 25px 25px rgba(0,0,0,0.6);
+    border: 1px solid #ff4444;
+    display: flex; justify-content: center; align-items: center;
+    color: white;
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    text-shadow: 0 -1px 0 rgba(0,0,0,0.5);
+    /* Animates button physically pressing down */
+    animation: buttonPress 0.5s 1.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes buttonPress {
+    0% { transform: translateY(0); box-shadow: inset 0 6px 8px rgba(255,255,255,0.4), inset 0 -4px 8px rgba(0,0,0,0.4), 0 12px 0 #700000, 0 12px 2px rgba(0,0,0,0.8), 0 25px 25px rgba(0,0,0,0.6); }
+    50% { transform: translateY(12px); box-shadow: inset 0 6px 8px rgba(255,255,255,0.4), inset 0 -4px 8px rgba(0,0,0,0.4), 0 0px 0 #700000, 0 0px 2px rgba(0,0,0,0.8), 0 10px 15px rgba(0,0,0,0.6); }
+    100% { transform: translateY(0); box-shadow: inset 0 6px 8px rgba(255,255,255,0.4), inset 0 -4px 8px rgba(0,0,0,0.4), 0 12px 0 #700000, 0 12px 2px rgba(0,0,0,0.8), 0 25px 25px rgba(0,0,0,0.6); }
+  }
+
+
+  /* --- SPIN ANIMATIONS --- */
+  /* 
+    Triggered exactly after button hits bottom (1.75s).
+    Using a custom springy ease to snap numbers like a physical slot machine. 
+  */
+  .s-1 { animation: spin1 3.0s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+  .s-2 { animation: spin2 3.5s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+  .s-3 { animation: spin3 4.0s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+  .s-4 { animation: spin4 4.5s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+  .s-5 { animation: spin5 5.0s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+  .s-6 { animation: spin6 5.5s 1.75s cubic-bezier(0.2, 0.95, 0.1, 1.05) both; }
+
+  /* 
+    Values pre-calculated based on line-height: 1.5em.
+    Multiplier = index of target digit in strip.
+  */
+  @keyframes spin1 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-28 * 1.5em)); } }
+  @keyframes spin2 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-32 * 1.5em)); } }
+  @keyframes spin3 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-44 * 1.5em)); } }
+  @keyframes spin4 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-47 * 1.5em)); } }
+  @keyframes spin5 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-55 * 1.5em)); } }
+  @keyframes spin6 { 0% { transform: translateY(0); } 100% { transform: translateY(calc(-69 * 1.5em)); } }
+
+</style>
+</head>
+<body>
+  
+  <div class="scene">
+    <div class="machine">
+      <div class="label">Total Revenue</div>
+      
+      <div class="glass-panel">
+        <div class="odometer-frame">
+          <div class="wheel-static">$</div>
+          
+          <div class="wheel"><div class="strip s-1">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8</div></div>
+          <div class="wheel"><div class="strip s-2">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2</div></div>
+          <div class="wheel"><div class="strip s-3">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4</div></div>
+          
+          <div class="wheel-static">,</div>
+          
+          <div class="wheel"><div class="strip s-4">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7</div></div>
+          <div class="wheel"><div class="strip s-5">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5</div></div>
+          <div class="wheel"><div class="strip s-6">0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div></div>
+        </div>
+      </div>
+      
+      <div class="button-container">
+        <div class="button">SPIN</div>
+      </div>
+      
+    </div>
+  </div>
+
+</body>
+</html>

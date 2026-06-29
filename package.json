@@ -16,11 +16,14 @@
     "@google/genai": "^1.44.0",
     "chart.js": "^4.5.1",
     "countup.js": "^2.9.0",
+    "d3-geo": "^3.1.1",
     "dotenv": "^17.2.3",
     "html2canvas": "^1.4.1",
+    "jsdom": "^29.1.1",
     "jspdf": "^4.2.0",
     "lucide": "^1.16.0",
     "pptxgenjs": "^4.0.1",
-    "puppeteer": "^24.38.0"
+    "puppeteer": "^24.38.0",
+    "topojson-client": "^3.1.0"
   }
 }

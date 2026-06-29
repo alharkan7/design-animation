@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@900&display=swap');
+
+  :root {
+    --pink: #FF499E;
+    --yellow: #FFD300;
+    --teal: #00E5FF;
+    --orange: #FF6200;
+    --purple: #B200FF;
+    --black: #111111;
+  }
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    overflow: hidden; 
+    background-color: var(--black);
+  }
+
+  /* --- SCENE & BACKGROUND --- */
+  .scene {
+    position: absolute; inset: 0; width: 100vw; height: 100vh;
+    /* Exit animation mapping to pristine canvas */
+    animation: sceneExit 0.8s 8s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  @keyframes sceneExit {
+    0% { transform: scale(1); filter: blur(0px); opacity: 1; }
+    100% { transform: scale(1.5); filter: blur(20px); opacity: 0; }
+  }
+
+  .bg-base {
+    position: absolute; inset: -10vw; width: 120vw; height: 120vh;
+    background-color: #f7f7f7;
+    background-image: 
+      radial-gradient(var(--black) 15%, transparent 16%), 
+      radial-gradient(var(--black) 15%, transparent 16%);
+    background-size: 40px 40px;
+    background-position: 0 0, 20px 20px;
+    /* Subtle pan to keep it feeling alive without infinite looping */
+    animation: bgPan 4s linear forwards;
+  }
+
+  @keyframes bgPan {
+    0% { background-position: 0 0, 20px 20px; }
+    100% { background-position: -80px -80px, -60px -60px; }
+  }
+
+  /* --- CHECKERBOARD STRIP --- */
+  .checkerboard-wrap {
+    position: absolute;
+    top: 55vh; left: -10vw;
+    width: 120vw; height: 35vh;
+    transform: rotate(-10deg);
+    animation: checkSlideIn 0.8s 0s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  
+  .checkerboard {
+    width: 100%; height: 100%;
+    background-color: var(--pink);
+    background-image: 
+      linear-gradient(45deg, var(--black) 25%, transparent 25%, transparent 75%, var(--black) 75%, var(--black)),
+      linear-gradient(45deg, var(--black) 25%, transparent 25%, transparent 75%, var(--black) 75%, var(--black));
+    background-size: 60px 60px;
+    background-position: 0 0, 30px 30px;
+    border-top: 12px solid var(--black);
+    border-bottom: 12px solid var(--black);
+    box-shadow: 25px 25px 0 var(--black);
+    animation: checkPan 4s linear forwards;
+  }
+
+  @keyframes checkSlideIn {
+    0% { transform: translateY(100vh) rotate(-10deg); opacity: 0; }
+    100% { transform: translateY(0) rotate(-10deg); opacity: 1; }
+  }
+  @keyframes checkPan {
+    0% { background-position: 0 0, 30px 30px; }
+    100% { background-position: -120px 0, -90px 30px; }
+  }
+
+
+  /* --- GEOMETRIC SHAPES --- */
+  .shape-wrap {
+    position: absolute;
+    /* Uses CSS variables to control individual pop entrance delays and landing rotations */
+    animation: popIn 0.8s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0) rotate(calc(var(--rot) - 90deg)); opacity: 0; }
+    100% { transform: scale(1) rotate(var(--rot)); opacity: 1; }
+  }
+
+  .shape {
+    /* 
+      Authentic 1980s MTV stop-motion feel using step-end timing. 
+      Runs for a bounded duration before holding still to meet recording constraints.
+    */
+    animation: jitterSm 0.5s calc(var(--delay) + 0.8s) step-end 12 both;
+  }
+
+  @keyframes jitterSm {
+    0% { transform: translate(0,0) rotate(0deg); }
+    25% { transform: translate(12px, -8px) rotate(4deg); }
+    50% { transform: translate(-8px, 15px) rotate(-3deg); }
+    75% { transform: translate(-15px, -10px) rotate(8deg); }
+    100% { transform: translate(0,0) rotate(0deg); }
+  }
+
+  .s-circle {
+    width: 25vw; height: 25vw;
+    background: var(--teal);
+    border-radius: 50%;
+    border: 12px solid var(--black);
+    box-shadow: 20px 20px 0 var(--black);
+  }
+
+  .s-capsule {
+    width: 10vw; height: 25vw;
+    background: var(--orange);
+    border-radius: 5vw;
+    border: 12px solid var(--black);
+    box-shadow: 20px 20px 0 var(--black);
+  }
+
+  .s-stairs {
+    width: 25vw; height: 25vw;
+    filter: drop-shadow(20px 20px 0 var(--black));
+    overflow: visible;
+  }
+
+  .s-arch {
+    width: 22vw; height: 13.2vw;
+    filter: drop-shadow(15px 15px 0 var(--black));
+    overflow: visible;
+  }
+
+  /* Confetti Styles */
+  .confetti-plus {
+    width: 5vw; height: 5vw;
+    background: 
+      linear-gradient(var(--black), var(--black)) center/1.5vw 100% no-repeat,
+      linear-gradient(var(--black), var(--black)) center/100% 1.5vw no-repeat;
+    /* Uses standard drop shadow to avoid creating multiple rect SVGs */
+    filter: drop-shadow(8px 8px 0 var(--purple));
+  }
+
+  .confetti-squiggle {
+    width: 15vw; height: 6vw;
+    filter: drop-shadow(8px 8px 0 var(--orange));
+    overflow: visible;
+  }
+
+
+  /* --- TYPOGRAPHY --- */
+  .text-container {
+    position: absolute;
+    top: 48%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    display: flex;
+    white-space: nowrap;
+  }
+
+  .letter-wrap {
+    display: inline-block;
+    animation: letterPop 0.6s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes letterPop {
+    0% { transform: scale(0) translateY(100px) rotate(calc(var(--rot) - 45deg)); opacity: 0; }
+    100% { transform: scale(1) translateY(0) rotate(var(--rot)); opacity: 1; }
+  }
+
+  .letter {
+    display: inline-block;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14vw;
+    font-weight: 900;
+    -webkit-text-stroke: 6px var(--black);
+    /* Classic Memphis multi-layer heavy drop shadow extrusion */
+    text-shadow: 
+      4px 4px 0 var(--black),
+      8px 8px 0 var(--black),
+      12px 12px 0 var(--black),
+      16px 16px 0 var(--black),
+      20px 20px 0 var(--pink),
+      26px 26px 0 var(--black);
+    animation: jitterSm 0.5s calc(var(--delay) + 0.8s) step-end 10 both;
+  }
+
+</style>
+</head>
+<body>
+  <div class="scene">
+    
+    <!-- Halftone Polka Dot Base -->
+    <div class="bg-base"></div>
+    
+    <!-- Massive Slicing Checkerboard -->
+    <div class="checkerboard-wrap">
+      <div class="checkerboard"></div>
+    </div>
+  
+    <!-- Giant Geometric Shapes -->
+    <div class="shape-wrap" style="--rot: -15deg; --delay: 0.1s; top: -5vh; left: 5vw;">
+      <div class="shape s-circle"></div>
+    </div>
+  
+    <div class="shape-wrap" style="--rot: 25deg; --delay: 0.3s; top: 15vh; right: 10vw;">
+      <svg class="shape s-arch" viewBox="0 0 100 60">
+        <path d="M10,50 A 40,40 0 0 1 90,50 Z" fill="var(--yellow)" stroke="var(--black)" stroke-width="8" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  
+    <div class="shape-wrap" style="--rot: -5deg; --delay: 0.5s; bottom: 8vh; left: 15vw;">
+      <svg class="shape s-stairs" viewBox="0 0 100 100">
+        <path d="M10,90 L10,50 L40,50 L40,20 L70,20 L70,0 L90,0 L90,90 Z" fill="var(--pink)" stroke="var(--black)" stroke-width="6" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    
+    <div class="shape-wrap" style="--rot: -35deg; --delay: 0.4s; top: 40vh; right: 5vw;">
+      <div class="shape s-capsule"></div>
+    </div>
+  
+    <!-- Confetti Layer -->
+    <div class="shape-wrap" style="--rot: 15deg; --delay: 0.2s; top: 10vh; left: 45vw;">
+      <div class="shape confetti-plus"></div>
+    </div>
+    <div class="shape-wrap" style="--rot: 45deg; --delay: 0.6s; bottom: 20vh; right: 30vw;">
+      <div class="shape confetti-plus" style="filter: drop-shadow(8px 8px 0 var(--yellow));"></div>
+    </div>
+    <div class="shape-wrap" style="--rot: -20deg; --delay: 0.7s; bottom: 35vh; left: 5vw;">
+      <svg class="shape confetti-squiggle" viewBox="0 0 100 40">
+        <path d="M10,20 Q20,0 30,20 T50,20 T70,20 T90,20" fill="none" stroke="var(--black)" stroke-width="10" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="shape-wrap" style="--rot: 60deg; --delay: 0.5s; top: 25vh; right: 40vw;">
+      <svg class="shape confetti-squiggle" style="filter: drop-shadow(8px 8px 0 var(--pink));" viewBox="0 0 100 40">
+        <path d="M10,20 Q20,40 30,20 T50,20 T70,20 T90,20" fill="none" stroke="var(--black)" stroke-width="10" stroke-linecap="round"/>
+      </svg>
+    </div>
+  
+    <!-- Hero Typography (Stacked multi-shadow) -->
+    <div class="text-container">
+      <span class="letter-wrap" style="--delay: 0.8s; --rot: -6deg;"><span class="letter" style="color: var(--yellow)">R</span></span>
+      <span class="letter-wrap" style="--delay: 0.9s; --rot: 4deg;"><span class="letter" style="color: var(--pink)">A</span></span>
+      <span class="letter-wrap" style="--delay: 1.0s; --rot: -8deg;"><span class="letter" style="color: var(--teal)">D</span></span>
+      <span class="letter-wrap" style="--delay: 1.1s; --rot: 5deg;"><span class="letter" style="color: #fff">I</span></span>
+      <span class="letter-wrap" style="--delay: 1.2s; --rot: -5deg;"><span class="letter" style="color: var(--orange)">C</span></span>
+      <span class="letter-wrap" style="--delay: 1.3s; --rot: 10deg;"><span class="letter" style="color: var(--purple)">A</span></span>
+      <span class="letter-wrap" style="--delay: 1.4s; --rot: -4deg;"><span class="letter" style="color: var(--yellow)">L</span></span>
+    </div>
+  
+  </div>
+</body>
+</html>

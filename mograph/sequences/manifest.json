@@ -25,5 +25,12 @@
   { "file": "neumorphism.html", "name": "Neumorphic Soft UI" },
   { "file": "editorial-data.html", "name": "Editorial Data Infographic" },
   { "file": "retro-arcade.html", "name": "Retro 8-Bit Arcade" },
-  { "file": "retro-arcade-v2.html", "name": "Retro 8-Bit Data Dashboard" }
+  { "file": "retro-arcade-v2.html", "name": "Retro 8-Bit Data Dashboard" },
+  { "file": "deep-glassmorphism.html", "name": "Deep Glassmorphism & Light Refraction" },
+  { "file": "geo-flight-paths.html", "name": "Geospatial Map & Flight Paths" },
+  { "file": "apple-product-trailer.html", "name": "Apple-Style Product Trailer" },
+  { "file": "odometer.html", "name": "Skeuomorphic Mechanics Odometer" },
+  { "file": "memphis-design.html", "name": "Memphis Design / Pop-Art" },
+  { "file": "vox-explainer.html", "name": "Vox Journalistic Explainer" },
+  { "file": "vintage-science.html", "name": "Vintage Science Collage" }
 ]

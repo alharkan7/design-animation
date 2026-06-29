@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #000000;
+  }
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    background-color: var(--bg);
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    color-scheme: dark;
+    letter-spacing: -0.02em;
+  }
+
+  .scene {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Utility classes */
+  .metallic-text {
+    background: linear-gradient(180deg, #ffffff 0%, #666666 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* --- SCENE 1 --- */
+  .s1-container {
+    text-align: center;
+    font-size: clamp(4rem, 10vw, 10rem);
+    font-weight: 700;
+    animation: s1Exit 1s 3s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  .s1-word {
+    display: inline-block;
+  }
+  .s1-w1 {
+    animation: wordEnter 1.2s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .s1-w2 {
+    animation: wordEnter 1.2s 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    margin-left: 2vw;
+  }
+
+  @keyframes wordEnter {
+    0% { opacity: 0; transform: translateY(40px) scale(0.9); filter: blur(10px); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
+  }
+  @keyframes s1Exit {
+    0% { opacity: 1; transform: scale(1); filter: blur(0px); }
+    100% { opacity: 0; transform: scale(1.1); filter: blur(10px); }
+  }
+
+
+  /* --- SCENE 2 --- */
+  .scene-2 {
+    /* enters at 3.5s, exits via SaaS wipe at 7s */
+    animation: 
+      s2Enter 1s 3.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+      saasWipeOut 1s 7s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  @keyframes s2Enter {
+    0% { opacity: 0; transform: scale(0.92) translateY(20px); filter: blur(5px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
+  }
+
+  .device-svg {
+    width: clamp(700px, 70vw, 1200px);
+    overflow: visible;
+  }
+  
+  .device-path {
+    stroke-dasharray: 4000;
+    /* We animate stroke-dashoffset from 4000 down to 0 */
+    animation: pathTrace 2.5s 3.5s cubic-bezier(0.64, 0, 0.36, 1) both;
+  }
+
+  .device-fill {
+    opacity: 0;
+    animation: fillFade 1.2s 5.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes pathTrace {
+    0% { stroke-dashoffset: 4000; }
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes fillFade {
+    0% { opacity: 0; filter: blur(4px); }
+    100% { opacity: 1; filter: blur(0px); }
+  }
+
+
+  /* --- SCENE 3 --- */
+  .scene-3 {
+    background-color: #030303; /* absolute minimal brightness to separate from pitch black */
+    /* SaaS wipe in at 7s, exit at 11.5s */
+    animation: 
+      saasWipeIn 1s 7s cubic-bezier(0.76, 0, 0.24, 1) both,
+      finalExit 1s 11.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  /* Wipe animations */
+  @keyframes saasWipeOut {
+    0% { clip-path: inset(0 0 0 0); transform: scale(1) translateX(0); opacity: 1;}
+    100% { clip-path: inset(0 100% 0 0); transform: scale(0.92) translateX(-5vw); opacity: 0;}
+  }
+  
+  @keyframes saasWipeIn {
+    0% { clip-path: inset(0 0 0 100%); transform: scale(1.08) translateX(5vw); opacity: 0;}
+    100% { clip-path: inset(0 0 0 0); transform: scale(1) translateX(0); opacity: 1;}
+  }
+
+  @keyframes finalExit {
+    0% { opacity: 1; transform: scale(1); filter: blur(0px); }
+    100% { opacity: 0; transform: scale(1.1); filter: blur(10px); }
+  }
+
+  .s3-creeping-bg {
+    position: absolute;
+    inset: -5%; width: 110%; height: 110%;
+    background: radial-gradient(circle at center, #151520 0%, #000000 50%);
+    animation: creepingScale 13s 0s linear both;
+    z-index: 0;
+  }
+
+  @keyframes creepingScale {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.05); }
+  }
+
+  .s3-content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .s3-logo {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 2.5vh;
+    animation: 
+      logoEnter 1.2s 7.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes logoEnter {
+    0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .s3-title {
+    font-size: clamp(3rem, 6vw, 8rem);
+    font-weight: 700;
+    margin: 0 0 1vh 0;
+    animation: s3TextEnter 1.2s 7.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .s3-subtitle {
+    font-size: clamp(1.2rem, 2vw, 3rem);
+    color: #888888;
+    font-weight: 400;
+    margin: 0;
+    animation: s3TextEnter 1.2s 7.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes s3TextEnter {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Sweeping Lens Flare */
+  .flare {
+    position: absolute;
+    width: 50vw; height: 15vh;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.12) 0%, transparent 60%);
+    top: 40%; left: 30%;
+    transform: rotate(-15deg);
+    filter: blur(12px);
+    animation: flarePan 5s 7.5s cubic-bezier(0.64, 0, 0.36, 1) both;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  @keyframes flarePan {
+    0% { transform: translateX(-60vw) rotate(-20deg) scaleX(1); opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: translateX(60vw) rotate(-20deg) scaleX(2); opacity: 0; }
+  }
+
+</style>
+</head>
+<body>
+  
+  <!-- SCENE 1 -->
+  <div class="scene scene-1">
+    <div class="s1-container">
+      <div class="s1-word s1-w1 metallic-text">Pro.</div>
+      <div class="s1-word s1-w2 metallic-text">Power.</div>
+    </div>
+  </div>
+
+  <!-- SCENE 2 -->
+  <div class="scene scene-2">
+    <!-- Highly detailed MacBook Pro SVG trace -->
+    <svg class="device-svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <!-- Intense, high-contrast metallic edge gradient -->
+        <linearGradient id="metallic-edge" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#444444"/>
+          <stop offset="25%" stop-color="#ffffff"/>
+          <stop offset="50%" stop-color="#222222"/>
+          <stop offset="75%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="#444444"/>
+        </linearGradient>
+        
+        <!-- Screen Power On Gradient -->
+        <linearGradient id="screen-wallpaper" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#140a2b"/>
+          <stop offset="50%" stop-color="#090518"/>
+          <stop offset="100%" stop-color="#020105"/>
+        </linearGradient>
+        
+        <!-- Authentic angled glass reflection -->
+        <linearGradient id="glass-reflection" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.06)"/>
+          <stop offset="40%" stop-color="rgba(255,255,255,0.01)"/>
+          <stop offset="100%" stop-color="transparent"/>
+        </linearGradient>
+      </defs>
+      
+      <!-- LAYER 1: SILHOUETTE ANIMATION -->
+      <g fill="none" stroke="url(#metallic-edge)" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Outer Lid / Bezel -->
+        <path class="device-path" stroke-width="3" d="M 120 60 L 680 60 Q 700 60 700 80 L 700 380 L 100 380 L 100 80 Q 100 60 120 60 Z" />
+        
+        <!-- Inner Screen Area (Subtle silver trim) -->
+        <path class="device-path" stroke-width="1" stroke="rgba(255,255,255,0.2)" d="M 115 75 L 685 75 L 685 365 L 115 365 Z" />
+        
+        <!-- Notch (Iconic Pro Feature) -->
+        <path class="device-path" stroke-width="1.5" d="M 360 75 L 360 88 Q 360 95 367 95 L 433 95 Q 440 95 440 88 L 440 75 Z" />
+        
+        <!-- Lower Chassis Base (Thick bottom profile) -->
+        <path class="device-path" stroke-width="4.5" d="M 80 384 L 720 384 Q 740 384 740 395 L 740 405 Q 740 415 720 415 L 80 415 Q 60 415 60 405 L 60 395 Q 60 384 80 384 Z" />
+        
+        <!-- Hinge Mechanism (Rear) -->
+        <rect class="device-path" stroke-width="2" x="250" y="380" width="300" height="4" />
+        
+        <!-- Thumb Groove (Front Lip) -->
+        <path class="device-path" stroke-width="2" d="M 370 384 Q 400 394 430 384" />
+        
+        <!-- Keyboard Deck Reflection Lines (Top of Base) -->
+        <path class="device-path" stroke-width="1" stroke="rgba(255,255,255,0.15)" d="M 82 386 L 718 386" />
+      </g>
+      
+      <!-- LAYER 2: POWER ON (SCREEN & ILLUMINATION) -->
+      <g class="device-fill">
+        <!-- The Screen Backlight -->
+        <rect x="116" y="76" width="568" height="288" fill="url(#screen-wallpaper)" />
+        
+        <!-- Vibrant Abstract Wallpaper Element (Like macOS Sequoia/Monterey) -->
+        <circle cx="400" cy="220" r="140" fill="#6633ff" filter="blur(60px)" opacity="0.45" />
+        <ellipse cx="250" cy="150" rx="100" ry="60" fill="#ff2288" filter="blur(50px)" opacity="0.3" transform="rotate(-20 250 150)" />
+        
+        <!-- True Black Notch Overlay -->
+        <path d="M 359 75 L 359 88 Q 359 96 367 96 L 433 96 Q 441 96 441 88 L 441 75 Z" fill="#020202" />
+        
+        <!-- Camera Lenses in Notch -->
+        <circle cx="400" cy="85" r="3" fill="#111" />
+        <circle cx="400" cy="85" r="1" fill="#4488ff" opacity="0.7"/>
+        <circle cx="385" cy="85" r="2" fill="#00ff00" opacity="0.4" filter="blur(1px)"/> <!-- Green indicator dot -->
+        
+        <!-- Glass Screen Reflection (Physical sheen) -->
+        <polygon points="116,76 350,76 180,364 116,364" fill="url(#glass-reflection)" />
+      </g>
+    </svg>
+  </div>
+
+  <!-- SCENE 3 -->
+  <div class="scene scene-3">
+    <div class="s3-creeping-bg"></div>
+    <div class="flare"></div>
+    <div class="s3-content">
+      <!-- Minimalist geometric "M" logo with CNC milled styling -->
+      <svg class="s3-logo" viewBox="0 0 100 100" fill="none" stroke="url(#metallic-edge)">
+        <path d="M 20 80 L 20 20 L 50 60 L 80 20 L 80 80" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+      <h1 class="s3-title metallic-text">Studio M.</h1>
+      <p class="s3-subtitle">The ultimate workstation.</p>
+    </div>
+  </div>
+
+</body>
+</html>

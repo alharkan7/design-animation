@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap');
+
+  :root {
+    --bg: #000000;
+    /* Apple visionOS / macOS authentic glass variables */
+    --card-bg: rgba(40, 40, 45, 0.35);
+    --card-border-top: rgba(255, 255, 255, 0.25);
+    --card-border-bottom: rgba(255, 255, 255, 0.08);
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.55);
+    
+    /* Monterey/Ventura style vibrant colors */
+    --orb-1: #ff007f; /* Vivid Magenta */
+    --orb-2: #00d2ff; /* Electric Cyan */
+    --orb-3: #ff7e5f; /* Warm Sunset Orange */
+    --orb-4: #7928ca; /* Deep Purple */
+  }
+
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    background-color: var(--bg);
+    color: var(--text-main);
+    /* Inter approximates SF Pro well */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    color-scheme: dark;
+    letter-spacing: -0.015em;
+  }
+
+  .scene {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+  }
+
+  /* Orbs for background gradient meshes */
+  .orb-wrapper {
+    position: absolute;
+  }
+
+  .orb-1-wrap {
+    top: -15vh; left: -10vw;
+    animation: 
+      orbEnter 1.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+      orbExit 1s 11s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  .orb-2-wrap {
+    bottom: -20vh; right: -5vw;
+    animation: 
+      orbEnter 2s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both,
+      orbExit 1s 11.2s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  .orb-3-wrap {
+    top: 40vh; left: 35vw;
+    animation: 
+      orbEnter 2.2s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both,
+      orbExit 1s 11.4s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+  .orb-4-wrap {
+    top: -5vh; right: 20vw;
+    animation: 
+      orbEnter 2.4s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both,
+      orbExit 1s 11.3s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  .orb {
+    border-radius: 50%;
+    /* Extreme blur to create fluid gradient mesh effect */
+    filter: blur(120px);
+  }
+
+  .orb-1 {
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
+    animation: orbDrift1 13s 0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  .orb-2 {
+    width: 70vw; height: 70vw;
+    background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
+    animation: orbDrift2 13s 0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  .orb-3 {
+    width: 50vw; height: 50vw;
+    background: radial-gradient(circle, var(--orb-3) 0%, transparent 70%);
+    animation: orbDrift3 13s 0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  .orb-4 {
+    width: 55vw; height: 55vw;
+    background: radial-gradient(circle, var(--orb-4) 0%, transparent 70%);
+    animation: orbDrift4 13s 0s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  }
+
+  /* Authentic Apple Glass */
+  .glass-card {
+    position: absolute;
+    background: var(--card-bg);
+    /* High blur and saturation boost for the vivid macOS feel */
+    backdrop-filter: blur(50px) saturate(180%);
+    -webkit-backdrop-filter: blur(50px) saturate(180%);
+    
+    /* Subtle variable borders: brighter top edge for light catching */
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top-color: var(--card-border-top);
+    border-bottom-color: var(--card-border-bottom);
+    border-radius: 36px; /* Squircle appearance */
+    
+    /* Multi-layered shadows: deep drop shadow + inner specular highlights */
+    box-shadow: 
+      0 40px 80px rgba(0,0,0,0.5), 
+      inset 0 1px 1px rgba(255,255,255,0.4),
+      inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .card-hero {
+    width: clamp(450px, 45vw, 900px);
+    height: clamp(300px, 35vh, 600px);
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem;
+    z-index: 10;
+    
+    animation: 
+      cardEnterHero 1.2s 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      cardExitHero 0.6s 10.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  .card-hero h1 {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(3.5rem, 6vw, 7rem);
+    font-weight: 500;
+    margin: 0 0 1.5rem 0;
+    /* Soft white gradient text */
+    background: linear-gradient(180deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .card-hero p {
+    font-size: clamp(1.2rem, 1.8vw, 2.5rem);
+    color: var(--text-muted);
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .card-left {
+    width: clamp(280px, 20vw, 450px);
+    height: clamp(380px, 40vh, 650px);
+    left: 8vw; top: 25vh;
+    z-index: 5;
+    animation: 
+      cardEnterSide 1.2s 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+      cardExitSide 0.6s 10.3s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  .card-right {
+    width: clamp(350px, 28vw, 600px);
+    height: clamp(220px, 25vh, 450px);
+    right: 8vw; bottom: 15vh;
+    z-index: 15;
+    animation: 
+      cardEnterSideRight 1.2s 2.1s cubic-bezier(0.16, 1, 0.3, 1) both,
+      cardExitSideRight 0.6s 10.7s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  }
+
+  @keyframes orbEnter {
+    0% { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 0.9; transform: scale(1); }
+  }
+  @keyframes orbExit {
+    0% { opacity: 0.9; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.8); }
+  }
+
+  @keyframes orbDrift1 {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(15vw, 15vh); }
+  }
+  @keyframes orbDrift2 {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-20vw, -10vh); }
+  }
+  @keyframes orbDrift3 {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(15vw, -30vh); }
+  }
+  @keyframes orbDrift4 {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-15vw, 20vh); }
+  }
+
+  @keyframes cardEnterHero {
+    0% { opacity: 0; transform: translate(-50%, -40%) scale(0.95); filter: blur(10px); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0px); }
+  }
+  @keyframes cardExitHero {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(0.95); filter: blur(10px); }
+  }
+
+  @keyframes cardEnterSide {
+    0% { opacity: 0; transform: translateX(-5vw) scale(0.95); filter: blur(10px); }
+    100% { opacity: 1; transform: translateX(0) scale(1); filter: blur(0px); }
+  }
+  @keyframes cardExitSide {
+    0% { opacity: 1; transform: translateX(0) scale(1); }
+    100% { opacity: 0; transform: translateX(-5vw) scale(0.95); }
+  }
+
+  @keyframes cardEnterSideRight {
+    0% { opacity: 0; transform: translateX(5vw) scale(0.95); filter: blur(10px); }
+    100% { opacity: 1; transform: translateX(0) scale(1); filter: blur(0px); }
+  }
+  @keyframes cardExitSideRight {
+    0% { opacity: 1; transform: translateX(0) scale(1); }
+    100% { opacity: 0; transform: translateX(5vw) scale(0.95); }
+  }
+
+  /* UI Elements inside cards (Skeletons to show refraction) */
+  .ui-skeleton {
+    width: 100%;
+    height: 2vh;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-bottom: 2vh;
+  }
+  .ui-skeleton.short { width: 60%; }
+  .ui-skeleton.medium { width: 80%; }
+  .ui-skeleton.circle { 
+    width: 8vh; 
+    height: 8vh; 
+    border-radius: 50%; 
+    margin-bottom: 4vh; 
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .ui-row {
+    display: flex;
+    gap: 2vh;
+    margin-bottom: 2vh;
+  }
+  .ui-box {
+    flex: 1;
+    height: 12vh;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .card-padding {
+    padding: 4vh;
+  }
+</style>
+</head>
+<body>
+  <div class="scene">
+    <div class="orb-wrapper orb-1-wrap"><div class="orb orb-1"></div></div>
+    <div class="orb-wrapper orb-2-wrap"><div class="orb orb-2"></div></div>
+    <div class="orb-wrapper orb-3-wrap"><div class="orb orb-3"></div></div>
+    <div class="orb-wrapper orb-4-wrap"><div class="orb orb-4"></div></div>
+    
+    <div class="glass-card card-left">
+      <div class="card-padding">
+        <div class="ui-skeleton circle"></div>
+        <div class="ui-skeleton"></div>
+        <div class="ui-skeleton medium"></div>
+        <div class="ui-skeleton short"></div>
+        <div style="height: 4vh;"></div>
+        <div class="ui-row">
+          <div class="ui-box"></div>
+          <div class="ui-box"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="glass-card card-right">
+      <div class="card-padding">
+        <div class="ui-skeleton medium"></div>
+        <div class="ui-skeleton short"></div>
+        <div style="height: 2vh;"></div>
+        <div class="ui-skeleton"></div>
+        <div class="ui-skeleton"></div>
+      </div>
+    </div>
+    
+    <div class="glass-card card-hero">
+      <h1>Spatial Vision</h1>
+      <p>Authentic glassmorphism with dynamic light</p>
+    </div>
+  </div>
+</body>
+</html>

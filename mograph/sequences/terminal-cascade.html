@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* Reset & Base */
+    :root {
+      color-scheme: dark;
+      --bg: #090a10;
+      --ide-bg: #15161e;
+      --ide-border: #2a2b36;
+      --syntax-keyword: #ff7b72;
+      --syntax-func: #d2a8ff;
+      --syntax-string: #a5d6ff;
+      --syntax-text: #c9d1d9;
+      --syntax-comment: #8b949e;
+      --accent: #58a6ff;
+      --accent-glow: rgba(88, 166, 255, 0.5);
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 2000px;
+    }
+
+    /* 
+     * Camera Wrapper
+     */
+    .camera {
+      width: 60vw;
+      height: 42vw;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: cameraTilt 14s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+
+    @keyframes cameraTilt {
+      0%, 35% { transform: rotateX(0deg) rotateZ(0deg) scale(1); }
+      45%, 85% { transform: rotateX(55deg) rotateZ(-35deg) scale(0.9) translateY(-5vw); }
+      95%, 100% { transform: rotateX(0deg) rotateZ(0deg) scale(1); }
+    }
+
+    /* 
+     * IDE Window 
+     */
+    .ide-window {
+      position: absolute;
+      inset: 0;
+      background: var(--ide-bg);
+      border: 2px solid var(--ide-border);
+      border-radius: 1vw;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform-style: preserve-3d;
+      
+      animation: ideEnter 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 ideExit 1s 13s cubic-bezier(0.76, 0, 0.24, 1) forwards,
+                 ideShadow 14s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    
+    @keyframes ideEnter {
+      0% { transform: scale(0.9) translateY(4vw); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes ideExit {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0; }
+    }
+    @keyframes ideShadow {
+      0%, 35% { box-shadow: 0 2vw 4vw rgba(0,0,0,0.3); }
+      45%, 85% { box-shadow: -4vw 6vw 8vw rgba(0,0,0,0.6); }
+      95%, 100% { box-shadow: 0 2vw 4vw rgba(0,0,0,0.3); }
+    }
+
+    /* Header */
+    .ide-header {
+      height: 3vw;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 2px solid var(--ide-border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5vw;
+      gap: 0.6vw;
+      transform: translateZ(0.1vw);
+    }
+    .mac-btn { width: 0.9vw; height: 0.9vw; border-radius: 50%; }
+    .mac-close { background: #ff5f56; }
+    .mac-min { background: #ffbd2e; }
+    .mac-max { background: #27c93f; }
+    .ide-title {
+      margin: 0 auto;
+      font-family: -apple-system, sans-serif;
+      font-size: 1vw;
+      font-weight: 500;
+      color: var(--syntax-comment);
+      transform: translateX(-1.5vw);
+    }
+
+    /* Editor Body */
+    .ide-body {
+      flex: 1;
+      padding: 2vw;
+      font-size: 1.4vw;
+      line-height: 1.6;
+      color: var(--syntax-text);
+      transform-style: preserve-3d;
+      position: relative;
+    }
+
+    /* Typing Lines */
+    .line {
+      display: flex;
+      white-space: pre;
+      overflow: hidden;
+      max-width: 0;
+      animation: typeLine 0.4s steps(30, end) forwards;
+    }
+    @keyframes typeLine {
+      from { max-width: 0; }
+      to { max-width: 100%; }
+    }
+    .line-1 { animation-delay: 1.2s; }
+    .line-2 { animation-delay: 1.6s; }
+    .line-3 { animation-delay: 2.0s; }
+    .line-4 { animation-delay: 2.2s; }
+    .line-5 { animation-delay: 2.5s; }
+    .line-6 { animation-delay: 2.7s; }
+    .line-7 { animation-delay: 2.9s; }
+    .line-8 { animation-delay: 3.3s; }
+    .line-9 { animation-delay: 3.5s; }
+    .line-10 { animation-delay: 3.7s; }
+
+    /* Syntax */
+    .kw { color: var(--syntax-keyword); font-weight: 600; }
+    .fn { color: var(--syntax-func); }
+    .st { color: var(--syntax-string); }
+    .cm { color: var(--syntax-comment); font-style: italic; }
+
+    /* Cursor */
+    .cursor {
+      display: inline-block;
+      width: 0.7vw;
+      height: 1.5vw;
+      background: var(--accent);
+      vertical-align: middle;
+      opacity: 0;
+    }
+    .line-10 .cursor { animation: blinkCursorEnd 14s 3.7s step-end forwards; }
+    @keyframes blinkCursorEnd {
+      0%, 4%, 8%, 12% { opacity: 1; }
+      2%, 6%, 10% { opacity: 0; }
+      14%, 100% { opacity: 0; }
+    }
+
+    /* 
+     * Extruding Code Blocks 
+     */
+    .block {
+      transform-style: preserve-3d;
+      border-radius: 0.5vw;
+      padding: 0.3vw 0.8vw;
+      margin-left: -0.8vw;
+      position: relative;
+      background: transparent;
+      border: 1px solid transparent;
+      animation: blockExtrude 14s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    
+    /* Code fades out as UI rises */
+    .code-content {
+      animation: codeFade 14s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes codeFade {
+      0%, 52% { opacity: 1; filter: blur(0); }
+      58%, 85% { opacity: 0.2; filter: blur(2px); }
+      92%, 100% { opacity: 1; filter: blur(0); }
+    }
+
+    .block::before, .block::after {
+      content: '';
+      position: absolute;
+      background: var(--ide-border);
+      opacity: 0;
+      animation: blockWalls 14s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .block::before {
+      bottom: -1px; left: -1px; right: -1px;
+      height: 5vw; 
+      transform-origin: top;
+      transform: rotateX(-90deg);
+      background: #0b0c10;
+    }
+    .block::after {
+      top: -1px; bottom: -1px; right: -1px;
+      width: 5vw;
+      transform-origin: left;
+      transform: rotateY(90deg);
+      background: #171820;
+    }
+
+    @keyframes blockExtrude {
+      0%, 48% { transform: translateZ(0); background: transparent; border-color: transparent; }
+      52%, 85% { transform: translateZ(5vw); background: rgba(21, 22, 30, 0.95); border-color: rgba(255,255,255,0.15); }
+      90%, 100% { transform: translateZ(0); background: transparent; border-color: transparent; }
+    }
+    @keyframes blockWalls {
+      0%, 48% { opacity: 0; }
+      52%, 85% { opacity: 1; }
+      90%, 100% { opacity: 0; }
+    }
+    
+    .block-1 { animation-delay: 0s; }
+    .block-2 { animation-delay: 0.1s; }
+    .block-3 { animation-delay: 0.2s; }
+
+    /* 
+     * UI Nodes (The "Visual Diagram" breaking out of the code) 
+     */
+    .ui-node {
+      position: absolute;
+      top: 50%;
+      left: 70%; /* offset to right so it doesn't cover all code */
+      width: 14vw;
+      height: 9vw;
+      background: rgba(20, 20, 28, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 0.8vw;
+      display: flex;
+      flex-direction: column;
+      padding: 1vw;
+      box-sizing: border-box;
+      
+      /* Start hidden inside the code block */
+      opacity: 0;
+      transform: translate(-50%, -50%) translateZ(0) scale(0.5);
+      animation: uiReveal 14s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes uiReveal {
+      0%, 53% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) translateZ(0) scale(0.5); 
+      }
+      58%, 85% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) translateZ(12vw) scale(1); 
+        box-shadow: -3vw 6vw 6vw rgba(0,0,0,0.8), inset 0 0 2vw rgba(255,255,255,0.05);
+      }
+      92%, 100% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) translateZ(0) scale(0.5); 
+      }
+    }
+
+    /* Staggered UI reveals */
+    .block-1 .ui-node { animation-delay: 0s; left: 80%; }
+    .block-2 .ui-node { animation-delay: 0.2s; left: 85%; width: 18vw; }
+    .block-3 .ui-node { animation-delay: 0.4s; left: 60%; width: 10vw; height: 6vw; justify-content: center; align-items: center; }
+
+    /* Node 1: Server Stack */
+    .server-blade {
+      flex: 1;
+      background: #1e1f29;
+      border: 1px solid #333;
+      border-radius: 0.4vw;
+      margin-bottom: 0.5vw;
+      display: flex;
+      align-items: center;
+      padding: 0 1vw;
+      gap: 0.5vw;
+    }
+    .server-blade:last-child { margin-bottom: 0; }
+    .blade-light { width: 0.6vw; height: 0.6vw; border-radius: 50%; background: #444; }
+    .blade-light.active { background: #27c93f; box-shadow: 0 0 8px #27c93f; }
+
+    /* Node 2: Dashboard */
+    .dash-head {
+      height: 1.5vw;
+      background: #2a2b36;
+      border-radius: 0.4vw;
+      margin-bottom: 1vw;
+      width: 40%;
+    }
+    .dash-grid {
+      display: flex;
+      gap: 1vw;
+      flex: 1;
+      align-items: flex-end;
+    }
+    .dash-bar {
+      flex: 1;
+      background: linear-gradient(to top, var(--accent), #b620e0);
+      border-radius: 0.4vw 0.4vw 0 0;
+    }
+
+    /* Node 3: Status Badge */
+    .status-ring {
+      width: 2.5vw;
+      height: 2.5vw;
+      border-radius: 50%;
+      border: 0.3vw solid #27c93f;
+      border-top-color: transparent;
+      animation: spin 2s linear infinite;
+      margin-bottom: 0.5vw;
+      flex-shrink: 0;
+    }
+    .status-text {
+      font-family: -apple-system, sans-serif;
+      font-size: 0.8vw;
+      font-weight: 700;
+      color: #27c93f;
+      letter-spacing: 0.1vw;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+
+    /* SVG Connections */
+    .connections {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      transform: translateZ(0.1vw);
+    }
+    .path-line {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 800;
+      stroke-dashoffset: 800;
+      filter: drop-shadow(0 0 10px var(--accent-glow));
+      opacity: 0;
+      animation: drawPath 14s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    .path-1 { animation-delay: 0.2s; }
+    .path-2 { animation-delay: 0.4s; }
+
+    @keyframes drawPath {
+      0%, 55% { stroke-dashoffset: 800; opacity: 0; }
+      56% { opacity: 1; }
+      63%, 82% { stroke-dashoffset: 0; opacity: 1; }
+      86% { stroke-dashoffset: -800; opacity: 0; }
+      100% { stroke-dashoffset: -800; opacity: 0; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="camera">
+    <div class="ide-window">
+      <!-- Header -->
+      <div class="ide-header">
+        <div class="mac-btn mac-close"></div>
+        <div class="mac-btn mac-min"></div>
+        <div class="mac-btn mac-max"></div>
+        <div class="ide-title">network_graph.ts</div>
+      </div>
+      
+      <!-- Code Body -->
+      <div class="ide-body">
+        
+        <!-- Block 1: Node Core -->
+        <div class="block block-1">
+          <div class="code-content">
+            <div class="line line-1"><span class="cm">// 1. Initialize Neural Core</span></div>
+            <div class="line line-2"><span class="kw">const</span> node = <span class="kw">new</span> <span class="fn">ComputeNode</span>();</div>
+          </div>
+          
+          <!-- Breaking out UI -->
+          <div class="ui-node node-server">
+            <div class="server-blade">
+              <div class="blade-light active"></div>
+              <div class="blade-light"></div>
+            </div>
+            <div class="server-blade">
+              <div class="blade-light active"></div>
+            </div>
+            <div class="server-blade">
+              <div class="blade-light active"></div>
+              <div class="blade-light active"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="line line-3"><br></div>
+        
+        <!-- Block 2: Topology Config -->
+        <div class="block block-2">
+          <div class="code-content">
+            <div class="line line-4">node.<span class="fn">mountTopology</span>({</div>
+            <div class="line line-5">&nbsp;&nbsp;region: <span class="st">"us-east-cluster"</span>,</div>
+            <div class="line line-6">&nbsp;&nbsp;meshEnabled: <span class="kw">true</span>,</div>
+            <div class="line line-7">});</div>
+          </div>
+          
+          <!-- Breaking out UI -->
+          <div class="ui-node node-dash">
+            <div class="dash-head"></div>
+            <div class="dash-grid">
+              <div class="dash-bar" style="height: 40%"></div>
+              <div class="dash-bar" style="height: 80%"></div>
+              <div class="dash-bar" style="height: 60%"></div>
+              <div class="dash-bar" style="height: 100%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="line line-8"><br></div>
+        
+        <!-- Block 3: Deployment -->
+        <div class="block block-3">
+          <div class="code-content">
+            <div class="line line-9">await node.<span class="fn">deploy</span>();</div>
+            <div class="line line-10">console.<span class="fn">log</span>(<span class="st">"Active."</span>);<span class="cursor"></span></div>
+          </div>
+          
+          <!-- Breaking out UI -->
+          <div class="ui-node node-status">
+            <div class="status-ring"></div>
+            <div class="status-text">ONLINE</div>
+          </div>
+        </div>
+
+        <!-- Flowchart Lines -->
+        <svg class="connections" viewBox="0 0 600 390">
+          <!-- Block 1 to Block 2 -->
+          <path class="path-line path-1" d="M 20 42 L 5 42 L 5 130 L 20 130" />
+          <!-- Block 2 to Block 3 -->
+          <path class="path-line path-2" d="M 20 130 L 5 130 L 5 230 L 20 230" />
+          <!-- Branching data path to the UI nodes -->
+          <path class="path-line path-2" d="M 300 42 L 350 42 L 350 130 L 400 130" />
+        </svg>
+        
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

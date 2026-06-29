@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* 
+     * Editorial Data Visualization (NYT / Bloomberg Style)
+     * High-end typography, clean grid lines, and native CSS counters.
+     */
+     
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap');
+
+    :root {
+      --bg-canvas: #E9E8E4; /* Soft dark canvas to make the paper pop */
+      --bg-paper: #F8F7F3;
+      --text-main: #111111;
+      --text-muted: #666666;
+      --grid: #D0D0CC;
+      --accent: #D84226; /* Editorial Burnt Orange */
+      --accent-light: rgba(216, 66, 38, 0.2);
+    }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: var(--bg-canvas);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-main);
+    }
+
+    /* ---------------------------------
+       The Paper Card
+       --------------------------------- */
+    .editorial-card {
+      width: 60vw;
+      background: var(--bg-paper);
+      padding: 4vw;
+      box-shadow: 0 3vw 6vw rgba(0,0,0,0.1), 0 1vw 2vw rgba(0,0,0,0.05);
+      border-top: 0.4vw solid var(--text-main);
+      position: relative;
+      animation: cardLoop 12s both infinite; /* Master loop */
+    }
+    @keyframes cardLoop {
+      0%, 3% { opacity: 0; transform: translateY(2vw); }
+      8%, 92% { opacity: 1; transform: translateY(0); }
+      97%, 100% { opacity: 0; transform: translateY(-2vw); }
+    }
+
+    /* ---------------------------------
+       Typography Header
+       --------------------------------- */
+    .kicker {
+      font-weight: 700;
+      font-size: 0.8vw;
+      letter-spacing: 0.15vw;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--text-main);
+      display: inline-block;
+      padding-bottom: 0.3vw;
+      margin-bottom: 1vw;
+      animation: fadeUp1 12s both infinite;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5vw;
+      margin: 0 0 1vw 0;
+      line-height: 1.1;
+      animation: fadeUp2 12s both infinite;
+    }
+    .subtitle {
+      font-size: 1.2vw;
+      color: var(--text-muted);
+      max-width: 80%;
+      line-height: 1.5;
+      margin-bottom: 3vw;
+      animation: fadeUp3 12s both infinite;
+    }
+    
+    @keyframes fadeUp1 { 0%, 5% { opacity: 0; transform: translateY(1vw); } 12%, 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp2 { 0%, 7% { opacity: 0; transform: translateY(1vw); } 14%, 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp3 { 0%, 9% { opacity: 0; transform: translateY(1vw); } 16%, 100% { opacity: 1; transform: translateY(0); } }
+
+    /* ---------------------------------
+       Data Row (Counters)
+       --------------------------------- */
+    .data-row {
+      display: flex;
+      gap: 4vw;
+      margin-bottom: 2vw;
+      animation: fadeUp4 12s both infinite;
+    }
+    @keyframes fadeUp4 { 0%, 12% { opacity: 0; transform: translateY(1vw); } 19%, 100% { opacity: 1; transform: translateY(0); } }
+    
+    .stat-label {
+      font-size: 0.8vw;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.5vw;
+      border-left: 2px solid var(--accent);
+      padding-left: 0.5vw;
+    }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 4vw;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .prefix, .suffix { font-size: 2vw; color: var(--text-muted); font-family: 'Inter', sans-serif; }
+    
+    /* Native CSS Counting Magic */
+    @property --val1 { syntax: '<integer>'; initial-value: 0; inherits: false; }
+    @property --val2 { syntax: '<integer>'; initial-value: 0; inherits: false; }
+
+    .num-1 {
+      counter-reset: n1 var(--val1);
+      animation: count1 12s cubic-bezier(0.16, 1, 0.3, 1) both infinite;
+    }
+    .num-1::after { content: counter(n1); }
+
+    .num-2 {
+      counter-reset: n2 var(--val2);
+      animation: count2 12s cubic-bezier(0.16, 1, 0.3, 1) both infinite;
+    }
+    .num-2::after { content: counter(n2); }
+
+    /* Count up starts precisely as the line finishes drawing (approx 35%) */
+    @keyframes count1 {
+      0%, 30% { --val1: 102; }
+      45%, 100% { --val1: 847; }
+    }
+    @keyframes count2 {
+      0%, 35% { --val2: 14; }
+      50%, 100% { --val2: 342; }
+    }
+
+    /* ---------------------------------
+       The Chart & SVG
+       --------------------------------- */
+    .chart-container {
+      width: 100%;
+      position: relative;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    
+    /* Grid Animations */
+    .grid-lines line {
+      stroke: var(--grid);
+      stroke-width: 1;
+      stroke-dasharray: 800;
+      stroke-dashoffset: 800;
+      animation: drawGrid 12s cubic-bezier(0.16, 1, 0.3, 1) both infinite;
+    }
+    .grid-lines line:nth-child(1) { animation-name: drawGrid1; }
+    .grid-lines line:nth-child(2) { animation-name: drawGrid2; }
+    .grid-lines line:nth-child(3) { animation-name: drawGrid3; }
+    .grid-lines line:nth-child(4) { animation-name: drawGrid4; }
+    
+    @keyframes drawGrid1 { 0%, 14% { stroke-dashoffset: 800; } 30%, 100% { stroke-dashoffset: 0; } }
+    @keyframes drawGrid2 { 0%, 16% { stroke-dashoffset: 800; } 32%, 100% { stroke-dashoffset: 0; } }
+    @keyframes drawGrid3 { 0%, 18% { stroke-dashoffset: 800; } 34%, 100% { stroke-dashoffset: 0; } }
+    @keyframes drawGrid4 { 0%, 20% { stroke-dashoffset: 800; } 36%, 100% { stroke-dashoffset: 0; } }
+
+    /* Axis Text */
+    .axis-labels text {
+      fill: var(--text-muted);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      animation: fadeAxis 12s both infinite;
+    }
+    @keyframes fadeAxis { 0%, 25% { opacity: 0; } 30%, 100% { opacity: 1; } }
+
+    /* The Main Data Line */
+    .chart-line {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 1200;
+      stroke-dashoffset: 1200;
+      animation: drawLine 12s cubic-bezier(0.65, 0, 0.35, 1) both infinite;
+    }
+    @keyframes drawLine {
+      0%, 20% { stroke-dashoffset: 1200; }
+      40%, 100% { stroke-dashoffset: 0; }
+    }
+
+    /* The Area Fill */
+    .chart-area {
+      animation: fadeArea 12s both infinite;
+    }
+    @keyframes fadeArea {
+      0%, 35% { opacity: 0; }
+      45%, 100% { opacity: 1; }
+    }
+
+    /* The Data Dots */
+    .data-dots circle {
+      fill: var(--bg-paper);
+      stroke: var(--accent);
+      stroke-width: 3;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    /* Dots pop in sequentially right as the line crosses them */
+    .data-dots circle:nth-child(1) { animation: pD1 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+    .data-dots circle:nth-child(2) { animation: pD2 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+    .data-dots circle:nth-child(3) { animation: pD3 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+    .data-dots circle:nth-child(4) { animation: pD4 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+    .data-dots circle:nth-child(5) { animation: pD5 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+    .data-dots circle:nth-child(6) { animation: pD6 12s cubic-bezier(0.34, 1.56, 0.64, 1) both infinite; }
+
+    @keyframes pD1 { 0%, 24% { transform: scale(0); } 28%, 100% { transform: scale(1); } }
+    @keyframes pD2 { 0%, 27% { transform: scale(0); } 31%, 100% { transform: scale(1); } }
+    @keyframes pD3 { 0%, 30% { transform: scale(0); } 34%, 100% { transform: scale(1); } }
+    @keyframes pD4 { 0%, 33% { transform: scale(0); } 37%, 100% { transform: scale(1); } }
+    @keyframes pD5 { 0%, 36% { transform: scale(0); } 40%, 100% { transform: scale(1); } }
+    @keyframes pD6 { 0%, 39% { transform: scale(0); } 43%, 100% { transform: scale(1.5); } } /* The peak dot is larger */
+
+    /* ---------------------------------
+       Editorial Annotations
+       --------------------------------- */
+    .anno-line {
+      fill: none; 
+      stroke: var(--text-main); 
+      stroke-width: 1.5; 
+      stroke-dasharray: 4 4;
+      stroke-dasharray: 300;
+      stroke-dashoffset: 300;
+      animation: drawAnno 12s cubic-bezier(0.16, 1, 0.3, 1) both infinite;
+    }
+    @keyframes drawAnno {
+      0%, 42% { stroke-dashoffset: 300; }
+      50%, 100% { stroke-dashoffset: 0; }
+    }
+
+    .annotation-box {
+      position: absolute;
+      top: -2vw; 
+      left: 30vw; /* Positioned right near the peak line */
+      width: 18vw;
+      background: white;
+      border: 1px solid var(--grid);
+      padding: 1vw 1.5vw;
+      box-shadow: 0 1vw 2vw rgba(0,0,0,0.05);
+      animation: dropAnno 12s cubic-bezier(0.16, 1, 0.3, 1) both infinite;
+    }
+    .annotation-box strong {
+      display: block;
+      font-size: 1vw;
+      margin-bottom: 0.3vw;
+      color: var(--accent);
+    }
+    .annotation-box p {
+      margin: 0;
+      font-size: 0.8vw;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    
+    @keyframes dropAnno {
+      0%, 45% { opacity: 0; transform: translateY(-1vw); }
+      55%, 100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---------------------------------
+       Responsive Portrait (Vertical) Layout
+       --------------------------------- */
+    @media (orientation: portrait) {
+      .editorial-card {
+        width: 85vw;
+        padding: 6vw;
+        border-top-width: 1vw;
+      }
+      .kicker { font-size: 2vw; padding-bottom: 1vw; margin-bottom: 2vw; letter-spacing: 0.3vw; border-bottom-width: 0.3vw; }
+      h1 { font-size: 7vw; margin-bottom: 2vw; }
+      .subtitle { font-size: 3vw; max-width: 100%; margin-bottom: 6vw; line-height: 1.4; }
+      
+      .data-row { 
+        flex-direction: column; 
+        gap: 4vw; 
+        margin-bottom: 6vw; 
+      }
+      
+      .stat-label { font-size: 2vw; padding-left: 1vw; margin-bottom: 1vw; border-left-width: 0.5vw; }
+      .stat-value { font-size: 10vw; }
+      .prefix, .suffix { font-size: 5vw; }
+      
+      .annotation-box { 
+        width: 40vw; 
+        left: 35vw; 
+        top: -6vw; 
+        padding: 2vw 2.5vw; 
+        border-width: 0.3vw;
+        box-shadow: 0 2vw 4vw rgba(0,0,0,0.08);
+      }
+      .annotation-box strong { font-size: 2.5vw; margin-bottom: 1vw; }
+      .annotation-box p { font-size: 2.2vw; line-height: 1.4; }
+      
+      .axis-labels text { font-size: 24px; }
+      .grid-lines line { stroke-width: 2; }
+      .chart-line { stroke-width: 6; }
+      .data-dots circle { r: 8; stroke-width: 4; }
+      .peak-dot { r: 10 !important; }
+      .anno-line { stroke-width: 3; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="editorial-card">
+    
+    <header>
+      <div class="kicker">GLOBAL MARKETS</div>
+      <h1>Quarterly Yield Outperforms</h1>
+      <div class="subtitle">Despite early Q1 volatility, emerging technology hardware sectors drove a record-breaking financial surge into the fourth quarter.</div>
+    </header>
+
+    <div class="data-row">
+       <div class="stat-box">
+         <div class="stat-label">NET INCREASE</div>
+         <div class="stat-value"><span class="prefix">$</span><span class="num-1"></span><span class="suffix">B</span></div>
+       </div>
+       <div class="stat-box">
+         <div class="stat-label">YOY GROWTH</div>
+         <div class="stat-value"><span class="prefix">+</span><span class="num-2"></span><span class="suffix">%</span></div>
+       </div>
+    </div>
+
+    <div class="chart-container">
+      <!-- 
+        Coordinate system: 
+        X axis spans 50 to 750 (700 width)
+        Y axis spans 40 to 240 (200 height)
+      -->
+      <svg viewBox="0 0 800 280">
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        
+        <!-- Grid Lines -->
+        <g class="grid-lines">
+           <line x1="60" y1="40" x2="750" y2="40" />
+           <line x1="60" y1="106" x2="750" y2="106" />
+           <line x1="60" y1="173" x2="750" y2="173" />
+           <line x1="60" y1="240" x2="750" y2="240" />
+        </g>
+        
+        <!-- Y-Axis Labels -->
+        <g class="axis-labels y-axis">
+           <text x="50" y="44" text-anchor="end">75k</text>
+           <text x="50" y="110" text-anchor="end">50k</text>
+           <text x="50" y="177" text-anchor="end">25k</text>
+           <text x="50" y="244" text-anchor="end">0</text>
+        </g>
+        
+        <!-- X-Axis Labels -->
+        <g class="axis-labels x-axis">
+           <text x="150" y="270" text-anchor="middle">Q1</text>
+           <text x="350" y="270" text-anchor="middle">Q2</text>
+           <text x="550" y="270" text-anchor="middle">Q3</text>
+           <text x="750" y="270" text-anchor="middle">Q4</text>
+        </g>
+
+        <!-- The Area Fill (Drawn under the line) -->
+        <path class="chart-area" d="M 60,240 L 150,210 L 250,225 L 350,150 L 450,120 L 550,160 L 650,50 L 750,20 L 750,240 Z" fill="url(#areaGrad)"/>
+        
+        <!-- The Data Line -->
+        <path class="chart-line" d="M 60,240 L 150,210 L 250,225 L 350,150 L 450,120 L 550,160 L 650,50 L 750,20" />
+        
+        <!-- Annotation Dashed Line connecting to Q4 Peak -->
+        <path class="anno-line" d="M 750,20 L 750,-20 L 450,-20" stroke-dasharray="4 4" />
+
+        <!-- Data Points (Dots) -->
+        <g class="data-dots">
+           <circle cx="150" cy="210" r="5" />
+           <circle cx="250" cy="225" r="5" />
+           <circle cx="350" cy="150" r="5" />
+           <circle cx="450" cy="120" r="5" />
+           <circle cx="550" cy="160" r="5" />
+           <!-- Peak Point -->
+           <circle cx="750" cy="20" r="5" class="peak-dot" />
+        </g>
+      </svg>
+      
+      <!-- HTML Annotation Box positioned exactly over the end of the annotation line -->
+      <div class="annotation-box">
+         <strong>Record Hardware Surge</strong>
+         <p>The AI sector expansion drove unprecedented hardware demand in Q4.</p>
+      </div>
+      
+    </div>
+
+  </div>
+
+</body>
+</html>

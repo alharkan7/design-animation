@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+    :root {
+      /* J.A.R.V.I.S / Iron Man Palette */
+      --cyan: #80deea;
+      --cyan-bright: #e0f7fa;
+      --amber: #ffb300;
+      --amber-glow: rgba(255, 179, 0, 0.5);
+      --cyan-glow: rgba(128, 222, 234, 0.5);
+      --bg: #00080d;
+    }
+
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      font-family: 'Share Tech Mono', monospace;
+      background: var(--bg);
+      color: var(--cyan);
+    }
+
+    /* Full screen scanner lines */
+    .scan-lines {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.5;
+    }
+
+    /* Center alignment crosshairs */
+    .cross-line-h { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: rgba(128, 222, 234, 0.15); }
+    .cross-line-v { position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: rgba(128, 222, 234, 0.15); }
+
+    /* HUD Wrapper for 3D Helmet Perspective */
+    .helmet-view {
+      position: absolute;
+      inset: 0;
+      perspective: 1500px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Container holding all elements, breaths organically in 3D */
+    .hud-layer {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      transform-style: preserve-3d;
+      animation: helmetBreathe 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes helmetBreathe {
+      0% { transform: translateZ(0); }
+      100% { transform: translateZ(1.5vw); }
+    }
+
+    /* ---------------------------------
+       Central Gimbal (Volumetric SVG)
+       --------------------------------- */
+    .gimbal-container {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 45vw; height: 45vw;
+      transform-style: preserve-3d;
+      animation: hudAssemble 2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes hudAssemble {
+      0% { transform: translate(-50%, -50%) scale(0.2) rotate(-90deg); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+    }
+
+    .gimbal-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      overflow: visible;
+    }
+    
+    /* The volumetric layering */
+    .gimbal-bg {
+      transform: translateZ(-8vw) scale(1.15);
+      opacity: 0.15;
+      filter: blur(6px);
+    }
+    .gimbal-fg {
+      transform: translateZ(2vw);
+      filter: drop-shadow(0 0 6px var(--cyan-glow));
+    }
+
+    /* SVG Stroke Styles */
+    .ring { fill: none; stroke: var(--cyan); }
+    .ring-amber { fill: none; stroke: var(--amber); filter: drop-shadow(0 0 4px var(--amber-glow)); }
+
+    /* Animated Ticks & Arcs */
+    .ticks-large {
+      stroke-width: 8;
+      stroke-dasharray: 2 12;
+      transform-origin: 0px 0px;
+      animation: spinRight 40s linear infinite;
+    }
+    .ticks-small {
+      stroke-width: 4;
+      stroke-dasharray: 1 4;
+      opacity: 0.6;
+      transform-origin: 0px 0px;
+      animation: spinLeft 60s linear infinite;
+    }
+    .arc-thick {
+      stroke-width: 10;
+      stroke-dasharray: 100 400;
+      transform-origin: 0px 0px;
+      animation: spinRight 12s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .arc-thin {
+      stroke-width: 2;
+      stroke-dasharray: 150 100 50 100;
+      transform-origin: 0px 0px;
+      animation: spinLeft 25s linear infinite;
+    }
+    .arc-amber {
+      stroke-width: 4;
+      stroke-dasharray: 40 300;
+      transform-origin: 0px 0px;
+      animation: spinRight 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes spinRight { 100% { transform: rotate(360deg); } }
+    @keyframes spinLeft { 100% { transform: rotate(-360deg); } }
+
+    /* Target Lock Sequence */
+    .target-lock {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 12vw; height: 12vw;
+      border: 1px solid var(--amber);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) translateZ(4vw);
+      opacity: 0;
+      animation: lockOn 4s 2s infinite;
+      pointer-events: none;
+    }
+    .target-lock::before, .target-lock::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border: 1px solid var(--amber);
+      border-radius: 50%;
+    }
+    .target-lock::before { width: 8vw; height: 8vw; border-style: dashed; }
+    .target-lock::after { width: 4vw; height: 4vw; background: rgba(255,179,0,0.1); }
+
+    @keyframes lockOn {
+      0% { transform: translate(-50%, -50%) translateZ(4vw) scale(2); opacity: 0; }
+      10% { transform: translate(-50%, -50%) translateZ(4vw) scale(1); opacity: 1; }
+      15%, 85% { transform: translate(-50%, -50%) translateZ(4vw) scale(1); opacity: 0.5; }
+      90% { transform: translate(-50%, -50%) translateZ(4vw) scale(0.5); opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    /* ---------------------------------
+       Side Altitude / Pitch Ladders
+       --------------------------------- */
+    .ladder {
+      position: absolute;
+      top: 50%;
+      height: 40vh;
+      width: 4vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0.4;
+      animation: ladderEnter 1s 1.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .ladder-left { left: 28vw; border-right: 2px solid var(--cyan); align-items: flex-end; padding-right: 0.5vw; transform: translateY(-50%) translateZ(-2vw); }
+    .ladder-right { right: 28vw; border-left: 2px solid var(--cyan); align-items: flex-start; padding-left: 0.5vw; transform: translateY(-50%) translateZ(-2vw); }
+    
+    .ladder-tick { width: 1vw; height: 2px; background: var(--cyan); position: relative; }
+    .ladder-tick::after { content: attr(data-val); position: absolute; top: -0.6vw; font-size: 0.8vw; }
+    .ladder-left .ladder-tick::after { right: 1.5vw; }
+    .ladder-right .ladder-tick::after { left: 1.5vw; }
+
+    @keyframes ladderEnter {
+      0% { opacity: 0; height: 0vh; }
+      100% { opacity: 0.4; height: 40vh; }
+    }
+
+    /* ---------------------------------
+       Corner Data Boxes
+       --------------------------------- */
+    .data-box {
+      position: absolute;
+      background: rgba(0, 20, 30, 0.4);
+      border: 1px solid rgba(128, 222, 234, 0.2);
+      padding: 1.5vw 2vw;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 0 2vw rgba(0,0,0,0.5);
+      animation: boxEnter 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .box-tl { top: 12vh; left: 8vw; clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%, 0 30%); animation-delay: 0.4s; }
+    .box-tr { top: 12vh; right: 8vw; clip-path: polygon(0 0, 90% 0, 100% 30%, 100% 100%, 0 100%); animation-delay: 0.5s; text-align: right; }
+    .box-bl { bottom: 12vh; left: 8vw; clip-path: polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%); animation-delay: 0.6s; }
+    .box-br { bottom: 12vh; right: 8vw; clip-path: polygon(0 0, 100% 0, 100% 100%, 10% 100%, 0 70%); animation-delay: 0.7s; text-align: right; }
+
+    @keyframes boxEnter {
+      0% { opacity: 0; transform: translateY(2vw) scale(0.9); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Data Typography */
+    .label { font-size: 0.8vw; color: var(--cyan); opacity: 0.8; letter-spacing: 0.15vw; margin-bottom: 0.2vw; }
+    .value { font-size: 2.2vw; font-weight: bold; color: var(--cyan-bright); }
+    .value-amber { color: var(--amber); text-shadow: 0 0 8px var(--amber-glow); }
+
+    /* Fluctuating Numbers Micro-Animation */
+    .random-num::after {
+      content: "42.08";
+      animation: randomVal 0.4s infinite;
+    }
+    @keyframes randomVal {
+      0% { content: "84.92"; }
+      20% { content: "91.04"; }
+      40% { content: "42.18"; }
+      60% { content: "66.77"; }
+      80% { content: "12.83"; }
+      100% { content: "84.92"; }
+    }
+    .random-hex::after {
+      content: "0xFA";
+      animation: randomHex 0.6s infinite;
+    }
+    @keyframes randomHex {
+      0% { content: "0xFA"; } 30% { content: "0x9C"; } 60% { content: "0x11"; } 100% { content: "0xFA"; }
+    }
+
+    /* Small Data Readout near center */
+    .center-readout {
+      position: absolute;
+      top: 52%; left: 54%;
+      transform: translateZ(3vw);
+      font-size: 1vw;
+      color: var(--amber);
+      text-shadow: 0 0 5px var(--amber-glow);
+      animation: hudAssemble 2s 0.8s both;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Screen overlays -->
+  <div class="scan-lines"></div>
+  <div class="cross-line-h"></div>
+  <div class="cross-line-v"></div>
+
+  <!-- 3D Perspective Wrapper -->
+  <div class="helmet-view">
+    <div class="hud-layer">
+      
+      <!-- Top Left Box: Power Systems -->
+      <div class="data-box box-tl">
+        <div class="label">MK. XLII / POWER SYSTEMS</div>
+        <div class="value">94.2%</div>
+        <div style="display: flex; gap: 0.4vw; margin-top: 0.8vw; height: 3px;">
+          <div style="flex: 1; background: var(--cyan); box-shadow: 0 0 4px var(--cyan);"></div>
+          <div style="flex: 1; background: var(--cyan); box-shadow: 0 0 4px var(--cyan);"></div>
+          <div style="flex: 1; background: var(--cyan); box-shadow: 0 0 4px var(--cyan);"></div>
+          <div style="flex: 2; background: rgba(128, 222, 234, 0.2);"></div>
+        </div>
+      </div>
+
+      <!-- Top Right Box: Targeting -->
+      <div class="data-box box-tr">
+        <div class="label">TARGET TRAJECTORY</div>
+        <div class="value value-amber">LOCKED</div>
+        <div class="label" style="font-size: 1vw; margin-top: 0.5vw;">
+          AZIMUTH: <span class="random-num"></span>°
+        </div>
+      </div>
+
+      <!-- Bottom Left Box: Thrusters -->
+      <div class="data-box box-bl">
+        <div class="label">REPULSOR OUTPUT</div>
+        <div class="value random-num"></div>
+        <div class="label">TERA-JOULES [ <span class="random-hex"></span> ]</div>
+      </div>
+
+      <!-- Bottom Right Box: Env -->
+      <div class="data-box box-br">
+        <div class="label">ENVIRONMENTAL SCANNERS</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw 2vw; margin-top: 0.8vw; text-align: right;">
+           <div><span class="label">TEMP</span> <span class="value" style="font-size: 1.2vw;">-42°C</span></div>
+           <div><span class="label">PRES</span> <span class="value" style="font-size: 1.2vw;">102kPa</span></div>
+           <div><span class="label">WIND</span> <span class="value" style="font-size: 1.2vw;">14kts</span></div>
+           <div><span class="label">RAD</span>  <span class="value" style="font-size: 1.2vw;">.02μSv</span></div>
+        </div>
+      </div>
+
+      <!-- Pitch Ladders -->
+      <div class="ladder ladder-left">
+        <div class="ladder-tick" data-val="90"></div>
+        <div class="ladder-tick" data-val="60"></div>
+        <div class="ladder-tick" data-val="30"></div>
+        <div class="ladder-tick" data-val="0" style="width: 2vw;"></div>
+        <div class="ladder-tick" data-val="-30"></div>
+        <div class="ladder-tick" data-val="-60"></div>
+        <div class="ladder-tick" data-val="-90"></div>
+      </div>
+      <div class="ladder ladder-right">
+        <div class="ladder-tick" data-val="90"></div>
+        <div class="ladder-tick" data-val="60"></div>
+        <div class="ladder-tick" data-val="30"></div>
+        <div class="ladder-tick" data-val="0" style="width: 2vw;"></div>
+        <div class="ladder-tick" data-val="-30"></div>
+        <div class="ladder-tick" data-val="-60"></div>
+        <div class="ladder-tick" data-val="-90"></div>
+      </div>
+
+      <!-- Central Volumetric Gimbal -->
+      <div class="gimbal-container">
+        
+        <!-- Background Layer (Blurred, Scaled, Depth) -->
+        <svg class="gimbal-svg gimbal-bg" viewBox="-300 -300 600 600">
+          <circle r="290" class="ring" stroke-width="2" stroke-dasharray="10 20" />
+          <circle r="260" class="ring ticks-large" />
+          <circle r="220" class="ring arc-thick" />
+          <circle r="180" class="ring arc-thin" />
+          <circle r="120" class="ring" stroke-width="4" />
+          <!-- Big compass ticks -->
+          <path d="M 0,-300 L 0,-280 M 0,300 L 0,280 M -300,0 L -280,0 M 300,0 L 280,0" class="ring" stroke-width="8" />
+        </svg>
+
+        <!-- Foreground Layer (Sharp, Bright, Glowing) -->
+        <svg class="gimbal-svg gimbal-fg" viewBox="-300 -300 600 600">
+          
+          <circle r="290" class="ring" stroke-width="1" stroke-dasharray="2 12" />
+          <circle r="260" class="ring ticks-small" />
+          
+          <circle r="220" class="ring arc-thin" />
+          <circle r="180" class="ring arc-thick" style="animation-direction: reverse;" />
+          
+          <circle r="150" class="ring-amber arc-amber" />
+
+          <!-- Core ring -->
+          <circle r="100" class="ring" stroke-width="2" stroke-dasharray="10 10" />
+          <circle r="85" class="ring ticks-large" style="stroke-width: 15; stroke-dasharray: 2 8;" />
+          
+          <!-- Pitch alignment bracket -->
+          <path d="M -80,-40 L 80,-40 M -60,-20 L 60,-20 M -40,20 L 40,20 M -80,40 L 80,40" class="ring" stroke-width="2" opacity="0.4" />
+
+          <!-- Crosshair -->
+          <path d="M -15,0 L 15,0 M 0,-15 L 0,15" class="ring" stroke-width="3" />
+          
+          <!-- Targeting Corners -->
+          <path d="M -30,-20 L -30,-30 L -20,-30 M 30,-20 L 30,-30 L 20,-30 M 30,20 L 30,30 L 20,30 M -30,20 L -30,30 L -20,30" class="ring" stroke-width="4" />
+        </svg>
+
+        <!-- Amber Target Lock Alert -->
+        <div class="target-lock"></div>
+        
+      </div>
+
+      <!-- Small data readouts near the center reticle -->
+      <div class="center-readout">
+        <div style="font-size: 0.8vw; opacity: 0.8;">DIST</div>
+        <div class="random-num"></div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

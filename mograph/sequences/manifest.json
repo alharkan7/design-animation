@@ -16,5 +16,14 @@
   { "file": "3d-data-chart.html", "name": "3D Data Chart" },
   { "file": "data-architecture-core.html", "name": "Data Architecture Core (Tech)" },
   { "file": "data-architecture-core-v2.html", "name": "Data Architecture Core (Organic)" },
-  { "file": "hardware-teardown.html", "name": "Hardware Teardown" }
+  { "file": "hardware-teardown.html", "name": "Hardware Teardown" },
+  { "file": "bento-box.html", "name": "Bento Box Grid Reveal" },
+  { "file": "terminal-cascade.html", "name": "Terminal Cascade 3D" },
+  { "file": "scrapbook-brutalist.html", "name": "Brutalist Scrapbook Collage" },
+  { "file": "morphing-ui.html", "name": "Morphing UI (Dynamic Island)" },
+  { "file": "cyberpunk-hud.html", "name": "HUD / Cyberpunk Interface" },
+  { "file": "neumorphism.html", "name": "Neumorphic Soft UI" },
+  { "file": "editorial-data.html", "name": "Editorial Data Infographic" },
+  { "file": "retro-arcade.html", "name": "Retro 8-Bit Arcade" },
+  { "file": "retro-arcade-v2.html", "name": "Retro 8-Bit Data Dashboard" }
 ]

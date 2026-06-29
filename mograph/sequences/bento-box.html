@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* Reset & Base */
+    :root {
+      color-scheme: dark;
+      /* Apple Dark Mode Palette */
+      --bg: #000000;
+      --card-bg: #151516; /* Deep dark gray, almost black */
+      --card-border: rgba(255, 255, 255, 0.12);
+      
+      /* Premium Apple-esque Gradients */
+      --gradient-siri: linear-gradient(120deg, #32C5FF 0%, #B620E0 50%, #F7B500 100%);
+      --gradient-metal: linear-gradient(180deg, #FFFFFF 0%, #A9A9A9 100%);
+      
+      --text-main: #F5F5F7; /* Apple's off-white */
+      --text-muted: #86868B; /* Apple's specific gray */
+      
+      /* Smooth, deliberate easing (No bounce) */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      background: var(--bg); /* Mograph player will override if set to other presets, but looks best solid */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Scene Container */
+    .scene {
+      position: relative;
+      z-index: 10;
+      width: 88vw;
+      height: 82vh;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 1.5vw;
+      
+      /* The whole grid smoothly scales up */
+      animation: sceneEnter 1.4s 0.2s var(--ease-out) both,
+                 sceneExit 1s 8.5s var(--ease-in-out) forwards;
+    }
+
+    @keyframes sceneEnter {
+      0% { transform: scale(0.9); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1); visibility: visible; }
+    }
+    @keyframes sceneExit {
+      0% { transform: scale(1); opacity: 1; visibility: visible; }
+      100% { transform: scale(0.9); opacity: 0; visibility: hidden; }
+    }
+
+    /* Bento Cards */
+    .bento-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border); /* Very thin crisp border */
+      border-radius: 2.5vw; /* Soft Apple curves */
+      display: flex;
+      flex-direction: column;
+      padding: 2.5vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Central hero card - spans 2x2 in the center */
+    .card-hero {
+      grid-column: 2 / 4;
+      grid-row: 1 / 3;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: #000;
+      /* Subtle inner glow / gradient for the hero */
+      box-shadow: inset 0 0 4vw rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255,255,255,0.15);
+      animation: cardEnter 1.2s 0.4s var(--ease-out) both,
+                 cardExit 0.8s 7.6s var(--ease-in-out) forwards;
+    }
+
+    /* Perimeter cards delay their entrance deliberately, masking in from the center */
+    .card-tl {
+      grid-column: 1 / 2;
+      grid-row: 1 / 3;
+      transform-origin: right bottom;
+      animation: cardEnterEdge 1.2s 0.6s var(--ease-out) both,
+                 cardExit 0.8s 7.5s var(--ease-in-out) forwards;
+    }
+    .card-tr {
+      grid-column: 4 / 5;
+      grid-row: 1 / 2;
+      transform-origin: left bottom;
+      animation: cardEnterEdge 1.2s 0.65s var(--ease-out) both,
+                 cardExit 0.8s 7.4s var(--ease-in-out) forwards;
+    }
+    .card-rm {
+      grid-column: 4 / 5;
+      grid-row: 2 / 3;
+      transform-origin: left center;
+      animation: cardEnterEdge 1.2s 0.7s var(--ease-out) both,
+                 cardExit 0.8s 7.3s var(--ease-in-out) forwards;
+    }
+    .card-bl {
+      grid-column: 1 / 3;
+      grid-row: 3 / 4;
+      transform-origin: top right;
+      animation: cardEnterEdge 1.2s 0.75s var(--ease-out) both,
+                 cardExit 0.8s 7.2s var(--ease-in-out) forwards;
+    }
+    .card-br {
+      grid-column: 3 / 5;
+      grid-row: 3 / 4;
+      transform-origin: top left;
+      animation: cardEnterEdge 1.2s 0.8s var(--ease-out) both,
+                 cardExit 0.8s 7.1s var(--ease-in-out) forwards;
+    }
+
+    /* Elegant, smooth scale and clip-mask entrances (Chroma safe, no opacity fades for the card borders) */
+    @keyframes cardEnter {
+      0% { transform: scale(0.85); clip-path: inset(20% round 2.5vw); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1); clip-path: inset(0% round 2.5vw); visibility: visible; }
+    }
+    @keyframes cardEnterEdge {
+      0% { transform: scale(0.9); clip-path: inset(100% 0 0 0 round 2.5vw); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1); clip-path: inset(0% 0 0 0 round 2.5vw); visibility: visible; }
+    }
+    @keyframes cardExit {
+      0% { transform: scale(1); opacity: 1; visibility: visible; }
+      100% { transform: scale(0.85); opacity: 0; visibility: hidden; }
+    }
+
+    /* ---------------------------------
+       Inner Card Content
+       --------------------------------- */
+       
+    .hero-title {
+      font-size: clamp(4rem, 8vw, 9rem);
+      font-weight: 800;
+      margin: 0;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      
+      /* Apple metallic text effect */
+      background: var(--gradient-metal);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      
+      /* Smooth reveal */
+      animation: textReveal 1.2s 1s var(--ease-out) both;
+    }
+    .hero-subtitle {
+      font-size: clamp(1.5rem, 2.5vw, 3rem);
+      font-weight: 500;
+      color: var(--text-muted);
+      margin: 1vw 0 0 0;
+      letter-spacing: -0.02em;
+      animation: textReveal 1.2s 1.1s var(--ease-out) both;
+    }
+    
+    .sm-title {
+      font-size: clamp(1.2rem, 2vw, 2.5rem);
+      font-weight: 600;
+      color: var(--text-muted); /* Subtitle on top */
+      margin: 0 0 0.5vw 0;
+      animation: slideRightIn 1s 1.2s var(--ease-out) both;
+    }
+    .sm-val {
+      font-size: clamp(2.5rem, 4vw, 5rem);
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 0;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      animation: slideRightIn 1s 1.3s var(--ease-out) both;
+    }
+
+    /* Top Left: Neural Engine Grid */
+    .grid-matrix {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.8vw;
+      margin-top: auto;
+      height: 12vw;
+    }
+    .matrix-dot {
+      background: #333;
+      border-radius: 0.5vw;
+      animation: dotLightUp 2s var(--ease-out) both;
+    }
+    @keyframes dotLightUp {
+      0% { background: #333; transform: scale(0.5); visibility: hidden; }
+      1% { visibility: visible; }
+      20% { background: #fff; transform: scale(1.1); }
+      100% { background: #555; transform: scale(1); visibility: visible; }
+    }
+    
+    /* Top Right: Accent number */
+    .accent-val {
+      color: transparent;
+      background: var(--gradient-siri);
+      -webkit-background-clip: text;
+    }
+    
+    /* Right Middle: Minimal Ring */
+    .ring-container {
+      position: relative;
+      width: 8vw;
+      height: 8vw;
+      flex-shrink: 0;
+      margin: auto;
+    }
+    .ring-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 0.8vw solid #333;
+      animation: ringEnter 1s 1.3s var(--ease-out) both;
+    }
+    .ring-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 0.8vw solid transparent;
+      border-top-color: #F7B500;
+      border-right-color: #F7B500;
+      transform: rotate(-45deg);
+      /* Smooth draw */
+      animation: ringDraw 1.5s 1.6s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    
+    /* Bottom Left: Smooth Clean Bar Chart */
+    .clean-chart {
+      margin-top: auto;
+      display: flex;
+      align-items: flex-end;
+      gap: 1vw;
+      height: 6vw;
+    }
+    .clean-bar {
+      flex: 1;
+      background: #444;
+      border-radius: 0.5vw;
+      transform-origin: bottom;
+    }
+    .clean-bar.active {
+      background: #fff;
+    }
+    .clean-bar-1 { animation: barGrow 1s 1.4s var(--ease-out) both; height: 30%; }
+    .clean-bar-2 { animation: barGrow 1s 1.45s var(--ease-out) both; height: 50%; }
+    .clean-bar-3 { animation: barGrow 1s 1.5s var(--ease-out) both; height: 40%; }
+    .clean-bar-4 { animation: barGrow 1s 1.55s var(--ease-out) both; height: 80%; }
+    .clean-bar-5 { animation: barGrow 1s 1.6s var(--ease-out) both; height: 100%; }
+    .clean-bar-6 { animation: barGrow 1s 1.65s var(--ease-out) both; height: 70%; }
+
+    /* General reveal animations (No opacity for chroma-safety, using clip-path instead) */
+    @keyframes textReveal {
+      0% { transform: translateY(2vw); clip-path: inset(0 0 100% 0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateY(0); clip-path: inset(0 0 -20% 0); visibility: visible; }
+    }
+    @keyframes slideRightIn {
+      0% { transform: translateX(-2vw); clip-path: inset(0 100% 0 0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: translateX(0); clip-path: inset(0 -20% 0 0); visibility: visible; }
+    }
+    @keyframes barGrow {
+      0% { transform: scaleY(0); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scaleY(1); visibility: visible; }
+    }
+    @keyframes ringEnter {
+      0% { transform: scale(0.5); clip-path: inset(50%); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1); clip-path: inset(0%); visibility: visible; }
+    }
+    @keyframes ringDraw {
+      0% { transform: scale(0.8) rotate(-180deg); visibility: hidden; }
+      1% { visibility: visible; }
+      100% { transform: scale(1) rotate(-45deg); visibility: visible; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Bento Grid Scene -->
+  <div class="scene">
+    
+    <!-- Top Left (Neural Engine style grid) -->
+    <div class="bento-card card-tl">
+      <div class="sm-title">Core Performance</div>
+      <div class="sm-val">16-core</div>
+      <div class="grid-matrix">
+        <!-- Generates a 4x4 grid of dots with delayed light ups -->
+        <script>
+          const delays = [2.0, 2.1, 2.3, 2.05, 2.4, 2.15, 2.6, 2.2, 2.35, 2.5, 2.25, 2.45, 2.7, 2.1, 2.65, 2.55];
+          for(let i=0; i<16; i++) {
+            document.write(`<div class="matrix-dot" style="animation-delay: ${delays[i]}s"></div>`);
+          }
+        </script>
+      </div>
+    </div>
+
+    <!-- Center Hero -->
+    <div class="bento-card card-hero">
+      <h1 class="hero-title">M4 Max</h1>
+      <p class="hero-subtitle">Outrageously fast.</p>
+    </div>
+
+    <!-- Top Right -->
+    <div class="bento-card card-tr">
+      <div class="sm-title">GPU Speed</div>
+      <div class="sm-val accent-val">Up to 4x</div>
+    </div>
+
+    <!-- Right Middle -->
+    <div class="bento-card card-rm" style="align-items: center; justify-content: center;">
+      <div class="ring-container">
+        <div class="ring-track"></div>
+        <div class="ring-fill"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Left -->
+    <div class="bento-card card-bl">
+      <div class="sm-title">Unified Memory</div>
+      <div class="sm-val" style="display:flex; align-items: baseline; gap: 0.5vw;">
+        128<span style="font-size: 0.5em; color: var(--text-muted); font-weight: 600;">GB</span>
+      </div>
+    </div>
+
+    <!-- Bottom Right -->
+    <div class="bento-card card-br">
+      <div class="sm-title">Efficiency</div>
+      <div class="sm-val">22 hrs</div>
+      
+      <div class="clean-chart">
+        <div class="clean-bar clean-bar-1"></div>
+        <div class="clean-bar clean-bar-2"></div>
+        <div class="clean-bar clean-bar-3"></div>
+        <div class="clean-bar clean-bar-4"></div>
+        <div class="clean-bar clean-bar-5"></div>
+        <div class="clean-bar clean-bar-6 active"></div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

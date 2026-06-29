@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* 
+     * Neumorphism (iPod Style)
+     * Built on precision drop shadows with distinct TE-style soft plastic outlines.
+     */
+     
+    :root {
+      /* Neumorphic base colors */
+      --bg: #ECEAE4;
+      --text: #8A9BB2;
+      --accent: #FF4713;
+      
+      /* Base Shadows */
+      --shadow-flat: 0 0 0 rgba(0,0,0,0), 0 0 0 rgba(255,255,255,0);
+      
+      /* Soft Convex Shadows (Buttons) */
+      --shadow-raised: 
+        0.6vw 0.6vw 1.2vw rgba(175, 180, 185, 0.7), 
+        -0.6vw -0.6vw 1.2vw rgba(255, 255, 255, 0.9);
+        
+      /* Large Convex Shadows (Main Board) */
+      --shadow-card: 
+        1.5vw 1.5vw 3vw rgba(160, 165, 170, 0.5), 
+        -1vw -1vw 2.5vw rgba(255, 255, 255, 0.9);
+        
+      /* Concave Shadows (Pressed / Tracks) */
+      --shadow-pressed: 
+        inset 0.4vw 0.4vw 0.8vw rgba(175, 180, 185, 0.8), 
+        inset -0.4vw -0.4vw 0.8vw rgba(255, 255, 255, 0.9);
+    }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, sans-serif;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ---------------------------------
+       Main iPod Card
+       --------------------------------- */
+    .card {
+      width: 35vw;
+      min-width: 250px;
+      aspect-ratio: 0.65; /* Fixes height proportionally */
+      border-radius: 3vw;
+      background: var(--bg);
+      padding: 8%;
+      box-sizing: border-box; /* Prevents children from spilling out */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      border: 1px solid transparent;
+      animation: boardRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    
+    /* Board extrusion with precise TE plastic borders */
+    @keyframes boardRise {
+      0%, 5% { 
+        box-shadow: var(--shadow-flat); transform: scale(0.95);
+        border-color: transparent; 
+      }
+      15%, 85% { 
+        box-shadow: var(--shadow-card); transform: scale(1);
+        border-top-color: rgba(255,255,255,1);
+        border-left-color: rgba(255,255,255,1);
+        border-bottom-color: rgba(0,0,0,0.06);
+        border-right-color: rgba(0,0,0,0.06);
+      }
+      95%, 100% { 
+        box-shadow: var(--shadow-flat); transform: scale(0.95);
+        border-color: transparent; 
+      }
+    }
+
+    /* ---------------------------------
+       Toggle Switch (Top Right)
+       --------------------------------- */
+    .toggle-track {
+      width: 14%; aspect-ratio: 2;
+      border-radius: 10vw;
+      background: var(--bg);
+      position: absolute;
+      top: 6%; right: 8%;
+      border: 1px solid transparent;
+      animation: trackRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .toggle-thumb {
+      position: absolute;
+      top: 50%; margin-top: -15%; /* 30% width / 2 */
+      width: 30%; aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid transparent;
+      animation: elemRise 12s cubic-bezier(0.16,1,0.3,1) both, toggleSlide 12s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes toggleSlide {
+      0%, 31% { left: 10%; background: var(--bg); }
+      33%, 68% { left: 60%; background: var(--accent); }
+      71%, 100% { left: 10%; background: var(--bg); }
+    }
+
+    /* ---------------------------------
+       Central Record Dial
+       --------------------------------- */
+    .dial-wrap {
+      width: 70%; aspect-ratio: 1;
+      border-radius: 50%;
+      margin: 10% auto 0 auto;
+      border: 1px solid transparent;
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+      animation: elemRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .dial-spin {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      position: relative;
+      animation: spinPlay 12s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    .dial-inner {
+      position: absolute;
+      top: 50%; left: 50%;
+      margin-top: -15%; margin-left: -15%; /* 30% size */
+      width: 30%; aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid transparent;
+      animation: trackRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    /* Grooves to show rotation */
+    .dial-groove {
+      position: absolute;
+      background: rgba(138, 155, 178, 0.2);
+      border-radius: 1vw;
+    }
+    .g1 { top: 8%; left: 50%; width: 3%; height: 12%; margin-left: -1.5%; }
+    .g2 { bottom: 8%; left: 50%; width: 3%; height: 12%; margin-left: -1.5%; }
+    .g3 { top: 50%; left: 8%; width: 12%; height: 3%; margin-top: -1.5%; }
+    .g4 { top: 50%; right: 8%; width: 12%; height: 3%; margin-top: -1.5%; }
+
+    /* ---------------------------------
+       Controls (Play, Prev, Next)
+       --------------------------------- */
+    .controls {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn {
+      border-radius: 50%;
+      background: var(--bg);
+      display: flex; justify-content: center; align-items: center;
+      color: var(--text);
+      border: 1px solid transparent;
+    }
+    .btn-side {
+      width: 22%; aspect-ratio: 1;
+      animation: elemRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .btn-play {
+      width: 35%; aspect-ratio: 1;
+      animation: playPress 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .icon { width: 40%; height: 40%; fill: currentColor; }
+
+    /* ---------------------------------
+       Progress Track
+       --------------------------------- */
+    .track {
+      width: 100%;
+      height: 2vw; /* Relative to viewport width scales perfectly with main card */
+      border-radius: 1vw;
+      background: var(--bg);
+      position: relative;
+      border: 1px solid transparent;
+      margin-bottom: 5%;
+      animation: trackRise 12s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .progress-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      border-radius: 1vw;
+      background: var(--accent);
+      box-shadow: 0 0 1vw rgba(255, 71, 19, 0.5);
+      animation: progressMove 12s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    .progress-thumb {
+      position: absolute;
+      top: 50%; margin-top: -1.5vw;
+      width: 3vw; height: 3vw;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid transparent;
+      animation: elemRise 12s cubic-bezier(0.16, 1, 0.3, 1) both, thumbMove 12s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+
+    /* ---------------------------------
+       Component Shadow Keyframes
+       --------------------------------- */
+       
+    /* Generic element extrusion */
+    @keyframes elemRise {
+      0%, 10% { 
+        box-shadow: var(--shadow-flat); border-color: transparent;
+      }
+      20%, 80% { 
+        box-shadow: var(--shadow-raised);
+        border-top-color: rgba(255,255,255,1); border-left-color: rgba(255,255,255,1);
+        border-bottom-color: rgba(0,0,0,0.06); border-right-color: rgba(0,0,0,0.06);
+      }
+      90%, 100% { 
+        box-shadow: var(--shadow-flat); border-color: transparent;
+      }
+    }
+
+    /* Inset track extrusion */
+    @keyframes trackRise {
+      0%, 15% { box-shadow: inset 0 0 0 rgba(0,0,0,0), inset 0 0 0 rgba(255,255,255,0); }
+      25%, 75% { 
+         box-shadow: var(--shadow-pressed); 
+         /* Tracks invert the borders (dark top/left, light bottom/right) */
+         border-top-color: rgba(0,0,0,0.06); border-left-color: rgba(0,0,0,0.06);
+         border-bottom-color: rgba(255,255,255,0.7); border-right-color: rgba(255,255,255,0.7);
+      }
+      85%, 100% { box-shadow: inset 0 0 0 rgba(0,0,0,0), inset 0 0 0 rgba(255,255,255,0); }
+    }
+
+    /* Tactile Play Button press */
+    @keyframes playPress {
+      0%, 10% { box-shadow: var(--shadow-flat); border-color: transparent; color: var(--text); }
+      
+      /* Raised */
+      20%, 30% { 
+        box-shadow: var(--shadow-raised); color: var(--text);
+        border-top-color: rgba(255,255,255,1); border-left-color: rgba(255,255,255,1);
+        border-bottom-color: rgba(0,0,0,0.06); border-right-color: rgba(0,0,0,0.06);
+      }
+      
+      /* Pressed in! (Shadows flip to inset, borders flip, color turns orange) */
+      33%, 68% { 
+        box-shadow: var(--shadow-pressed); color: var(--accent);
+        border-top-color: rgba(0,0,0,0.04); border-left-color: rgba(0,0,0,0.04);
+        border-bottom-color: rgba(255,255,255,0.5); border-right-color: rgba(255,255,255,0.5);
+      }
+      
+      /* Release */
+      71%, 80% { 
+        box-shadow: var(--shadow-raised); color: var(--text);
+        border-top-color: rgba(255,255,255,1); border-left-color: rgba(255,255,255,1);
+        border-bottom-color: rgba(0,0,0,0.06); border-right-color: rgba(0,0,0,0.06);
+      }
+      
+      90%, 100% { box-shadow: var(--shadow-flat); border-color: transparent; color: var(--text); }
+    }
+
+    /* ---------------------------------
+       Playback Sync Keyframes
+       --------------------------------- */
+    
+    @keyframes spinPlay {
+      0%, 33% { transform: rotate(0deg); }
+      68%, 100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes progressMove {
+      0%, 33% { width: 0%; }
+      68%, 100% { width: 100%; }
+    }
+    
+    @keyframes thumbMove {
+      0%, 33% { left: 0%; transform: translateX(0); }
+      /* Translating -100% prevents the thumb from pushing past the right edge */
+      68%, 100% { left: 100%; transform: translateX(-100%); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    
+    <!-- Top Right Toggle Switch -->
+    <div class="toggle-track">
+      <div class="toggle-thumb"></div>
+    </div>
+    
+    <!-- Rotating Record Dial -->
+    <div class="dial-wrap">
+      <div class="dial-spin">
+        <div class="dial-groove g1"></div>
+        <div class="dial-groove g2"></div>
+        <div class="dial-groove g3"></div>
+        <div class="dial-groove g4"></div>
+      </div>
+      <div class="dial-inner"></div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls">
+      <div class="btn btn-side">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polygon points="11,12 19,21 19,3"/>
+          <polygon points="3,12 11,21 11,3"/>
+        </svg>
+      </div>
+      
+      <div class="btn btn-play">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polygon points="5,3 19,12 5,21" />
+        </svg>
+      </div>
+      
+      <div class="btn btn-side">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polygon points="13,12 5,21 5,3"/>
+          <polygon points="21,12 13,21 13,3"/>
+        </svg>
+      </div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="track">
+      <div class="progress-fill"></div>
+      <div class="progress-thumb"></div>
+    </div>
+    
+  </div>
+
+</body>
+</html>

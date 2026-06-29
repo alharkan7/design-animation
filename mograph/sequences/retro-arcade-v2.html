@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* 
+     * Retro 8-Bit Data Visualizations (Mainframe Style)
+     * Blocky charts, step-animations, and CRT aesthetics.
+     */
+     
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+      --neon: #39FF14;
+      --red: #FF003C;
+      --yellow: #FFEB3B;
+      --cyan: #00F3FF;
+      --magenta: #FF00FF;
+      --bg: #050505;
+    }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+    }
+
+    /* ---------------------------------
+       CRT Screen Effects
+       --------------------------------- */
+    .crt-screen {
+      position: relative;
+      width: 100vw; height: 100vh;
+      background: var(--bg);
+      text-shadow: 2px 0px 0px rgba(255,0,0,0.8), -2px 0px 0px rgba(0,255,255,0.8);
+      animation: crtFlicker 0.15s infinite;
+    }
+    
+    @keyframes crtFlicker {
+      0% { opacity: 0.95; }
+      50% { opacity: 1; }
+      100% { opacity: 0.98; }
+    }
+
+    .crt-overlay {
+      position: absolute;
+      inset: 0;
+      background: 
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 0.4vw, 0.6vw 100%;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: inset 0 0 8vw rgba(0,0,0,1), inset 0 0 3vw rgba(0,0,0,0.8);
+    }
+
+    /* ---------------------------------
+       Dashboard Layout
+       --------------------------------- */
+    .dashboard {
+      position: absolute;
+      inset: 4vw;
+      display: flex;
+      flex-direction: column;
+      gap: 3vw;
+    }
+    .sys-header {
+      display: flex; justify-content: space-between;
+      border-bottom: 0.4vw solid var(--neon);
+      padding-bottom: 1vw;
+      font-size: 1.5vw;
+      color: var(--neon);
+    }
+    
+    .blink { animation: blinker 1s step-end infinite; }
+    @keyframes blinker { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 3vw;
+      flex-grow: 1;
+    }
+    .panel-wide { grid-column: 1 / -1; }
+    
+    .panel {
+      border: 0.2vw solid var(--cyan);
+      padding: 2vw;
+      position: relative;
+    }
+    .panel-title {
+      position: absolute;
+      top: -1vw; left: 1vw;
+      background: var(--bg);
+      padding: 0 1vw;
+      color: var(--cyan);
+      font-size: 1.2vw;
+    }
+
+    /* ---------------------------------
+       Panel 1: Blocky Bar Chart
+       --------------------------------- */
+    .bar-chart {
+      display: flex; gap: 2vw; height: 12vw; align-items: flex-end;
+      margin-top: 1vw;
+      border-bottom: 0.2vw solid var(--text-muted);
+      padding-bottom: 0.5vw;
+    }
+    .bar {
+      flex: 1;
+      background-color: var(--c);
+      /* Slices the bar horizontally into distinct blocks */
+      background-image: repeating-linear-gradient(to bottom, var(--bg) 0, var(--bg) 0.3vw, transparent 0.3vw, transparent 1.5vw);
+      height: var(--h);
+      animation: barGrow 12s steps(8, end) infinite;
+    }
+    /* Stagger the bars */
+    .bar:nth-child(1) { animation-delay: 0s; }
+    .bar:nth-child(2) { animation-delay: 0.2s; }
+    .bar:nth-child(3) { animation-delay: 0.4s; }
+    .bar:nth-child(4) { animation-delay: 0.6s; }
+    .bar:nth-child(5) { animation-delay: 0.8s; }
+
+    @keyframes barGrow {
+      0%, 15% { height: 0%; }
+      35%, 90% { height: var(--h); }
+      95%, 100% { height: 0%; }
+    }
+    .bar-labels {
+      display: flex; gap: 2vw; margin-top: 1vw;
+      font-size: 1vw; text-align: center; color: var(--cyan);
+    }
+    .bar-labels span { flex: 1; }
+
+    /* ---------------------------------
+       Panel 2: Stair-step Line Chart
+       --------------------------------- */
+    .line-chart-wrap {
+      position: relative;
+      height: 12vw;
+      margin-top: 1vw;
+      border: 0.2vw solid var(--red);
+      background: 
+        linear-gradient(rgba(255,0,60,0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,0,60,0.2) 1px, transparent 1px);
+      background-size: 2vw 2vw;
+    }
+    .pixel-line {
+      width: 100%; height: 100%;
+    }
+    .pixel-line polyline {
+      fill: none;
+      stroke: var(--yellow);
+      stroke-width: 0.5vw;
+      stroke-linejoin: miter;
+    }
+    .line-mask {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      transform-origin: right;
+      /* Steps(20) makes the line reveal block-by-block left-to-right */
+      animation: revealLine 12s steps(20, end) infinite;
+    }
+    @keyframes revealLine {
+      0%, 20% { transform: scaleX(1); }
+      45%, 90% { transform: scaleX(0); }
+      95%, 100% { transform: scaleX(1); }
+    }
+
+    /* ---------------------------------
+       Panel 3: Defrag Memory Matrix
+       --------------------------------- */
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(24, 1fr);
+      gap: 0.5vw;
+      margin-top: 2vw;
+    }
+    .mem-block {
+      aspect-ratio: 1;
+      background: var(--bg);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    /* Assigning blocks to different defrag patterns */
+    .mem-block:nth-child(4n) { animation: defrag1 12s step-end infinite; }
+    .mem-block:nth-child(4n+1) { animation: defrag2 12s step-end infinite; }
+    .mem-block:nth-child(4n+2) { animation: defrag3 12s step-end infinite; }
+    .mem-block:nth-child(4n+3) { animation: defrag4 12s step-end infinite; }
+
+    /* The blocks start empty, turn red (allocating), then neon green (optimized) */
+    @keyframes defrag1 { 
+      0%, 10% { background: var(--bg); } 
+      11%, 30% { background: var(--red); } 
+      31%, 90% { background: var(--neon); border-color: var(--neon); } 
+      95%, 100% { background: var(--bg); } 
+    }
+    @keyframes defrag2 { 
+      0%, 25% { background: var(--bg); } 
+      26%, 40% { background: var(--red); } 
+      41%, 90% { background: var(--neon); border-color: var(--neon); } 
+      95%, 100% { background: var(--bg); } 
+    }
+    @keyframes defrag3 { 
+      0%, 40% { background: var(--bg); } 
+      41%, 55% { background: var(--red); } 
+      56%, 90% { background: var(--cyan); border-color: var(--cyan); } 
+      95%, 100% { background: var(--bg); } 
+    }
+    @keyframes defrag4 { 
+      0%, 55% { background: var(--bg); } 
+      56%, 70% { background: var(--red); } 
+      71%, 90% { background: var(--magenta); border-color: var(--magenta); } 
+      95%, 100% { background: var(--bg); } 
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="crt-screen">
+    <!-- Overlay for vignette and scanlines -->
+    <div class="crt-overlay"></div>
+    
+    <div class="dashboard">
+      <!-- Mainframe Header -->
+      <header class="sys-header">
+        <div>SYS_REQ::ANALYTICS_OVERVIEW</div>
+        <div class="blink">REC_MODE: ACTIVE</div>
+      </header>
+  
+      <div class="panels">
+        
+        <!-- Panel 1: Bar Chart -->
+        <div class="panel">
+          <div class="panel-title">SYSTEM LOAD</div>
+          <div class="bar-chart">
+             <!-- The height uses custom properties to control the growth animation limit -->
+             <div class="bar" style="--h: 80%; --c: var(--neon);"></div>
+             <div class="bar" style="--h: 40%; --c: var(--cyan);"></div>
+             <div class="bar" style="--h: 100%; --c: var(--red);"></div>
+             <div class="bar" style="--h: 60%; --c: var(--yellow);"></div>
+             <div class="bar" style="--h: 30%; --c: var(--magenta);"></div>
+          </div>
+          <div class="bar-labels">
+            <span>N1</span><span>N2</span><span>N3</span><span>N4</span><span>N5</span>
+          </div>
+        </div>
+  
+        <!-- Panel 2: Stair-step Line Chart -->
+        <div class="panel">
+          <div class="panel-title">NETWORK TRAFFIC</div>
+          <div class="line-chart-wrap">
+            <svg viewBox="0 0 100 50" class="pixel-line" preserveAspectRatio="none">
+              <!-- A perfectly blocky stair-step line drawn with 90 degree angles -->
+              <polyline points="0,45 5,45 5,35 15,35 15,45 25,45 25,15 35,15 35,30 45,30 45,10 55,10 55,25 65,25 65,5 75,5 75,15 85,15 85,40 95,40 95,20 100,20" />
+            </svg>
+            <!-- Moving mask reveals the line -->
+            <div class="line-mask"></div>
+          </div>
+        </div>
+        
+        <!-- Panel 3: Defrag Memory Matrix -->
+        <div class="panel panel-wide">
+          <div class="panel-title">MEMORY ALLOCATION [SECTOR 7]</div>
+          <div class="memory-grid">
+             <!-- 48 blocks for the matrix visualization -->
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+             <div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div><div class="mem-block"></div>
+          </div>
+        </div>
+  
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    /* 
+     * Retro 8-Bit Arcade (CRT Style)
+     * Heavily stylized with scanlines, chromatic aberration, and pixel art sprites.
+     */
+     
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root {
+      --neon: #39FF14;
+      --red: #FF003C;
+      --yellow: #FFEB3B;
+      --cyan: #00F3FF;
+      --bg: #050505;
+    }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+    }
+
+    /* ---------------------------------
+       CRT Screen Effects
+       --------------------------------- */
+    .crt-screen {
+      position: relative;
+      width: 100vw; height: 100vh;
+      background: var(--bg);
+      /* Chromatic aberration */
+      text-shadow: 2px 0px 0px rgba(255,0,0,0.8), -2px 0px 0px rgba(0,255,255,0.8);
+      animation: crtFlicker 0.15s infinite;
+    }
+    
+    /* Global screen flicker */
+    @keyframes crtFlicker {
+      0% { opacity: 0.95; }
+      50% { opacity: 1; }
+      100% { opacity: 0.98; }
+    }
+
+    /* Scanlines and Vignette Overlay */
+    .crt-overlay {
+      position: absolute;
+      inset: 0;
+      background: 
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 0.4vw, 0.6vw 100%;
+      pointer-events: none;
+      z-index: 100;
+      /* Heavy rounded vignette to curve the screen */
+      box-shadow: inset 0 0 10vw rgba(0,0,0,1), inset 0 0 4vw rgba(0,0,0,0.8);
+    }
+
+    /* ---------------------------------
+       Top HUD (Scores)
+       --------------------------------- */
+    .top-bar {
+      position: absolute;
+      top: 5%; left: 5%; right: 5%;
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.5vw;
+      line-height: 1.5;
+    }
+    .score-label { color: #fff; }
+    
+    @property --score {
+      syntax: '<integer>';
+      initial-value: 12050;
+      inherits: false;
+    }
+    .score-num {
+      counter-reset: score var(--score);
+      animation: countScore 12s steps(40) infinite;
+      color: var(--neon);
+    }
+    .score-num::before { content: "0" counter(score); }
+    
+    @keyframes countScore {
+      0% { --score: 12050; }
+      100% { --score: 14890; }
+    }
+
+    /* ---------------------------------
+       Bottom HUD (Health)
+       --------------------------------- */
+    .bottom-bar {
+      position: absolute;
+      bottom: 5%; left: 5%;
+      display: flex; gap: 2vw; align-items: center;
+      font-size: 1.5vw; color: #fff;
+    }
+    .health-bar { display: flex; gap: 0.5vw; }
+    .hp-block {
+      width: 1.5vw; height: 3vw;
+      background: var(--neon);
+      box-shadow: 2px 0px 0px rgba(255,0,0,0.8), -2px 0px 0px rgba(0,255,255,0.8);
+      animation: drainHP 12s step-end infinite;
+    }
+    /* HP draining step animations */
+    .hp-block:nth-child(5) { animation-name: drain5; }
+    .hp-block:nth-child(4) { animation-name: drain4; }
+    .hp-block:nth-child(3) { animation-name: drain3; }
+    
+    @keyframes drain5 { 0%, 25% { opacity: 1; } 26%, 100% { opacity: 0; } }
+    @keyframes drain4 { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    @keyframes drain3 { 0%, 80% { opacity: 1; background: var(--yellow); } 81%, 100% { opacity: 0; } }
+    /* First two blocks stay alive but turn red */
+    .hp-block:nth-child(2), .hp-block:nth-child(1) {
+      animation: dangerColor 12s step-end infinite;
+    }
+    @keyframes dangerColor {
+      0%, 80% { background: var(--neon); }
+      81%, 100% { background: var(--red); }
+    }
+
+    .insert-coin {
+      position: absolute;
+      bottom: 5%; right: 5%;
+      color: var(--yellow);
+      font-size: 1.5vw;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+    /* ---------------------------------
+       Pixel Art Sprites (Box Shadow)
+       --------------------------------- */
+    .alien {
+      font-size: 0.5vw; /* Pixel base size */
+      width: 1em; height: 1em;
+      background: transparent;
+      color: var(--neon);
+      animation: alienWalk 0.8s step-end infinite;
+    }
+    
+    /* 11x8 Space Invader frames */
+    @keyframes alienWalk {
+      0%, 49% {
+        box-shadow: 
+          2em 0em, 8em 0em,
+          3em 1em, 7em 1em,
+          2em 2em, 3em 2em, 4em 2em, 5em 2em, 6em 2em, 7em 2em, 8em 2em,
+          1em 3em, 2em 3em, 4em 3em, 5em 3em, 6em 3em, 8em 3em, 9em 3em,
+          0em 4em, 1em 4em, 2em 4em, 3em 4em, 4em 4em, 5em 4em, 6em 4em, 7em 4em, 8em 4em, 9em 4em, 10em 4em,
+          0em 5em, 2em 5em, 3em 5em, 4em 5em, 5em 5em, 6em 5em, 7em 5em, 8em 5em, 10em 5em,
+          0em 6em, 2em 6em, 8em 6em, 10em 6em,
+          3em 7em, 4em 7em, 6em 7em, 7em 7em;
+      }
+      50%, 100% {
+        box-shadow: 
+          2em 1em, 8em 1em,
+          0em 2em, 2em 2em, 3em 2em, 4em 2em, 5em 2em, 6em 2em, 7em 2em, 8em 2em, 10em 2em,
+          0em 3em, 1em 3em, 2em 3em, 4em 3em, 5em 3em, 6em 3em, 8em 3em, 9em 3em, 10em 3em,
+          0em 4em, 1em 4em, 2em 4em, 3em 4em, 4em 4em, 5em 4em, 6em 4em, 7em 4em, 8em 4em, 9em 4em, 10em 4em,
+          2em 5em, 3em 5em, 4em 5em, 5em 5em, 6em 5em, 7em 5em, 8em 5em,
+          1em 6em, 9em 6em,
+          0em 7em, 10em 7em;
+      }
+    }
+
+    /* Fleet Movement (Zig Zag descent) */
+    .alien-fleet {
+      position: absolute;
+      top: 15%; left: 10%;
+      display: flex; gap: 8vw;
+      animation: fleetMove 12s step-end infinite;
+    }
+    @keyframes fleetMove {
+      0% { transform: translate(0, 0); }
+      10% { transform: translate(15vw, 0); }
+      20% { transform: translate(30vw, 0); }
+      25% { transform: translate(30vw, 4vw); }
+      35% { transform: translate(15vw, 4vw); }
+      45% { transform: translate(0vw, 4vw); }
+      50% { transform: translate(0vw, 8vw); }
+      60% { transform: translate(15vw, 8vw); }
+      70% { transform: translate(30vw, 8vw); }
+      75% { transform: translate(30vw, 12vw); }
+      85% { transform: translate(15vw, 12vw); }
+      95% { transform: translate(0vw, 12vw); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* ---------------------------------
+       Player Ship
+       --------------------------------- */
+    .player-container {
+      position: absolute;
+      bottom: 20%; left: 50%;
+      animation: playerMove 12s step-end infinite;
+    }
+    
+    .player-ship {
+      font-size: 0.6vw;
+      width: 1em; height: 1em;
+      background: transparent;
+      color: var(--cyan);
+      box-shadow:
+        5em 0em,
+        4em 1em, 5em 1em, 6em 1em,
+        4em 2em, 5em 2em, 6em 2em,
+        0em 3em, 1em 3em, 2em 3em, 3em 3em, 4em 3em, 5em 3em, 6em 3em, 7em 3em, 8em 3em, 9em 3em, 10em 3em,
+        0em 4em, 1em 4em, 2em 4em, 3em 4em, 4em 4em, 5em 4em, 6em 4em, 7em 4em, 8em 4em, 9em 4em, 10em 4em,
+        0em 5em, 1em 5em, 2em 5em, 3em 5em, 4em 5em, 5em 5em, 6em 5em, 7em 5em, 8em 5em, 9em 5em, 10em 5em,
+        0em 6em, 1em 6em, 2em 6em, 3em 6em, 4em 6em, 5em 6em, 6em 6em, 7em 6em, 8em 6em, 9em 6em, 10em 6em,
+        0em 7em, 1em 7em, 2em 7em, 3em 7em, 4em 7em, 5em 7em, 6em 7em, 7em 7em, 8em 7em, 9em 7em, 10em 7em;
+    }
+
+    @keyframes playerMove {
+      0% { transform: translateX(0); }
+      10% { transform: translateX(-15vw); }
+      20% { transform: translateX(-15vw); }
+      30% { transform: translateX(20vw); }
+      40% { transform: translateX(20vw); }
+      50% { transform: translateX(-10vw); }
+      60% { transform: translateX(-10vw); }
+      70% { transform: translateX(30vw); }
+      80% { transform: translateX(30vw); }
+      90% { transform: translateX(0); }
+      100% { transform: translateX(0); }
+    }
+
+    /* Player Lasers */
+    .laser {
+      position: absolute;
+      /* Spawns from the nose of the ship (x=5em) */
+      left: 3vw; 
+      width: 0.4vw; height: 1.5vw;
+      background: var(--yellow);
+      opacity: 0;
+      animation: fireLaser 1s step-end infinite;
+    }
+    @keyframes fireLaser {
+      0%, 15% { opacity: 0; bottom: 0; }
+      20% { opacity: 1; bottom: 10vh; }
+      40% { opacity: 1; bottom: 30vh; }
+      60% { opacity: 1; bottom: 50vh; }
+      80% { opacity: 1; bottom: 70vh; }
+      100% { opacity: 0; bottom: 90vh; }
+    }
+
+    /* ---------------------------------
+       Boss Warning Alert
+       --------------------------------- */
+    .boss-warning {
+      position: absolute;
+      top: 40%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--red);
+      font-size: 3vw;
+      text-align: center;
+      line-height: 1.8;
+      animation: bossFlash 12s step-end infinite;
+    }
+    @keyframes bossFlash {
+      0%, 75% { opacity: 0; }
+      /* Flash rapidly */
+      76%, 80%, 84%, 88%, 92%, 96%, 100% { opacity: 1; color: var(--red); }
+      78%, 82%, 86%, 90%, 94%, 98% { opacity: 1; color: #fff; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="crt-screen">
+    <!-- Overlay for vignette and scanlines -->
+    <div class="crt-overlay"></div>
+
+    <!-- UI Layer -->
+    <div class="top-bar">
+       <div class="score">
+         <div class="score-label">SCORE</div>
+         <div class="score-num"></div>
+       </div>
+       <div class="hi-score">
+         <div class="score-label">HI-SCORE</div>
+         <div>099990</div>
+       </div>
+    </div>
+    
+    <!-- The Alien Fleet -->
+    <div class="alien-fleet">
+      <div class="alien"></div>
+      <div class="alien" style="color: var(--yellow);"></div>
+      <div class="alien" style="color: var(--red);"></div>
+    </div>
+    
+    <!-- Player and Lasers -->
+    <div class="player-container">
+       <div class="laser"></div>
+       <div class="player-ship"></div>
+    </div>
+    
+    <!-- Boss Alert -->
+    <div class="boss-warning">
+       <div>WARNING</div>
+       <div>BOSS APPROACHING</div>
+    </div>
+    
+    <!-- Bottom HUD -->
+    <div class="bottom-bar">
+       <div>HP</div>
+       <div class="health-bar">
+          <div class="hp-block"></div>
+          <div class="hp-block"></div>
+          <div class="hp-block"></div>
+          <div class="hp-block"></div>
+          <div class="hp-block"></div>
+       </div>
+    </div>
+    
+    <div class="insert-coin">INSERT COIN</div>
+  </div>
+
+</body>
+</html>

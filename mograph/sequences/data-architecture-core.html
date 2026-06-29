@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Data Architecture Core</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap');
+
+    :root {
+      /* High-contrast palette for light backgrounds */
+      --c-text: #0f172a;       /* Slate 900 for high visibility on white */
+      --c-line: #334155;       /* Slate 700 for connecting lines */
+      
+      /* Dark UI components (SaaS aesthetic) */
+      --c-surface: #0f172a;    
+      --c-surface-light: #1e293b;
+      --c-border: #334155;
+      --c-extrude: #020617;    /* Pure dark for 3D hard shadows */
+      
+      /* Vibrant Accents */
+      --c-blue: #3b82f6;
+      --c-emerald: #10b981;
+      --c-violet: #8b5cf6;
+      --c-amber: #f59e0b;
+      --c-cyan: #06b6d4;
+    }
+
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      /* We leave background transparent so the player's white/preset background shows through */
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 2500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera {
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    .tilt-wrapper {
+      position: relative;
+      transform-style: preserve-3d;
+      /* Perfect isometric projection */
+      transform: rotateX(60deg) rotateZ(-45deg);
+      /* Sequence timing: Enter at 0s, Exit at 11.5s */
+      animation: sceneIn 1.5s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 sceneOut 1s 11.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    }
+
+    @keyframes sceneIn {
+      0% { transform: rotateX(60deg) rotateZ(-45deg) scale(0) translateZ(-50vmin); }
+      100% { transform: rotateX(60deg) rotateZ(-45deg) scale(1) translateZ(0); }
+    }
+    @keyframes sceneOut {
+      0% { transform: rotateX(60deg) rotateZ(-45deg) scale(1) translateZ(0); }
+      100% { transform: rotateX(60deg) rotateZ(-45deg) scale(0) translateZ(50vmin); }
+    }
+
+    /* Base Layer Styles */
+    .layer {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform-style: preserve-3d;
+    }
+
+    .l-board {
+      position: absolute;
+      inset: 0;
+      background: var(--c-surface);
+      border: 2px solid var(--c-border);
+      transform-style: preserve-3d;
+      /* Hard offset shadows create a tactile 3D extrusion block without muddy soft shadows */
+      box-shadow: 
+        -1px 1px 0 var(--c-extrude),
+        -2px 2px 0 var(--c-extrude),
+        -3px 3px 0 var(--c-extrude),
+        -4px 4px 0 var(--c-extrude),
+        -5px 5px 0 var(--c-extrude),
+        -6px 6px 0 var(--c-extrude),
+        -7px 7px 0 var(--c-extrude),
+        -8px 8px 0 var(--c-extrude);
+    }
+    
+    .l-board::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+      pointer-events: none;
+    }
+
+    /* ════════ LAYER 1: DATA LAKE ════════ */
+    .l1 { width: 36vmin; height: 36vmin; }
+    .l1 .l-board { border-color: var(--c-blue); }
+    
+    .data-grid {
+      position: absolute;
+      inset: 2vmin;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 1.5vmin;
+      transform-style: preserve-3d;
+    }
+    
+    .data-block {
+      background: var(--c-surface-light);
+      border: 1px solid var(--c-border);
+      transform-style: preserve-3d;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+      animation: blockPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    .data-block.active {
+      background: var(--c-blue);
+      border-color: #60a5fa;
+      box-shadow: 0 0 15px var(--c-blue);
+    }
+
+    .data-block:nth-child(1) { animation-delay: 2.2s; }
+    .data-block:nth-child(5) { animation-delay: 2.3s; }
+    .data-block:nth-child(10) { animation-delay: 2.4s; }
+    .data-block:nth-child(15) { animation-delay: 2.5s; }
+    .data-block:nth-child(4) { animation-delay: 2.6s; }
+    .data-block:nth-child(7) { animation-delay: 2.7s; }
+    
+    @keyframes blockPop {
+      0% { transform: translateZ(0); }
+      100% { transform: translateZ(3vmin); }
+    }
+
+    /* ════════ LAYER 2: PROCESSING NODE ════════ */
+    .l2 { width: 28vmin; height: 28vmin; }
+    .l2 .l-board { border-color: var(--c-emerald); }
+    
+    .cpu-blade-wrap {
+      position: absolute;
+      inset: 2vmin;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transform-style: preserve-3d;
+    }
+    
+    .cpu-blade {
+      width: 100%;
+      height: 25%;
+      background: var(--c-surface-light);
+      border: 1px solid var(--c-emerald);
+      transform-style: preserve-3d;
+      position: relative;
+      animation: bladeSlide 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    
+    .cpu-blade::before {
+      content: ''; position: absolute; inset: 0;
+      box-shadow: -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude), -3px 3px 0 var(--c-extrude);
+      transform: translateZ(-1px);
+    }
+    
+    .cpu-blade-wrap .cpu-blade:nth-child(1) { animation-delay: 2.4s; }
+    .cpu-blade-wrap .cpu-blade:nth-child(2) { animation-delay: 2.5s; }
+    .cpu-blade-wrap .cpu-blade:nth-child(3) { animation-delay: 2.6s; }
+    
+    @keyframes bladeSlide {
+      0% { transform: translateX(10vmin) translateZ(2vmin); clip-path: inset(0 100% 0 0); }
+      100% { transform: translateX(0) translateZ(2vmin); clip-path: inset(0 0 0 0); }
+    }
+
+    /* ════════ LAYER 3: NEURAL CORE ════════ */
+    .l3 { width: 22vmin; height: 22vmin; }
+    .l3 .l-board { border-color: var(--c-violet); }
+    
+    .circuit-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      transform: translateZ(0.5vmin);
+    }
+    
+    .circuit-path {
+      fill: none;
+      stroke: var(--c-violet);
+      stroke-width: 2px;
+      stroke-dasharray: 140;
+      stroke-dashoffset: 140;
+      animation: tracePath 1s 2.8s cubic-bezier(0.64, 0, 0.36, 1) both;
+    }
+    
+    @keyframes tracePath {
+      0% { stroke-dashoffset: 140; }
+      100% { stroke-dashoffset: 0; }
+    }
+    
+    .neural-node {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 5vmin; height: 5vmin;
+      margin: -2.5vmin 0 0 -2.5vmin;
+      background: var(--c-surface-light);
+      border: 2px solid var(--c-violet);
+      border-radius: 1vmin;
+      transform-style: preserve-3d;
+      animation: nodeFloat 1.2s 3.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    .neural-node::after {
+      content: ''; position: absolute; inset: 20%;
+      background: var(--c-violet);
+      box-shadow: 0 0 20px var(--c-violet);
+      border-radius: 50%;
+    }
+    
+    @keyframes nodeFloat {
+      0% { transform: translateZ(0) rotate(0deg); }
+      100% { transform: translateZ(6vmin) rotate(45deg); }
+    }
+
+    /* ════════ LAYER 4: API GATEWAY ════════ */
+    .l4 { width: 14vmin; height: 14vmin; }
+    .l4 .l-board { border-color: var(--c-amber); border-radius: 50%; }
+    .l4 .l-board {
+      box-shadow: 
+        -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude), -3px 3px 0 var(--c-extrude),
+        -4px 4px 0 var(--c-extrude), -5px 5px 0 var(--c-extrude);
+    }
+    
+    .gateway-ring {
+      position: absolute;
+      inset: -4vmin;
+      border: 2px dashed var(--c-amber);
+      border-radius: 50%;
+      transform: translateZ(4vmin);
+      animation: spinGateway 6s 3.5s linear forwards;
+      clip-path: polygon(50% 50%, 50% 0, 50% 0, 50% 0, 50% 0, 50% 0);
+    }
+    
+    @keyframes spinGateway {
+      0% { clip-path: polygon(50% 50%, 50% 0, 50% 0, 50% 0, 50% 0, 50% 0); transform: translateZ(4vmin) rotate(0deg); }
+      10% { clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 0); transform: translateZ(4vmin) rotate(36deg); }
+      100% { clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 0); transform: translateZ(4vmin) rotate(360deg); }
+    }
+
+    /* ════════ Z-AXIS EXPLOSION ANIMATIONS ════════ */
+    .l1 { animation: l1Ex 1.5s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both, l1Col 1s 9.5s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l2 { animation: l2Ex 1.5s 1.3s cubic-bezier(0.16, 1, 0.3, 1) both, l2Col 1s 9.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l3 { animation: l3Ex 1.5s 1.4s cubic-bezier(0.16, 1, 0.3, 1) both, l3Col 1s 9.7s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l4 { animation: l4Ex 1.5s 1.5s cubic-bezier(0.16, 1, 0.3, 1) both, l4Col 1s 9.8s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+
+    /* Distances: L1 (-24), L2 (-6), L3 (12), L4 (30) */
+    @keyframes l1Ex { 0% { transform: translate(-50%, -50%) translateZ(0); } 100% { transform: translate(-50%, -50%) translateZ(-24vmin); } }
+    @keyframes l2Ex { 0% { transform: translate(-50%, -50%) translateZ(0); } 100% { transform: translate(-50%, -50%) translateZ(-6vmin); } }
+    @keyframes l3Ex { 0% { transform: translate(-50%, -50%) translateZ(0); } 100% { transform: translate(-50%, -50%) translateZ(12vmin); } }
+    @keyframes l4Ex { 0% { transform: translate(-50%, -50%) translateZ(0); } 100% { transform: translate(-50%, -50%) translateZ(30vmin); } }
+
+    @keyframes l1Col { 0% { transform: translate(-50%, -50%) translateZ(-24vmin); } 100% { transform: translate(-50%, -50%) translateZ(0); } }
+    @keyframes l2Col { 0% { transform: translate(-50%, -50%) translateZ(-6vmin); } 100% { transform: translate(-50%, -50%) translateZ(0); } }
+    @keyframes l3Col { 0% { transform: translate(-50%, -50%) translateZ(12vmin); } 100% { transform: translate(-50%, -50%) translateZ(0); } }
+    @keyframes l4Col { 0% { transform: translate(-50%, -50%) translateZ(30vmin); } 100% { transform: translate(-50%, -50%) translateZ(0); } }
+
+    /* ════════ THE CENTRAL LASER SPINE ════════ */
+    .spine-beam {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 4px; height: 70vmin;
+      background: linear-gradient(to top, transparent, var(--c-cyan), transparent);
+      /* Rotate to face exactly down the Z-axis */
+      transform: translate(-50%, -50%) rotateX(90deg);
+      transform-style: preserve-3d;
+      animation: spineOn 1s 2.5s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 spineOff 0.5s 9.2s forwards;
+    }
+    @keyframes spineOn { 0% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(0); } 100% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(1); } }
+    @keyframes spineOff { 0% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(1); } 100% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(0); } }
+
+    /* ════════ LABELS & ANNOTATIONS ════════ */
+    .label-group {
+      position: absolute;
+      /* Anchored perfectly to the right edge of the layer */
+      left: 100%; top: 50%;
+      transform-style: preserve-3d;
+    }
+
+    .label-line {
+      position: absolute;
+      left: 0; top: 0;
+      height: 2px; 
+      background: var(--c-line);
+      transform-origin: left center;
+      animation: lineDraw 0.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 lineDrawOut 0.5s forwards;
+    }
+    
+    /* Dynamically calculate line width so text boxes align on the exact same vertical screen axis.
+       (Layer width / 2) + Line Width = Constant Total X (e.g. 36vmin) */
+    .l1 .label-line { width: 18vmin; animation-delay: 3.0s, 9.0s; }
+    .l2 .label-line { width: 22vmin; animation-delay: 3.1s, 9.1s; }
+    .l3 .label-line { width: 25vmin; animation-delay: 3.2s, 9.2s; }
+    .l4 .label-line { width: 29vmin; animation-delay: 3.3s, 9.3s; }
+
+    @keyframes lineDraw { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+    @keyframes lineDrawOut { 0% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+
+    .label-text-wrapper {
+      position: absolute;
+      top: -3vmin;
+      transform-origin: left center;
+      /* Undo isometric projection so the text faces the camera completely flat */
+      transform: rotateZ(45deg) rotateX(-60deg);
+      transform-style: preserve-3d;
+    }
+
+    .l1 .label-text-wrapper { left: 19vmin; }
+    .l2 .label-text-wrapper { left: 23vmin; }
+    .l3 .label-text-wrapper { left: 26vmin; }
+    .l4 .label-text-wrapper { left: 30vmin; }
+
+    .label-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.2vmin;
+      font-weight: 700;
+      color: var(--c-text);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.2vmin;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+    .label-subtitle {
+      font-size: 1.2vmin;
+      color: #64748b; /* Slate 500 */
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+
+    .l1 .label-title, .l1 .label-subtitle { animation-delay: 3.2s, 8.8s; }
+    .l2 .label-title, .l2 .label-subtitle { animation-delay: 3.3s, 8.9s; }
+    .l3 .label-title, .l3 .label-subtitle { animation-delay: 3.4s, 9.0s; }
+    .l4 .label-title, .l4 .label-subtitle { animation-delay: 3.5s, 9.1s; }
+
+    /* Chroma-safe reveal using clip-path instead of opacity fade */
+    @keyframes textWipe {
+      0% { clip-path: inset(0 100% 0 0); transform: translateX(-2vmin); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+    }
+    @keyframes textWipeOut {
+      0% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+      100% { clip-path: inset(0 0 0 100%); transform: translateX(2vmin); }
+    }
+
+    /* ════════ PIN DROP ACCENTS ════════ */
+    .pin {
+      position: absolute; left: 0; top: 0;
+      width: 1.5vmin; height: 1.5vmin;
+      border: 2px solid var(--c-text);
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      /* Rotate back to face camera and center on the origin point */
+      transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg);
+      animation: pinDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 pinHide 0.5s forwards;
+    }
+    .pin::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 4px; height: 4px; margin: -2px 0 0 -2px;
+      background: var(--c-text); border-radius: 50%;
+    }
+    .l1 .pin { animation-delay: 3.1s, 8.9s; }
+    .l2 .pin { animation-delay: 3.2s, 9.0s; }
+    .l3 .pin { animation-delay: 3.3s, 9.1s; }
+    .l4 .pin { animation-delay: 3.4s, 9.2s; }
+    
+    @keyframes pinDrop {
+      0% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(0) translateZ(5vmin); }
+      100% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(1) translateZ(0); }
+    }
+    @keyframes pinHide {
+      0% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(1); }
+      100% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(0); }
+    }
+
+    /* ════════ DATA PACKETS (TRAVELING ALONG SPINE) ════════ */
+    .packet {
+      position: absolute; left: 50%; top: 50%;
+      width: 1.5vmin; height: 1.5vmin;
+      margin: -0.75vmin 0 0 -0.75vmin;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 0 0 15px var(--c-cyan);
+      transform-style: preserve-3d;
+    }
+    
+    .pkt1 { animation: pktUp 1.5s 4.0s cubic-bezier(0.64, 0, 0.36, 1) 3 forwards; }
+    .pkt2 { animation: pktUp 1.5s 4.5s cubic-bezier(0.64, 0, 0.36, 1) 3 forwards; }
+    .pkt3 { animation: pktDown 1.8s 4.2s cubic-bezier(0.64, 0, 0.36, 1) 2 forwards; background: var(--c-amber); box-shadow: 0 0 15px var(--c-amber); }
+
+    @keyframes pktUp {
+      0% { transform: translateZ(-24vmin) scale(0); }
+      10% { transform: translateZ(-18vmin) scale(1); }
+      90% { transform: translateZ(24vmin) scale(1); }
+      100% { transform: translateZ(30vmin) scale(0); }
+    }
+    @keyframes pktDown {
+      0% { transform: translateZ(30vmin) scale(0); }
+      10% { transform: translateZ(24vmin) scale(1); }
+      90% { transform: translateZ(-18vmin) scale(1); }
+      100% { transform: translateZ(-24vmin) scale(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="scene">
+    <div class="camera">
+      <div class="tilt-wrapper">
+        
+        <div class="spine-beam"></div>
+
+        <!-- LAYER 1: DATA LAKE -->
+        <div class="layer l1">
+          <div class="l-board">
+            <div class="data-grid">
+              <div class="data-block active"></div><div class="data-block"></div><div class="data-block"></div><div class="data-block active"></div>
+              <div class="data-block"></div><div class="data-block"></div><div class="data-block active"></div><div class="data-block"></div>
+              <div class="data-block"></div><div class="data-block active"></div><div class="data-block"></div><div class="data-block"></div>
+              <div class="data-block"></div><div class="data-block"></div><div class="data-block active"></div><div class="data-block"></div>
+            </div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Data Lake</div>
+              <div class="label-subtitle">Raw Storage Array</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 2: PROCESSING NODE -->
+        <div class="layer l2">
+          <div class="l-board">
+            <div class="cpu-blade-wrap">
+              <div class="cpu-blade"></div>
+              <div class="cpu-blade"></div>
+              <div class="cpu-blade"></div>
+            </div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Processing</div>
+              <div class="label-subtitle">Compute Cluster Node</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 3: NEURAL CORE -->
+        <div class="layer l3">
+          <div class="l-board">
+            <svg class="circuit-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <!-- M0,50 L35,50 M100,50 L65,50 M50,0 L50,35 M50,100 L50,65 -->
+              <path class="circuit-path" d="M0,50 L35,50 M100,50 L65,50 M50,0 L50,35 M50,100 L50,65" />
+            </svg>
+            <div class="neural-node"></div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">AI Core</div>
+              <div class="label-subtitle">Neural Engine Processing</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 4: API GATEWAY -->
+        <div class="layer l4">
+          <div class="l-board"></div>
+          <div class="gateway-ring"></div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">API Gateway</div>
+              <div class="label-subtitle">Data Routing & Output</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRAVELING DATA PACKETS -->
+        <div class="packet pkt1"></div>
+        <div class="packet pkt2"></div>
+        <div class="packet pkt3"></div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

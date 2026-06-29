@@ -13,5 +13,8 @@
   { "file": "virtual-camera-pan.html", "name": "Virtual Camera Macro Pan" },
   { "file": "kinetic-typography.html", "name": "Kinetic Typography (Example)" },
   { "file": "fake-scroll-teardown.html", "name": "Fake Scroll Page Tear Down" },
-  { "file": "3d-data-chart.html", "name": "3D Data Chart" }
+  { "file": "3d-data-chart.html", "name": "3D Data Chart" },
+  { "file": "data-architecture-core.html", "name": "Data Architecture Core (Tech)" },
+  { "file": "data-architecture-core-v2.html", "name": "Data Architecture Core (Organic)" },
+  { "file": "hardware-teardown.html", "name": "Hardware Teardown" }
 ]

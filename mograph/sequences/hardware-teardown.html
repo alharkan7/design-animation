@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hardware Teardown</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap');
+
+    :root {
+      /* Typography */
+      --c-text: #0f172a;       
+      --c-text-muted: #64748b; 
+      --c-line: #334155;       
+      
+      /* Hardware Palette */
+      --c-casing: #1e293b;
+      --c-casing-border: #475569;
+      --c-extrude: #020617;
+      
+      --c-cam-bg: #0f172a;
+      --c-lens: #000;
+      
+      --c-battery: #0f172a;
+      --c-copper: #b45309;
+      --c-silver: #94a3b8;
+      
+      --c-board: #064e3b;
+      --c-trace: #fbbf24;
+      --c-chip: #111827;
+      
+      --c-screen-bg: #0f172a;
+      --c-ui: #38bdf8;
+    }
+
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 2500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera {
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    .tilt-wrapper {
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(60deg) rotateZ(-30deg);
+      animation: sceneIn 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 sceneOut 1s 11.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    }
+
+    @keyframes sceneIn {
+      0% { transform: rotateX(60deg) rotateZ(-30deg) scale(0) translateZ(-50vmin); }
+      100% { transform: rotateX(60deg) rotateZ(-30deg) scale(1) translateZ(0); }
+    }
+    @keyframes sceneOut {
+      0% { transform: rotateX(60deg) rotateZ(-30deg) scale(1) translateZ(0); }
+      100% { transform: rotateX(60deg) rotateZ(-30deg) scale(0) translateZ(50vmin); }
+    }
+
+    /* Base Phone Layer (Accurate 19.5:9 proportions) */
+    .phone-layer {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 18vmin; height: 38vmin;
+      margin: -19vmin 0 0 -9vmin;
+      border-radius: 3.5vmin;
+      transform-style: preserve-3d;
+    }
+
+    /* ════════ L1: TITANIUM CASING ════════ */
+    .casing {
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: var(--c-casing);
+      border: 2px solid var(--c-casing-border);
+      box-shadow: 
+        -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude), -3px 3px 0 var(--c-extrude),
+        -4px 4px 0 var(--c-extrude), -5px 5px 0 var(--c-extrude), -6px 6px 0 var(--c-extrude),
+        -7px 7px 0 var(--c-extrude), -8px 8px 0 var(--c-extrude);
+      transform-style: preserve-3d;
+    }
+    
+    /* Physical Buttons */
+    .side-button {
+      position: absolute; width: 0.5vmin; background: var(--c-casing-border);
+      box-shadow: -1px 1px 0 var(--c-extrude);
+    }
+    .vol-up { left: -0.5vmin; top: 8vmin; height: 3vmin; border-radius: 0.2vmin 0 0 0.2vmin; }
+    .vol-down { left: -0.5vmin; top: 12vmin; height: 3vmin; border-radius: 0.2vmin 0 0 0.2vmin; }
+    .power { right: -0.5vmin; top: 10vmin; height: 4vmin; border-radius: 0 0.2vmin 0.2vmin 0; }
+
+    /* MagSafe Coil Placeholder */
+    .magsafe-ring {
+      position: absolute; left: 50%; top: 50%;
+      width: 8vmin; height: 8vmin;
+      margin: -4vmin 0 0 -4vmin;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.05);
+    }
+    .magsafe-tail {
+      position: absolute; left: 50%; bottom: -3vmin;
+      width: 1vmin; height: 3vmin;
+      margin-left: -0.5vmin;
+      background: rgba(255,255,255,0.05);
+      border-radius: 0.5vmin;
+    }
+
+    /* Pro Camera Module */
+    .camera-bump {
+      position: absolute; left: 1.5vmin; top: 1.5vmin;
+      width: 8vmin; height: 8vmin;
+      border-radius: 2vmin;
+      background: var(--c-cam-bg);
+      border: 1px solid var(--c-casing-border);
+      box-shadow: -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude), -3px 3px 0 var(--c-extrude);
+      transform: translateZ(2px);
+    }
+    
+    .lens {
+      position: absolute;
+      width: 2.8vmin; height: 2.8vmin;
+      background: #1e293b;
+      border-radius: 50%;
+      border: 1px solid #334155;
+      box-shadow: inset 0 0 5px #000;
+    }
+    .lens::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 1.2vmin; height: 1.2vmin; margin: -0.6vmin 0 0 -0.6vmin;
+      background: var(--c-lens); border-radius: 50%;
+    }
+    .lens::before {
+      content: ''; position: absolute; left: 20%; top: 20%;
+      width: 0.6vmin; height: 0.6vmin;
+      background: rgba(255,255,255,0.3); border-radius: 50%; z-index: 2;
+    }
+
+    /* Triangle layout */
+    .lens-1 { left: 0.8vmin; top: 0.8vmin; }
+    .lens-2 { left: 0.8vmin; top: 4.2vmin; }
+    .lens-3 { left: 4.2vmin; top: 2.5vmin; }
+
+    .flash {
+      position: absolute; right: 1.2vmin; top: 1vmin; width: 1.2vmin; height: 1.2vmin;
+      background: #fef08a; border-radius: 50%; box-shadow: 0 0 5px #fef08a;
+    }
+    .lidar {
+      position: absolute; right: 1.4vmin; bottom: 1.4vmin; width: 1.2vmin; height: 1.2vmin;
+      background: #000; border-radius: 50%;
+    }
+
+    /* ════════ L2: BATTERY & THERMALS ════════ */
+    .internals-plate {
+      position: absolute; inset: 0; border-radius: inherit;
+      background: #0f172a;
+      border: 1px solid var(--c-casing-border);
+      box-shadow: -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude);
+      transform-style: preserve-3d;
+    }
+    
+    .battery-pack {
+      position: absolute; right: 1.5vmin; top: 12vmin; bottom: 4vmin; width: 9vmin;
+      background: #1e293b; border: 1px solid #334155; border-radius: 1vmin;
+      transform: translateZ(1px);
+    }
+    .battery-label {
+      position: absolute; inset: 1vmin; border: 1px dashed #475569;
+      display: flex; flex-direction: column; gap: 0.5vmin; padding: 1vmin; box-sizing: border-box;
+    }
+    .bat-line { width: 100%; height: 2px; background: #475569; }
+    .bat-line.short { width: 50%; }
+    
+    .taptic-engine {
+      position: absolute; bottom: 1vmin; left: 1.5vmin; right: 1.5vmin; height: 2vmin;
+      background: #334155; border: 1px solid #475569; border-radius: 0.5vmin;
+      transform: translateZ(1px);
+      overflow: hidden;
+    }
+    .taptic-engine::after {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(90deg, #475569, #475569 2px, transparent 2px, transparent 4px);
+    }
+
+    .copper-pipe {
+      position: absolute; left: 4vmin; top: 2vmin; width: 1.2vmin; height: 22vmin;
+      background: var(--c-copper); border-radius: 0.6vmin;
+      box-shadow: inset -2px 0 4px rgba(0,0,0,0.5);
+      transform: translateZ(1px);
+    }
+    .copper-pipe::after {
+      content: ''; position: absolute; left: 0; bottom: 0; width: 10vmin; height: 1.2vmin;
+      background: var(--c-copper); border-radius: 0.6vmin;
+    }
+
+    /* ════════ L3: MOTHERBOARD ════════ */
+    .motherboard {
+      position: absolute; inset: 0; border-radius: inherit;
+      background: var(--c-board);
+      border: 1px solid #047857;
+      box-shadow: -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude);
+      overflow: hidden;
+      transform: translateZ(0); 
+    }
+    
+    .microchip {
+      position: absolute; background: var(--c-chip);
+      border: 1px solid #374151; border-radius: 0.3vmin;
+    }
+    .c1 { left: 2vmin; top: 12vmin; width: 3vmin; height: 4vmin; }
+    .c2 { left: 2vmin; top: 18vmin; width: 2vmin; height: 2vmin; }
+    .c3 { right: 2vmin; top: 2vmin; width: 3vmin; height: 6vmin; }
+    .c4 { left: 7vmin; top: 26vmin; width: 4vmin; height: 4vmin; }
+
+    .board-traces {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+    }
+    .trace {
+      fill: none; stroke: var(--c-trace); stroke-width: 2px;
+      stroke-dasharray: 100; stroke-dashoffset: 100;
+      animation: drawTrace 1s 2.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes drawTrace { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
+
+    .cpu-die {
+      position: absolute; top: 3.5vmin; left: 2vmin;
+      width: 5vmin; height: 5vmin;
+      background: #000; border: 2px solid var(--c-trace);
+      border-radius: 0.5vmin;
+      transform-style: preserve-3d;
+      transform: translateZ(2px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cpu-core {
+      width: 3vmin; height: 3vmin;
+      background: linear-gradient(135deg, #111, #333);
+      border: 1px solid #555; border-radius: 0.2vmin;
+    }
+
+    /* ════════ L4: OLED SCREEN ════════ */
+    .screen-glass {
+      position: absolute; inset: 0; border-radius: inherit;
+      background: #000;
+      border: 1px solid #334155;
+      box-shadow: 0 0 20px rgba(56,189,248,0.1);
+    }
+    .bezel-inner {
+      position: absolute; inset: 0.6vmin; border-radius: 3vmin;
+      background: var(--c-screen-bg);
+      overflow: hidden;
+      border: 1px solid #1e293b;
+    }
+    
+    /* Dynamic Island Notch */
+    .dynamic-island {
+      position: absolute; top: 1vmin; left: 50%;
+      width: 6vmin; height: 1.8vmin; margin-left: -3vmin;
+      background: #000; border-radius: 1vmin;
+      box-shadow: 0 0 5px rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: flex-end; padding: 0 0.5vmin; box-sizing: border-box;
+      z-index: 10;
+    }
+    .island-cam {
+      width: 1vmin; height: 1vmin; background: #111; border-radius: 50%;
+      border: 1px solid #333;
+    }
+
+    /* Fake UI Elements */
+    .ui-screen {
+      position: absolute; inset: 0; margin-top: 5vmin;
+      padding: 1.5vmin; display: flex; flex-direction: column; gap: 1.5vmin;
+    }
+    .ui-widget {
+      width: 100%; height: 6vmin;
+      background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3);
+      border-radius: 1.5vmin;
+    }
+    .ui-row { display: flex; gap: 1vmin; }
+    .ui-box {
+      flex: 1; height: 6vmin;
+      background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3);
+      border-radius: 1.5vmin;
+    }
+    .ui-text { width: 70%; height: 1.5vmin; background: rgba(56,189,248,0.4); border-radius: 0.5vmin; }
+    .ui-text.short { width: 40%; }
+    .ui-text.long { width: 90%; }
+
+    /* ════════ Z-AXIS EXPLOSION ANIMATIONS ════════ */
+    .l1 { animation: l1Ex 1.8s 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both, l1Col 1s 9.5s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l2 { animation: l2Ex 1.8s 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) both, l2Col 1s 9.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l3 { animation: l3Ex 1.8s 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, l3Col 1s 9.7s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l4 { animation: l4Ex 1.8s 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, l4Col 1s 9.8s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+
+    @keyframes l1Ex { 0% { transform: translateZ(0vmin); } 100% { transform: translateZ(-22vmin); } }
+    @keyframes l2Ex { 0% { transform: translateZ(1vmin); } 100% { transform: translateZ(-6vmin); } }
+    @keyframes l3Ex { 0% { transform: translateZ(2vmin); } 100% { transform: translateZ(10vmin); } }
+    @keyframes l4Ex { 0% { transform: translateZ(3vmin); } 100% { transform: translateZ(26vmin); } }
+
+    @keyframes l1Col { 0% { transform: translateZ(-22vmin); } 100% { transform: translateZ(0vmin); } }
+    @keyframes l2Col { 0% { transform: translateZ(-6vmin); } 100% { transform: translateZ(1vmin); } }
+    @keyframes l3Col { 0% { transform: translateZ(10vmin); } 100% { transform: translateZ(2vmin); } }
+    @keyframes l4Col { 0% { transform: translateZ(26vmin); } 100% { transform: translateZ(3vmin); } }
+
+    /* ════════ LABELS & ANNOTATIONS ════════ */
+    .label-group {
+      position: absolute;
+      left: 100%; top: 50%;
+      transform-style: preserve-3d;
+    }
+
+    .label-line {
+      position: absolute;
+      left: 0; top: 0;
+      height: 2px; 
+      width: 14vmin;
+      background: var(--c-line);
+      transform-origin: left center;
+      animation: lineDraw 0.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 lineDrawOut 0.5s forwards;
+    }
+    
+    .l1 .label-line { animation-delay: 2.8s, 9.0s; }
+    .l2 .label-line { animation-delay: 2.9s, 9.1s; }
+    .l3 .label-line { animation-delay: 3.0s, 9.2s; }
+    .l4 .label-line { animation-delay: 3.1s, 9.3s; }
+
+    @keyframes lineDraw { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+    @keyframes lineDrawOut { 0% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+
+    .label-text-wrapper {
+      position: absolute;
+      top: -3vmin;
+      left: 15vmin;
+      transform-origin: left center;
+      transform: rotateZ(30deg) rotateX(-60deg);
+      transform-style: preserve-3d;
+      white-space: nowrap;
+    }
+
+    .label-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.2vmin;
+      font-weight: 700;
+      color: var(--c-text);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.2vmin;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+    .label-subtitle {
+      font-size: 1.2vmin;
+      color: var(--c-text-muted); 
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+
+    .l1 .label-title, .l1 .label-subtitle { animation-delay: 3.0s, 8.8s; }
+    .l2 .label-title, .l2 .label-subtitle { animation-delay: 3.1s, 8.9s; }
+    .l3 .label-title, .l3 .label-subtitle { animation-delay: 3.2s, 9.0s; }
+    .l4 .label-title, .l4 .label-subtitle { animation-delay: 3.3s, 9.1s; }
+
+    @keyframes textWipe {
+      0% { clip-path: inset(0 100% 0 0); transform: translateX(-2vmin); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+    }
+    @keyframes textWipeOut {
+      0% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+      100% { clip-path: inset(0 0 0 100%); transform: translateX(2vmin); }
+    }
+
+    /* ════════ PIN DROP ACCENTS ════════ */
+    .pin {
+      position: absolute; left: 0; top: 0;
+      width: 1.5vmin; height: 1.5vmin;
+      border: 2px solid var(--c-text);
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      transform: translate(-50%, -50%) rotateZ(30deg) rotateX(-60deg);
+      animation: pinDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 pinHide 0.5s forwards;
+    }
+    .pin::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 4px; height: 4px; margin: -2px 0 0 -2px;
+      background: var(--c-text); border-radius: 50%;
+    }
+    .l1 .pin { animation-delay: 2.9s, 8.9s; }
+    .l2 .pin { animation-delay: 3.0s, 9.0s; }
+    .l3 .pin { animation-delay: 3.1s, 9.1s; }
+    .l4 .pin { animation-delay: 3.2s, 9.2s; }
+    
+    @keyframes pinDrop {
+      0% { transform: translate(-50%, -50%) rotateZ(30deg) rotateX(-60deg) scale(0) translateZ(5vmin); }
+      100% { transform: translate(-50%, -50%) rotateZ(30deg) rotateX(-60deg) scale(1) translateZ(0); }
+    }
+    @keyframes pinHide {
+      0% { transform: translate(-50%, -50%) rotateZ(30deg) rotateX(-60deg) scale(1); }
+      100% { transform: translate(-50%, -50%) rotateZ(30deg) rotateX(-60deg) scale(0); }
+    }
+
+    /* ════════ DATA PARTICLES (Z-AXIS TRAVEL) ════════ */
+    .data-particle {
+      position: absolute; left: 50%; top: 30%;
+      width: 1vmin; height: 1vmin;
+      margin: -0.5vmin 0 0 -0.5vmin;
+      background: var(--c-ui);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--c-ui);
+      transform-style: preserve-3d;
+    }
+    
+    .dp1 { animation: pJump 1.5s 4s cubic-bezier(0.34, 1.56, 0.64, 1) 3 forwards; }
+    .dp2 { animation: pJump 1.5s 4.5s cubic-bezier(0.34, 1.56, 0.64, 1) 3 forwards; top: 70%; background: var(--c-trace); box-shadow: 0 0 10px var(--c-trace); }
+    .dp3 { animation: pJumpDown 1.8s 4.2s cubic-bezier(0.34, 1.56, 0.64, 1) 2 forwards; top: 80%; background: #10b981; box-shadow: 0 0 10px #10b981; }
+
+    @keyframes pJump {
+      0% { transform: translateZ(10vmin) scale(0); }
+      20% { transform: translateZ(13vmin) scale(1); }
+      80% { transform: translateZ(23vmin) scale(1); }
+      100% { transform: translateZ(26vmin) scale(0); }
+    }
+    @keyframes pJumpDown {
+      0% { transform: translateZ(10vmin) scale(0); }
+      20% { transform: translateZ(7vmin) scale(1); }
+      80% { transform: translateZ(-3vmin) scale(1); }
+      100% { transform: translateZ(-6vmin) scale(0); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="scene">
+    <div class="camera">
+      <div class="tilt-wrapper">
+        
+        <!-- LAYER 1: TITANIUM CASING -->
+        <div class="phone-layer l1">
+          <div class="casing">
+            <div class="side-button vol-up"></div>
+            <div class="side-button vol-down"></div>
+            <div class="side-button power"></div>
+            <div class="magsafe-ring"><div class="magsafe-tail"></div></div>
+            
+            <div class="camera-bump">
+              <div class="lens lens-1"></div>
+              <div class="lens lens-2"></div>
+              <div class="lens lens-3"></div>
+              <div class="flash"></div>
+              <div class="lidar"></div>
+            </div>
+          </div>
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Titanium Casing</div>
+              <div class="label-subtitle">Protective Outer Shell</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 2: INTERNALS -->
+        <div class="phone-layer l2">
+          <div class="internals-plate">
+            <div class="copper-pipe"></div>
+            <div class="battery-pack">
+              <div class="battery-label">
+                <div class="bat-line"></div>
+                <div class="bat-line"></div>
+                <div class="bat-line short"></div>
+              </div>
+            </div>
+            <div class="taptic-engine"></div>
+          </div>
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Graphene Battery</div>
+              <div class="label-subtitle">High-Density Power</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 3: MOTHERBOARD -->
+        <div class="phone-layer l3">
+          <div class="cpu-die"><div class="cpu-core"></div></div>
+          <div class="motherboard">
+            <svg class="board-traces" viewBox="0 0 100 200" preserveAspectRatio="none">
+              <path class="trace" d="M10,20 L30,20 L30,40 L60,40" />
+              <path class="trace" d="M80,10 L80,90 L40,90 L40,120" />
+              <path class="trace" d="M20,70 L20,150 L60,150" />
+              <path class="trace" d="M90,110 L90,180 L50,180" />
+              <path class="trace" d="M10,180 L30,180 L30,160 L50,160" />
+            </svg>
+            <div class="microchip c1"></div>
+            <div class="microchip c2"></div>
+            <div class="microchip c3"></div>
+            <div class="microchip c4"></div>
+          </div>
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Logic Board</div>
+              <div class="label-subtitle">Bionic Neural CPU</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 4: OLED SCREEN -->
+        <div class="phone-layer l4">
+          <div class="screen-glass">
+            <div class="bezel-inner">
+              <div class="dynamic-island">
+                <div class="island-cam"></div>
+              </div>
+              <div class="ui-screen">
+                <div class="ui-text"></div>
+                <div class="ui-text short"></div>
+                <div class="ui-widget"></div>
+                <div class="ui-row">
+                  <div class="ui-box"></div>
+                  <div class="ui-box"></div>
+                </div>
+                <div class="ui-text long"></div>
+              </div>
+            </div>
+          </div>
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">OLED Display</div>
+              <div class="label-subtitle">120Hz Retina Panel</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATA PARTICLES -->
+        <div class="data-particle dp1"></div>
+        <div class="data-particle dp2"></div>
+        <div class="data-particle dp3"></div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

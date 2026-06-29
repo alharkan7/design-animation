@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Organic Architecture Core</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+
+    :root {
+      /* Soft Nature Palette */
+      --c-text: #134e4a;      
+      --c-line: #94a3b8;      
+      
+      /* Clay / Soft Plastic UI */
+      --c-surface: #f8fafc;   /* Slightly off-white so it doesn't blend into the pure white background */
+      --c-border: #e2e8f0;    
+      --c-extrude: #cbd5e1;   
+      
+      /* Vibrant but soft organic accents */
+      --c-leaf: #34d399;      
+      --c-ocean: #38bdf8;     
+      --c-bloom: #fb7185;     
+      --c-sun: #fbbf24;       
+    }
+
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 2500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera {
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    .tilt-wrapper {
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(60deg) rotateZ(-45deg);
+      animation: sceneIn 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 sceneOut 1s 11.5s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    }
+
+    @keyframes sceneIn {
+      0% { transform: rotateX(60deg) rotateZ(-45deg) scale(0) translateZ(-30vmin); }
+      100% { transform: rotateX(60deg) rotateZ(-45deg) scale(1) translateZ(0); }
+    }
+    @keyframes sceneOut {
+      0% { transform: rotateX(60deg) rotateZ(-45deg) scale(1) translateZ(0); }
+      100% { transform: rotateX(60deg) rotateZ(-45deg) scale(0) translateZ(30vmin); }
+    }
+
+    /* Base Layer Styles */
+    .layer {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform-style: preserve-3d;
+    }
+
+    .clip-wrapper {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+      transform: translateZ(0);
+    }
+
+    .l-board {
+      position: absolute;
+      inset: 0;
+      background: var(--c-surface);
+      border: 2px solid var(--c-border);
+      transform-style: preserve-3d;
+      box-shadow: 
+        -1px 1px 0 var(--c-extrude),
+        -2px 2px 0 var(--c-extrude),
+        -3px 3px 0 var(--c-extrude),
+        -4px 4px 0 var(--c-extrude),
+        -5px 5px 0 var(--c-extrude),
+        -6px 6px 0 var(--c-extrude),
+        -7px 7px 0 var(--c-extrude);
+      border-radius: 50%;
+    }
+    
+    .l-board::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid rgba(255,255,255,1);
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.02);
+      pointer-events: none;
+    }
+
+    /* ════════ LAYER 1: ROOT BASIN ════════ */
+    .l1 { width: 36vmin; height: 36vmin; }
+    .l1 .l-board { border-color: var(--c-leaf); }
+    
+    .pebble-basin {
+      position: absolute;
+      inset: 2vmin;
+      transform-style: preserve-3d;
+    }
+    
+    .pebble {
+      position: absolute;
+      background: #f8fafc;
+      border: 2px solid var(--c-leaf);
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+      animation: pebblePop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    .pebble::before {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      box-shadow: -1px 1px 0 var(--c-extrude), -2px 2px 0 var(--c-extrude);
+      transform: translateZ(-1px);
+    }
+
+    .p-a { width: 10vmin; height: 10vmin; left: 8vmin; top: 8vmin; animation-delay: 2.2s; }
+    .p-b { width: 8vmin; height: 8vmin; left: 16vmin; top: 6vmin; animation-delay: 2.4s; }
+    .p-c { width: 10vmin; height: 10vmin; left: 12vmin; top: 18vmin; animation-delay: 2.6s; }
+    
+    @keyframes pebblePop {
+      0% { transform: translateZ(0) scale(0); }
+      100% { transform: translateZ(3vmin) scale(1); }
+    }
+
+    /* ════════ LAYER 2: FLOW MATRIX ════════ */
+    .l2 { width: 28vmin; height: 28vmin; }
+    .l2 .l-board { border-color: var(--c-ocean); border-radius: 6vmin; }
+    
+    .flow-waves {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+    
+    .wave-path {
+      fill: none;
+      stroke: var(--c-ocean);
+      stroke-width: 3px;
+      stroke-linecap: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: waveFlow 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .wave-path:nth-child(1) { animation-delay: 2.5s; }
+    .wave-path:nth-child(2) { animation-delay: 2.6s; }
+    .wave-path:nth-child(3) { animation-delay: 2.7s; }
+    
+    @keyframes waveFlow {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    /* ════════ LAYER 3: SYMBIOSIS CORE ════════ */
+    .l3 { width: 22vmin; height: 22vmin; }
+    .l3 .l-board { border-color: var(--c-bloom); }
+    
+    .organic-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+    
+    .organic-trace {
+      fill: none;
+      stroke: var(--c-bloom);
+      stroke-width: 3px;
+      stroke-linecap: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: organicTrace 1.2s 2.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    @keyframes organicTrace {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+    
+    .symbiosis-node {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 6vmin; height: 6vmin;
+      margin: -3vmin 0 0 -3vmin;
+      background: #fff;
+      border: 3px solid var(--c-bloom);
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      animation: nodeBreathe 1.5s 3.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    
+    .symbiosis-node::after {
+      content: ''; position: absolute; inset: 15%;
+      background: var(--c-bloom);
+      box-shadow: 0 0 15px var(--c-bloom);
+      border-radius: 50%;
+    }
+    
+    @keyframes nodeBreathe {
+      0% { transform: translateZ(0) scale(0); }
+      100% { transform: translateZ(6vmin) scale(1); }
+    }
+
+    /* ════════ LAYER 4: CANOPY EMITTER ════════ */
+    .l4 { width: 14vmin; height: 14vmin; }
+    .l4 .l-board { border-color: var(--c-sun); }
+    
+    .petal-ring {
+      position: absolute;
+      inset: -3vmin;
+      border: 3px dotted var(--c-sun);
+      border-radius: 50%;
+      transform: translateZ(3vmin);
+      animation: revealCanopy 1.5s 3.0s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 spinCanopy 10s 3.5s linear forwards;
+    }
+    
+    @keyframes revealCanopy {
+      0% { clip-path: circle(0% at 50% 50%); }
+      100% { clip-path: circle(100% at 50% 50%); }
+    }
+    @keyframes spinCanopy {
+      0% { transform: translateZ(3vmin) rotate(0deg); }
+      100% { transform: translateZ(3vmin) rotate(360deg); }
+    }
+
+    /* ════════ Z-AXIS EXPLOSION ANIMATIONS ════════ */
+    .l1 { animation: l1Ex 1.8s 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both, l1Col 1s 9.5s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l2 { animation: l2Ex 1.8s 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) both, l2Col 1s 9.6s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l3 { animation: l3Ex 1.8s 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, l3Col 1s 9.7s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+    .l4 { animation: l4Ex 1.8s 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, l4Col 1s 9.8s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+
+    /* Fix to "Transparent/Crowded" issue: Give them a tiny initial offset so they stack distinctly like a tiered cake, avoiding Z-fighting */
+    @keyframes l1Ex { 0% { transform: translate(-50%, -50%) translateZ(0vmin); } 100% { transform: translate(-50%, -50%) translateZ(-24vmin); } }
+    @keyframes l2Ex { 0% { transform: translate(-50%, -50%) translateZ(1vmin); } 100% { transform: translate(-50%, -50%) translateZ(-6vmin); } }
+    @keyframes l3Ex { 0% { transform: translate(-50%, -50%) translateZ(2vmin); } 100% { transform: translate(-50%, -50%) translateZ(12vmin); } }
+    @keyframes l4Ex { 0% { transform: translate(-50%, -50%) translateZ(3vmin); } 100% { transform: translate(-50%, -50%) translateZ(30vmin); } }
+
+    @keyframes l1Col { 0% { transform: translate(-50%, -50%) translateZ(-24vmin); } 100% { transform: translate(-50%, -50%) translateZ(0vmin); } }
+    @keyframes l2Col { 0% { transform: translate(-50%, -50%) translateZ(-6vmin); } 100% { transform: translate(-50%, -50%) translateZ(1vmin); } }
+    @keyframes l3Col { 0% { transform: translate(-50%, -50%) translateZ(12vmin); } 100% { transform: translate(-50%, -50%) translateZ(2vmin); } }
+    @keyframes l4Col { 0% { transform: translate(-50%, -50%) translateZ(30vmin); } 100% { transform: translate(-50%, -50%) translateZ(3vmin); } }
+
+    /* ════════ THE CENTRAL STEM ════════ */
+    .stem-beam {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 12px; height: 70vmin;
+      background: linear-gradient(to top, transparent, rgba(52,211,153,0.4), rgba(251,191,36,0.4), transparent);
+      border-radius: 6px;
+      filter: blur(2px);
+      transform: translate(-50%, -50%) rotateX(90deg);
+      transform-style: preserve-3d;
+      animation: stemOn 1.5s 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 stemOff 0.5s 9.2s forwards;
+    }
+    @keyframes stemOn { 0% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(0); } 100% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(1); } }
+    @keyframes stemOff { 0% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(1); } 100% { transform: translate(-50%, -50%) rotateX(90deg) scaleY(0); } }
+
+    /* ════════ LABELS & ANNOTATIONS ════════ */
+    .label-group {
+      position: absolute;
+      left: 100%; top: 50%;
+      transform-style: preserve-3d;
+    }
+
+    .label-line {
+      position: absolute;
+      left: 0; top: 0;
+      height: 2px; 
+      background: var(--c-line);
+      border-radius: 2px;
+      transform-origin: left center;
+      animation: lineDraw 0.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+                 lineDrawOut 0.5s forwards;
+    }
+    
+    .l1 .label-line { width: 18vmin; animation-delay: 3.0s, 9.0s; }
+    .l2 .label-line { width: 22vmin; animation-delay: 3.1s, 9.1s; }
+    .l3 .label-line { width: 25vmin; animation-delay: 3.2s, 9.2s; }
+    .l4 .label-line { width: 29vmin; animation-delay: 3.3s, 9.3s; }
+
+    @keyframes lineDraw { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+    @keyframes lineDrawOut { 0% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+
+    .label-text-wrapper {
+      position: absolute;
+      top: -3vmin;
+      transform-origin: left center;
+      transform: rotateZ(45deg) rotateX(-60deg);
+      transform-style: preserve-3d;
+    }
+
+    .l1 .label-text-wrapper { left: 19vmin; }
+    .l2 .label-text-wrapper { left: 23vmin; }
+    .l3 .label-text-wrapper { left: 26vmin; }
+    .l4 .label-text-wrapper { left: 30vmin; }
+
+    .label-title {
+      font-size: 2.2vmin;
+      font-weight: 700;
+      color: var(--c-text);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2vmin;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+    .label-subtitle {
+      font-size: 1.2vmin;
+      color: #64748b; 
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      animation: textWipe 0.8s cubic-bezier(0.16, 1, 0.3, 1) both, textWipeOut 0.5s forwards;
+    }
+
+    .l1 .label-title, .l1 .label-subtitle { animation-delay: 3.2s, 8.8s; }
+    .l2 .label-title, .l2 .label-subtitle { animation-delay: 3.3s, 8.9s; }
+    .l3 .label-title, .l3 .label-subtitle { animation-delay: 3.4s, 9.0s; }
+    .l4 .label-title, .l4 .label-subtitle { animation-delay: 3.5s, 9.1s; }
+
+    @keyframes textWipe {
+      0% { clip-path: inset(0 100% 0 0); transform: translateX(-2vmin); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+    }
+    @keyframes textWipeOut {
+      0% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+      100% { clip-path: inset(0 0 0 100%); transform: translateX(2vmin); }
+    }
+
+    /* ════════ PIN DROP ACCENTS (Rounded/Soft) ════════ */
+    .pin {
+      position: absolute; left: 0; top: 0;
+      width: 1.5vmin; height: 1.5vmin;
+      background: var(--c-surface);
+      border: 2px solid var(--c-line);
+      border-radius: 50%;
+      transform-style: preserve-3d;
+      transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg);
+      animation: pinDrop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+                 pinHide 0.5s forwards;
+    }
+    .pin::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 6px; height: 6px; margin: -3px 0 0 -3px;
+      background: var(--c-line); border-radius: 50%;
+    }
+    .l1 .pin { animation-delay: 3.1s, 8.9s; }
+    .l2 .pin { animation-delay: 3.2s, 9.0s; }
+    .l3 .pin { animation-delay: 3.3s, 9.1s; }
+    .l4 .pin { animation-delay: 3.4s, 9.2s; }
+    
+    @keyframes pinDrop {
+      0% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(0) translateZ(5vmin); }
+      100% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(1) translateZ(0); }
+    }
+    @keyframes pinHide {
+      0% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(1); }
+      100% { transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg) scale(0); }
+    }
+
+    /* ════════ DATA DEWDROPS (TRAVELING ALONG STEM) ════════ */
+    .packet {
+      position: absolute; left: 50%; top: 50%;
+      width: 2vmin; height: 2vmin;
+      margin: -1vmin 0 0 -1vmin;
+      border-radius: 50%;
+      background: var(--c-leaf);
+      box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1), 0 0 10px var(--c-leaf);
+      transform-style: preserve-3d;
+    }
+    
+    .pkt1 { animation: pktUp 1.8s 4.0s cubic-bezier(0.34, 1.56, 0.64, 1) 3 forwards; }
+    .pkt2 { animation: pktUp 1.8s 4.6s cubic-bezier(0.34, 1.56, 0.64, 1) 3 forwards; background: var(--c-ocean); box-shadow: 0 0 10px var(--c-ocean); }
+    .pkt3 { animation: pktDown 2.2s 4.2s cubic-bezier(0.34, 1.56, 0.64, 1) 2 forwards; background: var(--c-sun); box-shadow: 0 0 10px var(--c-sun); }
+
+    @keyframes pktUp {
+      0% { transform: translateZ(-24vmin) scale(0); }
+      15% { transform: translateZ(-18vmin) scale(1); }
+      85% { transform: translateZ(24vmin) scale(1); }
+      100% { transform: translateZ(30vmin) scale(0); }
+    }
+    @keyframes pktDown {
+      0% { transform: translateZ(30vmin) scale(0); }
+      15% { transform: translateZ(24vmin) scale(1); }
+      85% { transform: translateZ(-18vmin) scale(1); }
+      100% { transform: translateZ(-24vmin) scale(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="scene">
+    <div class="camera">
+      <div class="tilt-wrapper">
+        
+        <div class="stem-beam"></div>
+
+        <!-- LAYER 1: ROOT BASIN -->
+        <div class="layer l1">
+          <div class="l-board">
+            <div class="pebble-basin">
+              <div class="pebble p-a"></div>
+              <div class="pebble p-b"></div>
+              <div class="pebble p-c"></div>
+            </div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Root Basin</div>
+              <div class="label-subtitle">Organic Storage Lake</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 2: FLOW MATRIX -->
+        <div class="layer l2">
+          <div class="l-board">
+            <div class="clip-wrapper">
+              <svg class="flow-waves" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="wave-path" d="M10,25 Q30,10 50,25 T90,25" />
+                <path class="wave-path" d="M10,50 Q30,35 50,50 T90,50" />
+                <path class="wave-path" d="M10,75 Q30,60 50,75 T90,75" />
+              </svg>
+            </div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Flow Matrix</div>
+              <div class="label-subtitle">Fluid Processing Node</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 3: SYMBIOSIS CORE -->
+        <div class="layer l3">
+          <div class="l-board">
+            <div class="clip-wrapper">
+              <svg class="organic-svg" viewBox="0 0 100 100">
+                <path class="organic-trace" d="M0,0 C40,0 40,50 50,50" />
+                <path class="organic-trace" d="M100,0 C60,0 60,50 50,50" />
+                <path class="organic-trace" d="M0,100 C40,100 40,50 50,50" />
+                <path class="organic-trace" d="M100,100 C60,100 60,50 50,50" />
+              </svg>
+            </div>
+            <div class="symbiosis-node"></div>
+          </div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Symbiosis Core</div>
+              <div class="label-subtitle">Central Neural Engine</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAYER 4: CANOPY EMITTER -->
+        <div class="layer l4">
+          <div class="l-board"></div>
+          <div class="petal-ring"></div>
+          
+          <div class="label-group">
+            <div class="pin"></div>
+            <div class="label-line"></div>
+            <div class="label-text-wrapper">
+              <div class="label-title">Canopy Emitter</div>
+              <div class="label-subtitle">Atmospheric Output API</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRAVELING DATA DEWDROPS -->
+        <div class="packet pkt1"></div>
+        <div class="packet pkt2"></div>
+        <div class="packet pkt3"></div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -39,6 +39,8 @@ function cacheDom() {
   dom.scrubberHead      = document.getElementById('scrubber-head');
   dom.timeDisplay       = document.getElementById('time-display');
   dom.fpsDisplay        = document.getElementById('fps-display');
+  dom.fullscreenBtn     = document.getElementById('fullscreen-btn');
+  dom.viewport          = document.querySelector('.mg-viewport');
 
   dom.qualitySelect     = document.getElementById('quality-select');
   dom.fpsSelect         = document.getElementById('fps-select');
@@ -696,6 +698,13 @@ function handleKeydown(e) {
         rewindPlayback();
       }
       break;
+    case 'f':
+    case 'F':
+      if (!e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+      break;
   }
 }
 
@@ -717,6 +726,39 @@ function hookIframeKeyboard() {
     // Cross-origin or not yet loaded — silently ignore
   }
 }
+
+// ---- Fullscreen ----
+function toggleFullscreen() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (dom.viewport.requestFullscreen) {
+      dom.viewport.requestFullscreen();
+    } else if (dom.viewport.webkitRequestFullscreen) {
+      dom.viewport.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
+
+['fullscreenchange', 'webkitfullscreenchange'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    if (isFullscreen) {
+      dom.fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
+      dom.fullscreenBtn.setAttribute('data-tooltip', 'Exit Full Screen');
+    } else {
+      dom.fullscreenBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+      dom.fullscreenBtn.setAttribute('data-tooltip', 'Full Screen');
+    }
+    if (state.currentSequence) {
+      setTimeout(applyAspectRatio, 50);
+    }
+  });
+});
 
 // ---- Window Resize ----
 function setupResize() {
@@ -772,6 +814,11 @@ function bindEvents() {
 
   // Export
   dom.exportBtn.addEventListener('click', exportVideo);
+
+  // Fullscreen
+  if (dom.fullscreenBtn) {
+    dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+  }
 
   // Scrubber interactive dragging
   let isScrubbing = false;

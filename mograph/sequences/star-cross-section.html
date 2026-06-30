@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stellar Interior Cross-Section</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14151a;
+      --photo: #e8590c;
+      --photo-edge: #b22a14;
+      --convective: #ff922b;
+      --radiative: #fcc419;
+      --core: #ffd60a;
+      --core-hot: #fff7d6;
+      --accent: #e8590c;
+      /* Darker extrusion colors for 3D depth */
+      --photo-ext: #8c1e0c;
+      --conv-ext: #cc6d14;
+      --rad-ext: #cc9d0a;
+      --core-ext: #cca800;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .camera {
+      position: absolute;
+      inset: 0;
+      animation:
+        cameraDrift 11.5s linear both,
+        cameraExit 0.9s 10.8s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+    }
+    @keyframes cameraDrift {
+      0%   { transform: scale(0.97) translate(1vmin, 1vmin); }
+      100% { transform: scale(1.0) translate(-1vmin, -1vmin); }
+    }
+    @keyframes cameraExit {
+      0%   { transform: scale(1.0) translate(-1vmin, -1vmin); opacity: 1; }
+      100% { transform: scale(0) translate(0, -4vmin); opacity: 1; }
+    }
+
+    .diagram {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 1400px; height: 1000px;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* 2.5D Isometric Setup */
+    .tilt-wrapper {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transform: translateY(100px) rotateX(55deg) rotateZ(-35deg);
+    }
+
+    .floor-grid {
+      position: absolute;
+      width: 2800px; height: 2800px;
+      left: -700px; top: -900px;
+      background: 
+        linear-gradient(var(--photo) 2px, transparent 2px),
+        linear-gradient(90deg, var(--photo) 2px, transparent 2px);
+      background-size: 100px 100px;
+      opacity: 0.05;
+      transform: translateZ(-400px);
+      animation: floorReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes floorReveal {
+      0% { opacity: 0; transform: translateZ(-500px); }
+      100% { opacity: 0.05; transform: translateZ(-400px); }
+    }
+
+    .floor-shadow {
+      position: absolute;
+      width: 800px; height: 800px;
+      left: 300px; top: 100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, transparent 60%);
+      transform: translateZ(-399px);
+      animation: shadowFade 1.2s 0.4s both;
+    }
+    @keyframes shadowFade {
+      0% { opacity: 0; transform: translateZ(-399px) scale(0.5); }
+      100% { opacity: 1; transform: translateZ(-399px) scale(1); }
+    }
+
+    .star-slice {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transform-origin: 50% 50%;
+      animation: slicePop 1.4s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes slicePop {
+      0% { transform: rotateX(-90deg) translateY(400px) scale(0); }
+      100% { transform: rotateX(-90deg) translateY(0) scale(1); }
+    }
+
+    .slice-layer {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+    }
+
+    .star {
+      position: absolute;
+      left: 0; top: 0;
+      width: 1400px; height: 1000px;
+      overflow: visible;
+    }
+
+    .extrusion-layer circle {
+      stroke-width: 12 !important;
+    }
+
+    /* ---------- Solid wedge wipe ---------- */
+    .solid-wedge {
+      position: absolute;
+      inset: 0;
+      clip-path: inset(0 0 0 0);
+      animation: wedgeWipe 1.4s 1.6s cubic-bezier(0.76, 0, 0.24, 1) both;
+    }
+    @keyframes wedgeWipe {
+      0%   { clip-path: inset(0 0 0 0); transform: translateZ(1px) translateY(0); opacity: 1; }
+      30%  { transform: translateZ(60px) translateY(-20px); opacity: 1; }
+      100% { clip-path: inset(0 0 100% 0); transform: translateZ(120px) translateY(-140px); opacity: 0; }
+    }
+
+    /* ---------- Cut walls (draw after the wedge leaves) ---------- */
+    .cut-wall {
+      stroke: var(--ink);
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-dasharray: 320;
+      stroke-dashoffset: 320;
+      animation: traceDraw 0.6s 2.4s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes traceDraw { to { stroke-dashoffset: 0; } }
+
+    .sunspot { fill: var(--photo-edge); opacity: 1; }
+
+    /* ---------- Rim prominences (grow from base outward) ---------- */
+    .prom {
+      clip-path: inset(100% 0 0 0);
+      animation: promGrow 0.5s var(--d) cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes promGrow {
+      0%   { clip-path: inset(100% 0 0 0); }
+      100% { clip-path: inset(0 0 0 0); }
+    }
+
+    /* ---------- Plasma streams through the exposed mouth ---------- */
+    .stream {
+      position: absolute;
+      left: 0; top: 0;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--core-hot) 0%, var(--core) 55%, var(--accent) 100%);
+      border: 2px solid var(--photo-edge);
+      offset-rotate: auto;
+      offset-anchor: auto;
+      offset-distance: 0%;
+      animation: streamFire 1.3s var(--d) cubic-bezier(0.4, 0, 0.2, 1) 2;
+    }
+    @keyframes streamFire {
+      0%   { offset-distance: 0%; transform: scale(0.2); }
+      15%  { transform: scale(1); }
+      85%  { transform: scale(1); }
+      100% { offset-distance: 100%; transform: scale(0.2); }
+    }
+
+    /* ---------- Mass-ejection flare (the payoff) ---------- */
+    .flare {
+      position: absolute;
+      left: 0; top: 0;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, var(--core-hot) 30%, var(--core) 60%, var(--accent) 100%);
+      border: 2px solid var(--photo-edge);
+      offset-rotate: auto;
+      offset-anchor: auto;
+      offset-distance: 0%;
+      animation: flareFire 0.9s 6.6s cubic-bezier(0.2, 0.6, 0.4, 1) both;
+    }
+    @keyframes flareFire {
+      0%   { offset-distance: 0%; transform: scale(0.2); }
+      20%  { transform: scale(1.4); }
+      60%  { transform: scaleX(2.4) scaleY(0.7); }
+      100% { offset-distance: 100%; transform: scale(0.3); }
+    }
+
+    /* ---------- Callouts (Flat on Slice Plane) ---------- */
+    .callout { 
+      position: absolute; left: var(--fx); top: var(--fy); 
+      transform-style: preserve-3d;
+      transform: translateZ(2px);
+    }
+    .callout .dot {
+      position: absolute;
+      left: -6px; top: -6px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--ink);
+      transform: scale(0);
+      animation: dotPop 0.3s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes dotPop { to { transform: scale(1); } }
+    .callout .leader {
+      position: absolute;
+      left: 0; top: -1.5px;
+      height: 3px;
+      width: var(--len);
+      background: var(--ink);
+      transform-origin: left center;
+      transform: rotate(var(--ang)) scaleX(0);
+      animation: leaderDraw 0.45s var(--delay) cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes leaderDraw {
+      0%   { transform: rotate(var(--ang)) scaleX(0); }
+      100% { transform: rotate(var(--ang)) scaleX(1); }
+    }
+    .billboard {
+      position: absolute;
+      left: var(--bex); top: var(--bey);
+      transform: translate(-50%, -50%) scale(0);
+      background: #ffffff;
+      border: 3px solid var(--ink);
+      box-shadow: 6px 6px 0 rgba(20, 21, 26, 0.14);
+      padding: 10px 18px;
+      border-radius: 10px;
+      white-space: nowrap;
+      animation: bbPop 0.45s calc(var(--delay) + 0.18s) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes bbPop {
+      0%   { transform: translate(-50%, -50%) scale(0); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    .ct-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+    .ct-desc {
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    /* ---------- Title & Badge (Flat on screen) ---------- */
+    .title {
+      position: absolute;
+      left: 80px; top: 60px;
+      transform: none;
+      text-align: left;
+      animation: titleReveal 0.8s 0.2s cubic-bezier(0.76, 0, 0.24, 1) both;
+    }
+    @keyframes titleReveal {
+      0%   { clip-path: inset(0 100% 0 0); transform: translateX(-24px); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+    }
+    .title h1 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 44px;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+    .title .sub {
+      margin-top: 6px;
+      font-size: 16px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .badge {
+      position: absolute;
+      right: 80px; bottom: 80px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 20px;
+      box-shadow: 6px 6px 0 rgba(232, 89, 12, 0.25);
+      transform: scale(0);
+      animation: badgePop 0.5s 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes badgePop { to { transform: scale(1); } }
+    .badge .b-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      color: var(--core);
+      line-height: 1;
+    }
+    .badge .b-lbl {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #c9c7cc;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="camera">
+    <div class="diagram">
+
+      <div class="tilt-wrapper">
+        <div class="floor-grid"></div>
+        <div class="floor-shadow"></div>
+
+        <div class="star-slice">
+          
+          <!-- ===== Extrusion Depth Layers ===== -->
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-120px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-110px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-100px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-90px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-80px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-70px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-60px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-50px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-40px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-30px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-20px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+          <div class="slice-layer extrusion-layer" style="transform: translateZ(-10px)"><svg class="star" viewBox="0 0 1400 1000"><circle cx="700" cy="500" r="230" fill="var(--conv-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="150" fill="var(--rad-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="70" fill="var(--core-ext)" stroke="var(--ink)" stroke-width="3" /><circle cx="700" cy="500" r="310" fill="var(--photo-ext)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" /></svg></div>
+
+          <!-- ===== Front Face (Cross Section) ===== -->
+          <div class="slice-layer slice-front" style="transform: translateZ(0)">
+            
+            <svg class="star" viewBox="0 0 1400 1000" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <radialGradient id="photoGrad" cx="42%" cy="40%" r="62%">
+                  <stop offset="0%" stop-color="#ffa94d" />
+                  <stop offset="60%" stop-color="#e8590c" />
+                  <stop offset="100%" stop-color="#b22a14" />
+                </radialGradient>
+                <radialGradient id="convGrad" cx="50%" cy="50%" r="55%">
+                  <stop offset="0%" stop-color="#ffc078" />
+                  <stop offset="100%" stop-color="#ff922b" />
+                </radialGradient>
+                <radialGradient id="radGrad" cx="50%" cy="50%" r="55%">
+                  <stop offset="0%" stop-color="#ffe780" />
+                  <stop offset="100%" stop-color="#fcc419" />
+                </radialGradient>
+                <radialGradient id="coreGrad" cx="50%" cy="50%" r="55%">
+                  <stop offset="0%" stop-color="#ffffff" />
+                  <stop offset="55%" stop-color="#fff7d6" />
+                  <stop offset="100%" stop-color="#ffd60a" />
+                </radialGradient>
+                <radialGradient id="promGrad" cx="50%" cy="85%" r="80%">
+                  <stop offset="0%" stop-color="#ffd60a" />
+                  <stop offset="55%" stop-color="#e8590c" />
+                  <stop offset="100%" stop-color="#b22a14" />
+                </radialGradient>
+                
+                <!-- cutMask hides the wedge from the photosphere shell -->
+                <mask id="cutMask">
+                  <rect x="0" y="0" width="1400" height="1000" fill="white" />
+                  <polygon points="700,500 240,114 1160,114" fill="black" />
+                </mask>
+                
+                <!-- wedgeMask isolates the wedge for the solid pop-out cover -->
+                <mask id="wedgeMask">
+                  <rect x="0" y="0" width="1400" height="1000" fill="black" />
+                  <polygon points="700,500 240,114 1160,114" fill="white" />
+                </mask>
+              </defs>
+
+              <!-- Interior layers (behind the shell; revealed through the mouth) -->
+              <circle cx="700" cy="500" r="230" fill="url(#convGrad)" stroke="var(--ink)" stroke-width="3" />
+              <circle cx="700" cy="500" r="150" fill="url(#radGrad)" stroke="var(--ink)" stroke-width="3" />
+              <circle cx="700" cy="500" r="70" fill="url(#coreGrad)" stroke="var(--ink)" stroke-width="3" />
+
+              <!-- Photosphere shell with the wedge mouth cut out -->
+              <circle cx="700" cy="500" r="310" fill="url(#photoGrad)" stroke="var(--ink)" stroke-width="4" mask="url(#cutMask)" />
+
+              <!-- Surface granulation / sunspots -->
+              <g mask="url(#cutMask)">
+                <ellipse class="sunspot" cx="820" cy="640" rx="26" ry="14" transform="rotate(-20 820 640)" />
+                <ellipse class="sunspot" cx="560" cy="700" rx="20" ry="12" transform="rotate(15 560 700)" />
+                <ellipse class="sunspot" cx="900" cy="470" rx="16" ry="10" transform="rotate(35 900 470)" />
+              </g>
+
+              <!-- Cut walls: the two radial edges of the wedge -->
+              <line class="cut-wall" x1="700" y1="500" x2="463" y2="301" />
+              <line class="cut-wall" x1="700" y1="500" x2="937" y2="301" />
+
+              <!-- Rim prominences -->
+              <path class="prom" style="--d: 2.6s" transform="rotate(90 700 500)"
+                    d="M 672 190 C 652 152, 658 98, 700 55 C 742 98, 748 152, 728 190 C 718 200, 682 200, 672 190 Z"
+                    fill="url(#promGrad)" stroke="var(--ink)" stroke-width="2" />
+              <path class="prom" style="--d: 2.8s" transform="rotate(135 700 500)"
+                    d="M 672 190 C 652 152, 658 98, 700 55 C 742 98, 748 152, 728 190 C 718 200, 682 200, 672 190 Z"
+                    fill="url(#promGrad)" stroke="var(--ink)" stroke-width="2" />
+              <path class="prom" style="--d: 3.0s" transform="rotate(225 700 500)"
+                    d="M 672 190 C 652 152, 658 98, 700 55 C 742 98, 748 152, 728 190 C 718 200, 682 200, 672 190 Z"
+                    fill="url(#promGrad)" stroke="var(--ink)" stroke-width="2" />
+              <path class="prom" style="--d: 2.7s" transform="rotate(270 700 500)"
+                    d="M 672 190 C 652 152, 658 98, 700 55 C 742 98, 748 152, 728 190 C 718 200, 682 200, 672 190 Z"
+                    fill="url(#promGrad)" stroke="var(--ink)" stroke-width="2" />
+              
+              <!-- Top vent prominence (ignites with the flare) -->
+              <path class="prom" style="--d: 6.8s" transform="rotate(0 700 500)"
+                    d="M 668 192 C 644 145, 650 78, 700 36 C 750 78, 756 145, 732 192 C 720 204, 680 204, 668 192 Z"
+                    fill="url(#promGrad)" stroke="var(--ink)" stroke-width="2" />
+            </svg>
+
+            <!-- Solid front-face cover that pops out to reveal the cut -->
+            <div class="solid-wedge">
+              <svg class="star" viewBox="0 0 1400 1000">
+                <circle cx="700" cy="500" r="310" fill="url(#photoGrad)" stroke="var(--ink)" stroke-width="4" mask="url(#wedgeMask)" />
+              </svg>
+            </div>
+
+            <!-- ===== Plasma streams ===== -->
+            <div class="stream" style="--d: 3.2s; offset-path: path('M 700 430 L 700 190');"></div>
+            <div class="stream" style="--d: 3.7s; offset-path: path('M 722 433 L 796 205');"></div>
+            <div class="stream" style="--d: 4.2s; offset-path: path('M 678 433 L 604 205');"></div>
+
+            <!-- ===== Mass-ejection flare ===== -->
+            <div class="flare" style="offset-path: path('M 700 470 L 700 30');"></div>
+
+            <!-- ===== Callouts ===== -->
+            <div class="callout" style="--fx: 700px; --fy: 440px; --bex: 340px; --bey: -90px;  --len: 352px; --ang: -14.8deg; --delay: 4.2s;">
+              <span class="dot"></span><span class="leader"></span>
+              <div class="billboard"><div class="ct-title">Core</div><div class="ct-desc">15,000,000 K · fusion</div></div>
+            </div>
+
+            <div class="callout" style="--fx: 660px; --fy: 410px; --bex: -320px; --bey: -80px; --len: 330px; --ang: -166.0deg; --delay: 4.5s;">
+              <span class="dot"></span><span class="leader"></span>
+              <div class="billboard"><div class="ct-title">Radiative Zone</div><div class="ct-desc">Photon transport</div></div>
+            </div>
+
+            <div class="callout" style="--fx: 560px; --fy: 360px; --bex: -330px; --bey: 30px;  --len: 331px; --ang: 174.8deg; --delay: 4.8s;">
+              <span class="dot"></span><span class="leader"></span>
+              <div class="billboard"><div class="ct-title">Convective Zone</div><div class="ct-desc">Plasma currents</div></div>
+            </div>
+
+            <div class="callout" style="--fx: 1000px; --fy: 520px; --bex: 280px; --bey: 80px;  --len: 291px; --ang: 15.9deg; --delay: 5.1s;">
+              <span class="dot"></span><span class="leader"></span>
+              <div class="billboard"><div class="ct-title">Photosphere</div><div class="ct-desc">5,800 K surface</div></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Title & Badge ===== -->
+      <div class="title">
+        <h1>Stellar Interior</h1>
+        <div class="sub">Anatomy of a Star</div>
+      </div>
+
+      <div class="badge">
+        <div class="b-num">2 × 10³⁰ kg</div>
+        <div class="b-lbl">Stellar Mass</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function fitToScreen() {
+      const diagram = document.querySelector('.diagram');
+      const scale = Math.min(window.innerWidth / 1400, window.innerHeight / 1000) * 0.92;
+      diagram.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    window.addEventListener('resize', fitToScreen);
+    fitToScreen();
+  </script>
+</body>
+</html>

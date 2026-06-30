@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocean Depth Cross-Section</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14151a;
+      --accent: #22d3ee;
+      --bio: #ffd60a;
+      --label: #2a3b4d;
+      --sediment: #2a1d12;
+      --sediment-dark: #140d07;
+      --creature: #04101c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .camera {
+      position: absolute;
+      inset: 0;
+      animation:
+        cameraDrift 11s linear both,
+        cameraExit 0.9s 10.3s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+    }
+    @keyframes cameraDrift {
+      0%   { transform: scale(0.97) translate(1vmin, 1vmin); }
+      100% { transform: scale(1.0) translate(-1vmin, -1vmin); }
+    }
+    @keyframes cameraExit {
+      0%   { transform: scale(1.0) translate(-1vmin, -1vmin); }
+      100% { transform: scale(0) translate(0, -4vmin); }
+    }
+
+    .diagram {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 1300px; height: 1100px;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* ---------- Title ---------- */
+    .title {
+      position: absolute;
+      left: 650px; top: 38px;
+      transform: translateX(-50%);
+      text-align: center;
+      animation: titleReveal 0.8s 0.2s cubic-bezier(0.76, 0, 0.24, 1) both;
+    }
+    .title h1 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 40px;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+    .title .sub {
+      margin-top: 5px;
+      font-size: 14px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    @keyframes titleReveal {
+      0%   { clip-path: inset(0 100% 0 0); transform: translateX(calc(-50% - 24px)); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(-50%); }
+    }
+
+    /* ---------- Sun ---------- */
+    .sun {
+      position: absolute;
+      left: 1162px; top: 70px;
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff3b0 0%, #ffd60a 70%, #ffb800 100%);
+      border: 3px solid var(--ink);
+      transform: scale(0);
+      animation: popIn 0.5s 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes popIn { to { transform: scale(1); } }
+
+    /* ---------- Ocean column ---------- */
+    .ocean {
+      position: absolute;
+      left: 470px; top: 100px;
+      width: 360px; height: 940px;
+      overflow: hidden;
+      border: 4px solid var(--ink);
+      border-radius: 10px 10px 14px 14px;
+      background: #eef3f7;
+    }
+
+    /* Water fill, revealed top-to-bottom by the scan (clip bottom inset). */
+    .water {
+      position: absolute;
+      inset: 0;
+      clip-path: inset(0 0 100% 0);
+      background: linear-gradient(
+        to bottom,
+        #74c0ef 0%, #4dabf7 12%, #1c7ed6 13.8%,
+        #1971c2 14%, #1864ab 34%, #0c5488 35.1%,
+        #0a4574 35.2%, #0a4574 55%, #073353 62.8%,
+        #052b4d 63%, #03253f 80%, #021f3a 85.1%,
+        #021a2e 85.3%, #021a2e 95%, #010d18 100%
+      );
+      animation: fillScan 4.4s 1.2s cubic-bezier(0.45, 0, 0.55, 1) both;
+    }
+    @keyframes fillScan { to { clip-path: inset(0 0 0 0); } }
+
+    /* Sunlight shimmer band at the surface */
+    .shimmer {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 130px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0));
+    }
+
+    .life {
+      position: absolute;
+      left: 0; top: 0;
+      width: 360px; height: 940px;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    /* Surface waves + light rays (sunlight zone, top) */
+    .surface, .rays { animation: fadeIn 0.6s 1.2s both; }
+    @keyframes fadeIn { from { transform: translateY(-6px); } to { transform: translateY(0); } }
+
+    /* Seafloor rises from the bottom when the scan lands */
+    .seafloor {
+      transform-origin: bottom;
+      transform: scaleY(0);
+      animation: floorRise 0.6s 5.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes floorRise { to { transform: scaleY(1); } }
+
+    /* Creature pop-ins (scale, chroma-safe) */
+    .creature {
+      transform-origin: center;
+      transform-box: fill-box;
+      transform: scale(0);
+      animation: creaturePop 0.5s var(--d) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes creaturePop { to { transform: scale(1); } }
+
+    /* Ambient motions (finite) */
+    .lure { transform-origin: center; transform-box: fill-box; animation: lurePulse 1.1s 3.2s cubic-bezier(0.45,0,0.55,1) 5; }
+    @keyframes lurePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
+    .jelly-bob { animation: jellyBob 2.2s 2.4s ease-in-out 3; }
+    @keyframes jellyBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .whale-drift { animation: whaleDrift 6s 1.8s ease-in-out both; }
+    @keyframes whaleDrift { 0% { transform: translateX(0); } 100% { transform: translateX(40px); } }
+
+    /* ---------- Scan line ---------- */
+    .scan-bar {
+      position: absolute;
+      left: 0; top: 100px;
+      width: 100%; height: 12px;
+      transform: scaleX(0);
+      transform-origin: center;
+      animation: scanMove 4.4s 1.2s cubic-bezier(0.45, 0, 0.55, 1) both,
+                 scanDone 0.3s 5.6s forwards;
+    }
+    .scan-core { position: absolute; left: 0; right: 0; top: 4px; height: 3px; background: var(--accent); }
+    .scan-glow { position: absolute; left: 0; right: 0; top: 0; height: 12px; background: #a5f3fc; }
+    @keyframes scanMove { 0% { top: 0; transform: scaleX(1); } 100% { top: 928px; transform: scaleX(1); } }
+    @keyframes scanDone { to { transform: scaleX(0); } }
+
+    /* ---------- Marine snow ---------- */
+    .snow {
+      position: absolute;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: #8aa6c0;
+      animation: snowDrift var(--dur, 5s) var(--d, 6s) linear 2;
+    }
+    @keyframes snowDrift {
+      0%   { transform: translateY(-20px); }
+      100% { transform: translateY(60px); }
+    }
+
+    /* ---------- Submarine (offset-path descent) ---------- */
+    .sub {
+      position: absolute;
+      left: 0; top: 0;
+      width: 74px; height: 34px;
+      offset-path: path('M 700 140 Q 685 380 700 580 Q 715 760 700 920');
+      offset-rotate: 0deg;
+      offset-anchor: auto;
+      offset-distance: 0%;
+      animation: subDescend 5.2s 1.5s cubic-bezier(0.45, 0, 0.55, 1) both;
+    }
+    @keyframes subDescend {
+      0%   { offset-distance: 0%; transform: scale(0.6); }
+      12%  { transform: scale(1); }
+      88%  { transform: scale(1); }
+      100% { offset-distance: 100%; transform: scale(0.7); }
+    }
+
+    /* ---------- Depth ruler (left) ---------- */
+    .ruler-line {
+      position: absolute;
+      left: 444px; top: 100px;
+      width: 3px; height: 940px;
+      background: var(--ink);
+      transform: scaleY(0);
+      transform-origin: top;
+      animation: rulerDraw 0.9s 0.4s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes rulerDraw { to { transform: scaleY(1); } }
+
+    .marker {
+      position: absolute;
+      left: 444px;
+      transform: scale(0);
+      animation: markerPop 0.4s var(--d) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .marker .tick { width: 22px; height: 3px; background: var(--ink); }
+    .marker .m-lbl {
+      position: absolute;
+      right: 30px; top: -11px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    @keyframes markerPop { to { transform: scale(1); } }
+
+    /* ---------- Zone labels (right) ---------- */
+    .zone-label {
+      position: absolute;
+      left: 855px;
+      transform: scale(0);
+      animation: zonePop 0.5s var(--d) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .zone-label .z-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+    .zone-label .z-sub {
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .zone-label .z-leader {
+      position: absolute;
+      right: 100%; top: 12px;
+      width: 26px; height: 3px;
+      background: var(--ink);
+      margin-right: -1px;
+    }
+    @keyframes zonePop { to { transform: scale(1); } }
+
+    /* ---------- Trench badge ---------- */
+    .badge {
+      position: absolute;
+      left: 80px; top: 980px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 12px;
+      padding: 11px 18px;
+      box-shadow: 6px 6px 0 rgba(34, 211, 238, 0.3);
+      transform: scale(0);
+      animation: popIn 0.5s 6.0s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .badge .b-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .badge .b-lbl {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #c9c7cc;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="camera">
+    <div class="diagram">
+
+      <!-- Title -->
+      <div class="title">
+        <h1>Ocean Depths</h1>
+        <div class="sub">Vertical Cross-Section</div>
+      </div>
+
+      <!-- Sun -->
+      <div class="sun"></div>
+
+      <!-- Depth ruler -->
+      <div class="ruler-line"></div>
+      <div class="marker" style="top: 97px;  --d: 1.3s;"><div class="tick"></div><div class="m-lbl">0 m</div></div>
+      <div class="marker" style="top: 227px; --d: 1.85s;"><div class="tick"></div><div class="m-lbl">200 m</div></div>
+      <div class="marker" style="top: 427px; --d: 2.74s;"><div class="tick"></div><div class="m-lbl">1 km</div></div>
+      <div class="marker" style="top: 687px; --d: 3.96s;"><div class="tick"></div><div class="m-lbl">4 km</div></div>
+      <div class="marker" style="top: 897px; --d: 4.94s;"><div class="tick"></div><div class="m-lbl">6 km</div></div>
+      <div class="marker" style="top: 1037px; --d: 5.6s;"><div class="tick"></div><div class="m-lbl">11 km</div></div>
+
+      <!-- Ocean column -->
+      <div class="ocean">
+        <div class="water"></div>
+        <div class="shimmer"></div>
+
+        <!-- Life SVG (local coords 360 x 940) -->
+        <svg class="life" viewBox="0 0 360 940" preserveAspectRatio="none">
+
+          <!-- Surface waves + sun rays (sunlight zone) -->
+          <g class="surface">
+            <path d="M0,6 Q30,0 60,6 T120,6 T180,6 T240,6 T300,6 T360,6 L360,0 L0,0 Z" fill="#a7d8f5"/>
+            <g class="rays" fill="#fff3c4">
+              <path d="M70,8 L40,120 L100,120 Z" opacity="1"/>
+              <path d="M180,8 L150,130 L210,130 Z"/>
+              <path d="M290,8 L270,110 L320,110 Z"/>
+            </g>
+          </g>
+
+          <!-- Whale (sunlight) -->
+          <g class="creature whale-drift" style="--d: 1.5s" transform="translate(20,55)">
+            <ellipse cx="60" cy="22" rx="56" ry="20" fill="#071726"/>
+            <path d="M114,22 L142,6 L134,22 L142,38 Z" fill="#071726"/>
+            <circle cx="32" cy="16" r="3" fill="#cfe0ee"/>
+          </g>
+
+          <!-- Fish (sunlight) -->
+          <g class="creature" style="--d: 1.7s" transform="translate(250,80)">
+            <path d="M0,10 Q14,0 30,10 Q14,20 0,10 L-10,3 L-10,17 Z" fill="#0a1a2a"/>
+            <circle cx="22" cy="8" r="1.6" fill="#cfe0ee"/>
+          </g>
+          <g class="creature" style="--d: 1.9s" transform="translate(258,40) scale(0.7)">
+            <path d="M0,10 Q14,0 30,10 Q14,20 0,10 L-10,3 L-10,17 Z" fill="#0a1a2a"/>
+          </g>
+
+          <!-- Jellyfish (twilight) -->
+          <g class="creature jelly-bob" style="--d: 2.2s" transform="translate(60,200)">
+            <path d="M0,18 a22,22 0 0 1 44,0 Z" fill="#1b3a59"/>
+            <path d="M6,18 Q4,34 9,50 M16,18 Q14,40 20,56 M28,18 Q26,36 31,52 M38,18 Q36,32 40,46" stroke="#1b3a59" stroke-width="2.5" fill="none"/>
+          </g>
+
+          <!-- Squid (twilight/midnight) -->
+          <g class="creature" style="--d: 2.9s" transform="translate(255,300)">
+            <path d="M22,0 Q44,2 42,32 Q32,44 22,44 Q12,44 2,32 Q0,2 22,0 Z" fill="#06121f"/>
+            <path d="M6,42 L3,62 M16,44 L13,66 M22,45 L22,68 M28,44 L31,66 M38,42 L41,62" stroke="#06121f" stroke-width="2.5" fill="none"/>
+            <circle cx="30" cy="14" r="2" fill="#9fb6c8"/>
+          </g>
+
+          <!-- Anglerfish (midnight) with glowing lure -->
+          <g class="creature" style="--d: 3.2s" transform="translate(70,470)">
+            <path d="M44,18 Q58,16 60,28 Q60,40 44,38 Q30,40 14,30 Q8,24 14,18 Q30,12 44,18 Z" fill="#030a12"/>
+            <path d="M14,30 L8,26 L10,32 Z M14,22 L8,20 L11,16 Z" fill="#030a12"/>
+            <path d="M40,18 Q52,4 60,-2" stroke="#030a12" stroke-width="2.5" fill="none"/>
+            <circle class="lure" cx="60" cy="-2" r="5" fill="#ffd60a"/>
+          </g>
+
+          <!-- Deep-sea creature (abyss) -->
+          <g class="creature" style="--d: 4.1s" transform="translate(250,690)">
+            <ellipse cx="16" cy="10" rx="15" ry="7" fill="#020a14"/>
+            <path d="M8,4 L4,-6 M24,4 L28,-6" stroke="#020a14" stroke-width="2" fill="none"/>
+            <circle cx="22" cy="9" r="1.6" fill="#7fa0b8"/>
+          </g>
+
+          <!-- Seafloor + trench (hadal) -->
+          <g class="seafloor">
+            <path d="M0,905 L70,892 L150,905 L170,940 L190,905 L260,898 L320,908 L360,902 L360,940 L0,940 Z" fill="var(--sediment)"/>
+            <path d="M150,905 Q180,860 190,905 Q170,920 150,905 Z" fill="var(--sediment-dark)"/>
+            <path d="M0,905 L70,892 L150,905 L170,940 L190,905 L260,898 L320,908 L360,902" stroke="var(--sediment-dark)" stroke-width="3" fill="none"/>
+          </g>
+        </svg>
+
+        <!-- Marine snow -->
+        <div class="snow" style="left: 40px;  top: 120px; --d: 6.0s; --dur: 5s;"></div>
+        <div class="snow" style="left: 90px;  top: 300px; --d: 6.4s; --dur: 6s;"></div>
+        <div class="snow" style="left: 150px; top: 500px; --d: 6.2s; --dur: 5.5s;"></div>
+        <div class="snow" style="left: 210px; top: 200px; --d: 6.6s; --dur: 6s;"></div>
+        <div class="snow" style="left: 270px; top: 600px; --d: 6.3s; --dur: 5s;"></div>
+        <div class="snow" style="left: 320px; top: 400px; --d: 6.5s; --dur: 6.5s;"></div>
+        <div class="snow" style="left: 60px;  top: 700px; --d: 6.1s; --dur: 5.5s;"></div>
+        <div class="snow" style="left: 180px; top: 780px; --d: 6.7s; --dur: 5s;"></div>
+        <div class="snow" style="left: 300px; top: 850px; --d: 6.4s; --dur: 6s;"></div>
+
+        <!-- Scan bar -->
+        <div class="scan-bar"><div class="scan-glow"></div><div class="scan-core"></div></div>
+      </div>
+
+      <!-- Submarine -->
+      <svg class="sub" viewBox="0 0 74 34">
+        <path d="M10,17 L-12,8 L-12,26 Z" fill="#ffe9a8"/>
+        <ellipse cx="32" cy="17" rx="28" ry="11" fill="#0a1a2a" stroke="#020a14" stroke-width="1.5"/>
+        <rect x="30" y="3" width="15" height="9" rx="2" fill="#0a1a2a" stroke="#020a14" stroke-width="1.5"/>
+        <circle cx="8" cy="17" r="3.5" fill="#ffd60a"/>
+        <path d="M58,17 L70,12 M58,17 L70,22" stroke="#020a14" stroke-width="2"/>
+        <line x1="22" y1="17" x2="44" y2="17" stroke="#3a587a" stroke-width="1.5"/>
+      </svg>
+
+      <!-- Zone labels -->
+      <div class="zone-label" style="top: 150px; --d: 1.4s;">
+        <div class="z-leader"></div>
+        <div class="z-name">Sunlight</div>
+        <div class="z-sub">Epipelagic · 0–200 m</div>
+      </div>
+      <div class="zone-label" style="top: 315px; --d: 1.95s;">
+        <div class="z-leader"></div>
+        <div class="z-name">Twilight</div>
+        <div class="z-sub">Mesopelagic · 200–1000 m</div>
+      </div>
+      <div class="zone-label" style="top: 545px; --d: 2.84s;">
+        <div class="z-leader"></div>
+        <div class="z-name">Midnight</div>
+        <div class="z-sub">Bathypelagic · 1–4 km</div>
+      </div>
+      <div class="zone-label" style="top: 780px; --d: 4.06s;">
+        <div class="z-leader"></div>
+        <div class="z-name">Abyss</div>
+        <div class="z-sub">Abyssopelagic · 4–6 km</div>
+      </div>
+      <div class="zone-label" style="top: 950px; --d: 5.04s;">
+        <div class="z-leader"></div>
+        <div class="z-name">Hadal</div>
+        <div class="z-sub">Trenches · 6–11 km</div>
+      </div>
+
+      <!-- Trench badge -->
+      <div class="badge">
+        <div class="b-num">10,935 m</div>
+        <div class="b-lbl">Deepest Point</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Deterministic responsive fit. -->
+  <script>
+    function fitToScreen() {
+      const diagram = document.querySelector('.diagram');
+      const scale = Math.min(window.innerWidth / 1300, window.innerHeight / 1100) * 0.92;
+      diagram.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    window.addEventListener('resize', fitToScreen);
+    fitToScreen();
+  </script>
+</body>
+</html>

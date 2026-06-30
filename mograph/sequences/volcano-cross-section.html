@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volcano Eruption Cutaway</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #14151a;          /* near-black outlines, traces, labels */
+      --rock-face: #4b515c;    /* general dark rock (exterior) */
+      --rock-1: #555b66;       /* stratum: surface slate */
+      --rock-2: #6b5b47;       /* stratum: brown */
+      --rock-3: #3e424a;       /* stratum: charcoal */
+      --rock-4: #5c3a28;       /* stratum: deep rust */
+      --lava-core: #ffe14a;    /* bright yellow */
+      --lava-mid: #ff8a1e;     /* orange */
+      --lava-edge: #e2371f;    /* deep red */
+      --ash: #7a7780;          /* smoke grey */
+      --ash-edge: #504d56;
+      --accent: #e2371f;
+      --muted: #6b6b72;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Ambient push-in; also carries the final collapse-to-blank exit. */
+    .camera {
+      position: absolute;
+      inset: 0;
+      animation:
+        cameraDrift 11s linear both,
+        cameraExit 0.9s 10.3s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+    }
+    @keyframes cameraDrift {
+      0%  { transform: scale(0.97) translate(1vmin, 1vmin); }
+      100% { transform: scale(1.0) translate(-1vmin, -1vmin); }
+    }
+    @keyframes cameraExit {
+      0%   { transform: scale(1.0) translate(-1vmin, -1vmin); opacity: 1; }
+      100% { transform: scale(0) translate(0, -4vmin); opacity: 1; }
+    }
+
+    /* Fixed coordinate space (1400x1000). SVG viewBox + HTML offset-paths
+       share these exact coordinates. Scaled to fit any viewport by the
+       tiny synchronous script at the bottom (deterministic for export). */
+    .diagram {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 1400px;
+      height: 1000px;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .volcano {
+      position: absolute;
+      left: 0; top: 0;
+      width: 1400px; height: 1000px;
+      overflow: visible;
+    }
+
+    /* ---------- Title plate ---------- */
+    .title {
+      position: absolute;
+      left: 700px; top: 56px;
+      transform: translateX(-50%);
+      text-align: center;
+      animation: titleReveal 0.8s 0.2s cubic-bezier(0.76, 0, 0.24, 1) both;
+    }
+    .title h1 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 44px;
+      letter-spacing: 0.12em;
+      color: var(--ink);
+      text-transform: uppercase;
+    }
+    .title .sub {
+      margin-top: 6px;
+      font-size: 16px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    @keyframes titleReveal {
+      0%   { clip-path: inset(0 100% 0 0); transform: translateX(calc(-50% - 24px)); }
+      100% { clip-path: inset(0 0 0 0); transform: translateX(-50%); }
+    }
+
+    /* ---------- SVG artwork ---------- */
+    .ground {
+      stroke: var(--ink);
+      stroke-width: 3;
+      stroke-dasharray: 1400;
+      stroke-dashoffset: 1400;
+      animation: traceDraw 0.7s 0.3s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+
+    .strata-band {
+      animation: strataSettle 0.6s var(--d, 0s) cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .s1 { fill: var(--rock-1); }
+    .s2 { fill: var(--rock-2); }
+    .s3 { fill: var(--rock-3); }
+    .s4 { fill: var(--rock-4); }
+    @keyframes strataSettle {
+      0%   { transform: translateY(14px); }
+      100% { transform: translateY(0); }
+    }
+
+    .strata-line { stroke: var(--ink); stroke-width: 2.5; fill: none; }
+    .outline {
+      stroke: var(--ink);
+      stroke-width: 4.5;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    /* Conduit: dark casing traces first, then the lava core traces inside. */
+    .conduit-casing {
+      stroke: #2a2d33;
+      stroke-width: 36;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: var(--len);
+      stroke-dashoffset: var(--len);
+      animation: traceDraw 0.8s 2.0s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    .conduit {
+      stroke: url(#lavaGradV);
+      stroke-width: 22;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: var(--len);
+      stroke-dashoffset: var(--len);
+      animation: traceDraw 1.0s 2.25s cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes traceDraw { to { stroke-dashoffset: 0; } }
+
+    .chamber {
+      transform-origin: 700px 850px;
+      transform-box: fill-box;
+      animation: chamberPop 0.7s 2.0s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes chamberPop {
+      0%   { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+    .chamber-core {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: chamberPulse 1.4s 2.6s cubic-bezier(0.45, 0, 0.55, 1) 5;
+    }
+    @keyframes chamberPulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+
+    /* ---------- Solid front-face cover (sliced away to reveal interior) ---------- */
+    .solid-cover {
+      position: absolute;
+      left: 200px; top: 180px;
+      width: 1000px; height: 640px;
+      clip-path: inset(0 0 0 0);
+      animation: sliceWipe 1.6s 0.6s cubic-bezier(0.76, 0, 0.24, 1) both;
+    }
+    .solid-mountain {
+      width: 100%; height: 100%;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(0,0,0,0.18)),
+        var(--rock-face);
+      clip-path: polygon(0% 100%, 44% 2.3%, 46% 11%, 54% 11%, 56% 2.3%, 100% 100%);
+    }
+    @keyframes sliceWipe {
+      0%   { clip-path: inset(0 0 0 0); transform: translateX(0) scale(1); }
+      100% { clip-path: inset(0 0 0 100%); transform: translateX(60px) scale(0.96); }
+    }
+
+    /* ---------- Travelling lava packets (offset-path) ---------- */
+    .packet {
+      position: absolute;
+      left: 0; top: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--lava-core) 0%, var(--lava-mid) 55%, var(--lava-edge) 100%);
+      border: 2px solid var(--lava-edge);
+      offset-rotate: auto;
+      offset-anchor: auto;
+      offset-distance: 0%;
+    }
+    .magma-packet {
+      animation: fireUp 0.95s var(--d) cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    /* Eruption particles are hotter/brighter. */
+    .erupt-packet {
+      width: 18px; height: 18px;
+      animation: fireUp 0.85s var(--d) cubic-bezier(0.2, 0.6, 0.4, 1) both;
+    }
+    @keyframes fireUp {
+      0%   { offset-distance: 0%; transform: scale(0.2); }
+      15%  { transform: scale(1); }
+      55%  { transform: scaleX(2.1) scaleY(0.7); }
+      85%  { transform: scale(1); }
+      100% { offset-distance: 100%; transform: scale(0.2); }
+    }
+
+    /* ---------- Crater flash ---------- */
+    .flash {
+      position: absolute;
+      left: 700px; top: 225px;
+      width: 90px; height: 90px;
+      margin: -45px 0 0 -45px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, var(--lava-core) 35%, var(--lava-mid) 65%, var(--lava-edge) 100%);
+      animation: flashBurst 0.5s 6.0s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes flashBurst {
+      0%   { transform: scale(0); }
+      35%  { transform: scale(1.6); }
+      100% { transform: scale(0.2); }
+    }
+
+    /* ---------- Ash plume (solid organic blobs, scaling = chroma-safe) ---------- */
+    .ash {
+      position: absolute;
+      left: 700px; top: 230px;
+      width: 90px; height: 90px;
+      margin: -45px 0 0 -45px;
+      background: var(--ash);
+      border: 3px solid var(--ash-edge);
+      animation: ashBillow 1.4s var(--d) cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes ashBillow {
+      0%   { transform: translate(0, 0) scale(0); }
+      100% { transform: translate(var(--dx, 0px), var(--dy, -150px)) scale(var(--s, 3)); }
+    }
+
+    /* ---------- Embers ---------- */
+    .ember {
+      position: absolute;
+      left: 0; top: 0;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--lava-core), var(--lava-mid));
+      offset-rotate: auto;
+      offset-anchor: auto;
+      offset-distance: 0%;
+      animation: emberFly 1.1s var(--d) cubic-bezier(0.3, 0.7, 0.7, 1) 3;
+    }
+    @keyframes emberFly {
+      0%   { offset-distance: 0%; transform: scale(0); }
+      20%  { transform: scale(1); }
+      100% { offset-distance: 100%; transform: scale(0); }
+    }
+
+    /* ---------- Lava rivers down the slopes (SVG dash draw) ---------- */
+    .flow {
+      stroke: url(#lavaGradV);
+      stroke-width: 16;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: var(--len);
+      stroke-dashoffset: var(--len);
+      animation: traceDraw 1.4s 6.3s cubic-bezier(0.5, 0, 0.5, 1) both;
+    }
+    .lava-pool {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: poolPop 0.5s var(--d) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes poolPop {
+      0%   { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+
+    /* ---------- Callouts (flat 2D billboards + leader lines) ---------- */
+    .callout { position: absolute; left: var(--fx); top: var(--fy); }
+    .callout .dot {
+      position: absolute;
+      left: -6px; top: -6px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--ink);
+      transform: scale(0);
+      animation: dotPop 0.3s var(--delay) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes dotPop { to { transform: scale(1); } }
+    .callout .leader {
+      position: absolute;
+      left: 0; top: -1.5px;
+      height: 3px;
+      width: var(--len);
+      background: var(--ink);
+      transform-origin: left center;
+      transform: rotate(var(--ang)) scaleX(0);
+      animation: leaderDraw 0.45s var(--delay) cubic-bezier(0.65, 0, 0.35, 1) both;
+    }
+    @keyframes leaderDraw {
+      0%   { transform: rotate(var(--ang)) scaleX(0); }
+      100% { transform: rotate(var(--ang)) scaleX(1); }
+    }
+    .billboard {
+      position: absolute;
+      left: var(--bex); top: var(--bey);
+      transform: translate(-50%, -50%) scale(0);
+      background: #ffffff;
+      border: 3px solid var(--ink);
+      box-shadow: 6px 6px 0 rgba(20, 21, 26, 0.14);
+      padding: 10px 18px;
+      border-radius: 10px;
+      white-space: nowrap;
+      animation: bbPop 0.45s calc(var(--delay) + 0.18s) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes bbPop {
+      0%   { transform: translate(-50%, -50%) scale(0); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    .ct-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--ink);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+    .ct-desc {
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    /* ---------- Data badge ---------- */
+    .badge {
+      position: absolute;
+      left: 250px; top: 760px;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 20px;
+      box-shadow: 6px 6px 0 rgba(226, 55, 31, 0.25);
+      transform: scale(0);
+      animation: badgePop 0.5s 7.0s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes badgePop { to { transform: scale(1); } }
+    .badge .b-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 30px;
+      color: var(--lava-core);
+      line-height: 1;
+    }
+    .badge .b-lbl {
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #c9c7cc;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="camera">
+    <div class="diagram">
+
+      <!-- ===== SVG cross-section artwork ===== -->
+      <svg class="volcano" viewBox="0 0 1400 1000" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <clipPath id="mountainClip">
+            <polygon points="200,820 640,195 660,250 740,250 760,195 1200,820" />
+          </clipPath>
+          <linearGradient id="lavaGradV" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#ffe14a" />
+            <stop offset="55%" stop-color="#ff8a1e" />
+            <stop offset="100%" stop-color="#e2371f" />
+          </linearGradient>
+          <radialGradient id="chamberGrad" cx="50%" cy="45%" r="60%">
+            <stop offset="0%" stop-color="#ffe14a" />
+            <stop offset="50%" stop-color="#ff8a1e" />
+            <stop offset="100%" stop-color="#e2371f" />
+          </radialGradient>
+        </defs>
+
+        <!-- Ground line -->
+        <line class="ground" x1="120" y1="820" x2="1280" y2="820" />
+
+        <!-- Strata (clipped to mountain body) -->
+        <g clip-path="url(#mountainClip)">
+          <rect class="strata-band s1" style="--d: 1.6s" x="180" y="180" width="1040" height="170" />
+          <rect class="strata-band s2" style="--d: 1.7s" x="180" y="350" width="1040" height="140" />
+          <rect class="strata-band s3" style="--d: 1.8s" x="180" y="490" width="1040" height="150" />
+          <rect class="strata-band s4" style="--d: 1.9s" x="180" y="640" width="1040" height="190" />
+          <line class="strata-line" x1="180" y1="350" x2="1220" y2="350" />
+          <line class="strata-line" x1="180" y1="490" x2="1220" y2="490" />
+          <line class="strata-line" x1="180" y1="640" x2="1220" y2="640" />
+        </g>
+
+        <!-- Mountain outline (stays visible over everything) -->
+        <polygon class="outline" points="200,820 640,195 660,250 740,250 760,195 1200,820" />
+
+        <!-- Conduit: casing then lava core -->
+        <path class="conduit-casing" style="--len: 510" d="M 700 760 L 700 250" />
+        <path class="conduit" style="--len: 510" d="M 700 760 L 700 250" />
+
+        <!-- Magma chamber -->
+        <ellipse class="chamber" cx="700" cy="850" rx="150" ry="68" fill="url(#chamberGrad)" stroke="var(--ink)" stroke-width="4" />
+        <ellipse class="chamber-core" cx="700" cy="845" rx="86" ry="36" fill="#ffe14a" />
+
+        <!-- Lava rivers down both slopes (drawn during eruption) -->
+        <path class="flow" style="--len: 764" d="M 640 200 L 210 815" />
+        <path class="flow" style="--len: 764" d="M 760 200 L 1190 815" />
+
+        <!-- Lava pools at the feet -->
+        <ellipse class="lava-pool" style="--d: 7.4s" cx="210" cy="822" rx="60" ry="20" fill="url(#chamberGrad)" stroke="var(--ink)" stroke-width="3" />
+        <ellipse class="lava-pool" style="--d: 7.5s" cx="1190" cy="822" rx="60" ry="20" fill="url(#chamberGrad)" stroke="var(--ink)" stroke-width="3" />
+      </svg>
+
+      <!-- ===== Solid front-face cover (sliced away) ===== -->
+      <div class="solid-cover"><div class="solid-mountain"></div></div>
+
+      <!-- ===== Title ===== -->
+      <div class="title">
+        <h1>Stratovolcano</h1>
+        <div class="sub">Anatomy of an Eruption</div>
+      </div>
+
+      <!-- ===== Magma rising up the conduit ===== -->
+      <div class="packet magma-packet" style="--d: 4.0s; offset-path: path('M 700 760 L 700 250');"></div>
+      <div class="packet magma-packet" style="--d: 4.4s; offset-path: path('M 700 760 L 700 250');"></div>
+      <div class="packet magma-packet" style="--d: 4.8s; offset-path: path('M 700 760 L 700 250');"></div>
+      <div class="packet magma-packet" style="--d: 5.2s; offset-path: path('M 700 760 L 700 250');"></div>
+      <div class="packet magma-packet" style="--d: 5.6s; offset-path: path('M 700 760 L 700 250');"></div>
+
+      <!-- ===== Eruption ===== -->
+      <div class="flash"></div>
+
+      <div class="packet erupt-packet" style="--d: 6.10s; offset-path: path('M 700 250 L 700 60');"></div>
+      <div class="packet erupt-packet" style="--d: 6.15s; offset-path: path('M 700 250 L 580 80');"></div>
+      <div class="packet erupt-packet" style="--d: 6.20s; offset-path: path('M 700 250 L 820 80');"></div>
+      <div class="packet erupt-packet" style="--d: 6.25s; offset-path: path('M 700 250 L 630 50');"></div>
+      <div class="packet erupt-packet" style="--d: 6.30s; offset-path: path('M 700 250 L 770 50');"></div>
+      <div class="packet erupt-packet" style="--d: 6.50s; offset-path: path('M 700 250 L 700 120');"></div>
+      <div class="packet erupt-packet" style="--d: 6.70s; offset-path: path('M 700 250 L 700 120');"></div>
+
+      <!-- Ash plume -->
+      <div class="ash" style="--d: 6.2s;  --dx: -10px; --dy: -150px; --s: 3.0; border-radius: 52% 48% 60% 40%;"></div>
+      <div class="ash" style="--d: 6.4s;  --dx:  40px; --dy: -200px; --s: 2.6; border-radius: 60% 40% 45% 55%;"></div>
+      <div class="ash" style="--d: 6.6s;  --dx: -50px; --dy: -190px; --s: 2.4; border-radius: 45% 55% 55% 45%;"></div>
+      <div class="ash" style="--d: 6.8s;  --dx:  20px; --dy: -250px; --s: 2.2; border-radius: 55% 45% 50% 50%;"></div>
+
+      <!-- Embers -->
+      <div class="ember" style="--d: 6.2s; offset-path: path('M 700 240 Q 660 160 600 120');"></div>
+      <div class="ember" style="--d: 6.4s; offset-path: path('M 700 240 Q 740 160 800 120');"></div>
+      <div class="ember" style="--d: 6.6s; offset-path: path('M 700 240 Q 690 140 670 70');"></div>
+      <div class="ember" style="--d: 6.5s; offset-path: path('M 700 240 Q 720 150 750 90');"></div>
+
+      <!-- ===== Callouts ===== -->
+      <div class="callout" style="--fx: 700px; --fy: 215px; --bex: 240px; --bey: -65px; --len: 249px; --ang: -15.1deg; --delay: 2.6s;">
+        <span class="dot"></span><span class="leader"></span>
+        <div class="billboard"><div class="ct-title">Crater</div><div class="ct-desc">Eruptive vent</div></div>
+      </div>
+
+      <div class="callout" style="--fx: 720px; --fy: 500px; --bex: 280px; --bey: 0px; --len: 280px; --ang: 0deg; --delay: 2.8s;">
+        <span class="dot"></span><span class="leader"></span>
+        <div class="billboard"><div class="ct-title">Conduit</div><div class="ct-desc">Magma pipe</div></div>
+      </div>
+
+      <div class="callout" style="--fx: 770px; --fy: 855px; --bex: 250px; --bey: 0px; --len: 250px; --ang: 0deg; --delay: 3.0s;">
+        <span class="dot"></span><span class="leader"></span>
+        <div class="billboard"><div class="ct-title">Magma Chamber</div><div class="ct-desc">1,200°C reservoir</div></div>
+      </div>
+
+      <div class="callout" style="--fx: 540px; --fy: 430px; --bex: -270px; --bey: -50px; --len: 275px; --ang: -169.5deg; --delay: 3.2s;">
+        <span class="dot"></span><span class="leader"></span>
+        <div class="billboard"><div class="ct-title">Rock Strata</div><div class="ct-desc">Layered ash and lava</div></div>
+      </div>
+
+      <div class="callout" style="--fx: 1010px; --fy: 640px; --bex: 240px; --bey: -80px; --len: 253px; --ang: -18.4deg; --delay: 6.6s;">
+        <span class="dot"></span><span class="leader"></span>
+        <div class="billboard"><div class="ct-title">Lava Flow</div><div class="ct-desc">800°C downslope</div></div>
+      </div>
+
+      <!-- ===== Data badge ===== -->
+      <div class="badge">
+        <div class="b-num">1,200°C</div>
+        <div class="b-lbl">Magma Temperature</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Deterministic responsive fit: scales the 1400x1000 diagram into the viewport. -->
+  <script>
+    function fitToScreen() {
+      const diagram = document.querySelector('.diagram');
+      const scale = Math.min(window.innerWidth / 1400, window.innerHeight / 1000) * 0.92;
+      diagram.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    window.addEventListener('resize', fitToScreen);
+    fitToScreen();
+  </script>
+</body>
+</html>

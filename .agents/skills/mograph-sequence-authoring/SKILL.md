@@ -169,6 +169,23 @@ To support users who edit videos in basic NLEs like CapCut (which do not support
    - ✅ **Universal Exit Collapses:** To elegantly reverse a complex 3D teardown sequence, write dedicated `*Collapse` keyframes that invert the transforms (e.g. `translateZ(0)`) and shadow offsets. Chain these onto the element's `animation` property with a delayed `forwards` fill (e.g. `animation: enter 1.2s both, collapse 0.8s 11.0s forwards`).
    - ✅ **Child Selector Delay Override:** When overriding `animation-delay` on elements that have multiple chained animations (like an enter and a collapse), you MUST supply multiple comma-separated values (`animation-delay: 4.1s, 11s;`). If you only supply one value, it overwrites the delay for ALL chained animations on that element.
 
+## 8. Technical Lessons & Gotchas (From SaaS Launch Momentum)
+
+1. **Animation Property Conflicts (The Fill-Mode Trap):**
+   - 🚫 If two sequential animations target `transform` on the same element (e.g., a cursor swoop, then a cursor click) and both use `fill-mode: both`, the second animation's `0%` state will leak backward during its delay and brutally override the first animation!
+   - ✅ **The Fix:** Strictly use `fill-mode: forwards` on the later animation so it doesn't assert its initial state backward. Alternatively, use independent modern CSS properties (`translate` vs `scale`) to avoid property collisions entirely.
+2. **Organic Exits vs Scene Slides:**
+   - Instead of sliding an entire container off-screen to clear a scene, animate the elements themselves. For infinite scrolling marquees, apply an aggressive `rowExit` animation that blasts rows off-screen in opposite directions.
+   - **Critical Width Calculation:** When translating scrolling rows off-screen, your `-vw` transform must account for the *entire trailing width* of the content, not just the viewport width. Moving a 9-item row by `-150vw` will leave its tail sitting dead in the center of the screen! Use aggressive values like `-350vw` or `250vw` to guarantee clearance.
+3. **Seamless Background Handoffs:**
+   - To transition smoothly from a massive expanding UI ripple into a new visual scene, do NOT fade a solid color block over the layout. Instead, give the new scene a `background: transparent`, allow the UI ripple to stay permanently on screen underneath it, and fade in just the new scene's content (text/grids). This makes the ripple organically *become* the new background.
+4. **Precision Camera Targets (`transform-origin`):**
+   - When zooming through a typographic portal (like the hole of a letter 'O'), do not eyeball the `transform-origin`. Mathematically calculate the percentage center of the specific character based on relative font widths, otherwise the camera will crash into the solid letter mass and ruin the portal illusion.
+5. **Breaking the Marquee Grid:**
+   - Rigid grids of matching cards moving in unison look robotic. To instantly elevate a multi-row marquee to a premium SaaS aesthetic, apply a visual offset (e.g. `margin-left: -11vw`, exactly half a card width) to alternating rows. This forces a classic, highly-aesthetic "brick-lay" masonry stagger while allowing all rows to animate fluidly at the same speed.
+6. **Kinetic Cursor Timing:**
+   - To make UI interactions feel incredibly deliberate, hide the cursor entirely off-screen (`120vw, 3vh`, `opacity: 0`). When the dashboard camera begins to zoom into a button, trigger a 2-second cursor swoop in parallel that lands on the target exactly as the click executes.
+
 ## Workflow / Checklist
 
 When adding a new sequence:

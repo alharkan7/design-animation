@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaaS Launch Momentum Cut</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --surface-2: #09090b; 
+      --surface-3: #18181b; 
+      --accent-1: #3b82f6;
+      --accent-2: #8b5cf6;
+      --accent-3: #ec4899;
+      --text-main: #ffffff; 
+      --text-muted: #a1a1aa;
+      --border: #27272a;
+    }
+
+    body {
+      margin: 0; padding: 0; overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      width: 100vw; height: 100vh;
+    }
+
+    .sequence-container {
+      position: relative; width: 100vw; height: 100vh;
+    }
+
+    .scene {
+      position: absolute; width: 100vw; height: 100vh;
+      box-sizing: border-box; display: flex; flex-direction: column;
+      visibility: hidden; overflow: hidden; z-index: 1;
+    }
+
+    /* ════════════ MOMENTUM CUT TRANSITIONS ════════════ */
+    @keyframes sceneWipeOut {
+      0% { visibility: visible; transform: translateX(0) scale(1); clip-path: inset(0 0 0 0); }
+      100% { visibility: hidden; transform: translateX(-20vw) scale(0.95); clip-path: inset(0 100% 0 0); }
+    }
+
+    @keyframes sceneWipeIn {
+      0% { visibility: hidden; transform: translateX(20vw) scale(0.95); clip-path: inset(0 0 0 100%); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translateX(0) scale(1); clip-path: inset(0 0 0 0); }
+    }
+
+    /* ════════════ SCENE 1: NETWORK OF CIRCLES ════════════ */
+    #scene1 {
+      z-index: 10; align-items: center; justify-content: center;
+      animation: sceneWipeOut 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.7s forwards;
+      visibility: visible;
+    }
+
+    .network-container { position: relative; width: 100vw; height: 100vh; }
+    .center-node {
+      position: absolute; top: 50%; left: 50%; width: 14vw; height: 14vw;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;
+      animation: 
+        popInCenter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both,
+        centerExit 0.8s cubic-bezier(0.7, 0, 0.3, 1) 2.7s forwards;
+      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+    }
+    .center-icon { width: 45%; height: 45%; fill: #fff; }
+    @keyframes popInCenter {
+      0% { visibility: hidden; transform: translate(-50%, -50%) scale(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translate(-50%, -50%) scale(1); }
+    }
+    @keyframes centerExit {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-150vw, -50%) scale(1); }
+    }
+
+    .satellite-system {
+      position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+      animation: systemOrbit 15s linear 0s forwards;
+    }
+    .satellite-system-spin {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      animation: spinBurst 0.8s cubic-bezier(0.7, 0, 0.3, 1) 2.7s forwards;
+    }
+    @keyframes spinBurst {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(90deg); }
+    }
+    @keyframes systemOrbit {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(120deg); }
+    }
+
+    .satellite-wrapper {
+      position: absolute; top: 0; left: 0; width: 0; height: 0;
+      transform: rotate(var(--rot));
+    }
+    .satellite-node {
+      position: absolute; top: 0; left: 0; width: 8vw; height: 8vw;
+      background: var(--surface-2); border-radius: 50%;
+      border: 4px solid var(--surface-3); box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+      animation: 
+        nodeSlideOut 1.2s cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both,
+        nodeExplode 0.8s cubic-bezier(0.7, 0, 0.3, 1) 2.7s forwards;
+    }
+    @keyframes nodeSlideOut {
+      0% { visibility: hidden; transform: translateX(0vw) translate(-50%, -50%) scale(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translateX(25vw) translate(-50%, -50%) scale(1); }
+    }
+    @keyframes nodeExplode {
+      0% { transform: translateX(25vw) translate(-50%, -50%) scale(1); }
+      100% { transform: translateX(65vw) translate(-50%, -50%) scale(1); }
+    }
+    .satellite-counter {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      transform: rotate(calc(-1 * var(--rot)));
+    }
+    .satellite-counter-inner {
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      animation: systemCounterOrbit 15s linear 0s forwards;
+    }
+    @keyframes systemCounterOrbit {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-120deg); }
+    }
+    .satellite-icon { width: 50%; height: 50%; fill: var(--text-main); }
+
+    /* ════════════ SCENE 2: TYPOGRAPHIC WINDOW CUT ════════════ */
+    #scene2 {
+      z-index: 25; background: transparent;
+      animation: sceneWipeIn 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.7s both;
+    }
+
+    .text-mask-wrapper {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      transform-origin: 29% 52%; 
+      animation: windowZoom 1.5s cubic-bezier(0.7, 0, 0.2, 1) 4.7s forwards;
+    }
+
+    .text-mask-svg { width: 100vw; height: 100vh; }
+
+    @keyframes windowZoom {
+      0% { transform: scale(1); visibility: visible; }
+      99% { transform: scale(200); visibility: visible; }
+      100% { transform: scale(200); visibility: hidden; } 
+    }
+
+    .solid-text {
+      animation: textFade 0.6s ease-in 4.7s forwards;
+    }
+
+    @keyframes textFade {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ════════════ SCENE 3: TESTIMONIAL MARQUEE ════════════ */
+    #scene3 {
+      z-index: 20;
+      /* Wipes in identically with scene 2 so they move as a single synchronized layer */
+      animation: 
+        sceneWipeIn 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.7s both,
+        scenePopOut 0s linear 11.0s forwards;
+    }
+
+    .marquee-container {
+      display: flex; flex-direction: column; gap: 3vh; width: 250vw;
+      /* Center it slightly vertically */
+      margin-top: 15vh;
+    }
+
+    .marquee-row { display: flex; gap: 3vw; white-space: nowrap; }
+
+    .testimonial-card {
+      width: 24vw; height: 20vh; background: var(--surface-2); border-radius: 2vh;
+      padding: 3vh 2vw; display: flex; flex-direction: column; gap: 2vh;
+      box-sizing: border-box; flex-shrink: 0; box-shadow: 0 12px 32px rgba(0,0,0,0.05);
+    }
+    .testimonial-header { display: flex; align-items: center; gap: 1.5vw; }
+    .testimonial-avatar { width: 5vh; height: 5vh; border-radius: 50%; }
+    .testimonial-lines { display: flex; flex-direction: column; gap: 1vh; flex: 1; }
+    .t-line { height: 1vh; background: var(--surface-3); border-radius: 0.5vh; width: 100%; }
+    .t-short { width: 40%; } .t-medium { width: 70%; } .t-long { width: 90%; }
+    .testimonial-body { display: flex; flex-direction: column; gap: 1.2vh; }
+
+    .logo-row { align-items: center; padding: 3vh 0; }
+    .logo-card { width: 18vw; display: flex; justify-content: center; flex-shrink: 0; }
+    .logo-svg { height: 5.5vh; fill: var(--surface-2); opacity: 0.35; }
+    
+    .staggered-row { margin-left: -11vw; }
+
+    .marquee-left { animation: scrollLeft 8s linear 2.7s both; }
+    .marquee-right { animation: scrollRight 8s linear 2.7s both; }
+    .row-exit-left { animation: rowExitLeft 1s cubic-bezier(0.4, 0, 0.1, 1) 9.5s forwards; }
+    .row-exit-right { animation: rowExitRight 1s cubic-bezier(0.4, 0, 0.1, 1) 9.5s forwards; }
+
+    @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-60vw); } }
+    @keyframes scrollRight { 0% { transform: translateX(-60vw); } 100% { transform: translateX(0); } }
+    @keyframes rowExitLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-350vw); } }
+    @keyframes rowExitRight { 0% { transform: translateX(0); } 100% { transform: translateX(250vw); } }
+
+    /* ════════════ SCENE 4: UI DASHBOARD ZOOM & CLICK ════════════ */
+    #scene4 {
+      z-index: 15;
+      animation: 
+        scenePopIn 0s linear 9.0s both,
+        canvasSwipeClean 0.8s cubic-bezier(0.5, 0, 0.1, 1) 18.5s forwards;
+    }
+    @keyframes scenePopIn {
+      0% { visibility: hidden; }
+      100% { visibility: visible; }
+    }
+    @keyframes canvasSwipeClean {
+      100% { transform: translateX(-150vw); visibility: hidden; }
+    }
+
+    .ui-wrapper {
+      position: absolute; top: 10vh; left: 10vw; width: 80vw; height: 80vh;
+      display: flex; flex-direction: column; gap: 3vh;
+      transform-origin: 93% 5%; /* Pinpoints the Analyze button */
+      animation: uiZoomIn 1.5s cubic-bezier(0.4, 0, 0.2, 1) 11.5s both;
+    }
+
+    @keyframes uiZoomIn {
+      0% { transform: scale(1); }
+      100% { transform: scale(2.5); }
+    }
+
+    .ripple-full {
+      position: absolute; left: 76vw; top: 4vh;
+      width: 0; height: 0;
+      background: var(--accent-1); 
+      border-radius: 50%; transform: translate(-50%, -50%);
+      z-index: 90;
+      animation: rippleFullExpand 0.6s ease-out 13.5s both;
+    }
+    @keyframes rippleFullExpand {
+      0% { width: 0; height: 0; opacity: 0.9; }
+      100% { width: 300vw; height: 300vw; opacity: 1; }
+    }
+
+    .cursor {
+      position: absolute; width: 4vh; height: 4vh;
+      fill: #09090b; stroke: #ffffff; stroke-width: 1px;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); z-index: 100;
+      animation: 
+        cursorSwoop 2.0s cubic-bezier(0.2, 0.8, 0.2, 1) 11.5s both,
+        cursorClick 0.3s ease-out 13.5s forwards;
+    }
+    @keyframes cursorSwoop {
+      0% { transform: translate(120vw, 3vh); opacity: 0; }
+      1% { opacity: 1; }
+      100% { transform: translate(75vw, 3vh); opacity: 1; }
+    }
+    @keyframes cursorClick {
+      0% { transform: translate(75vw, 3vh) scale(1); }
+      50% { transform: translate(75vw, 3vh) scale(0.8); }
+      100% { transform: translate(75vw, 3vh) scale(1); }
+    }
+
+    .ui-header {
+      height: 8vh; background: var(--surface-2); border-radius: 2vh; 
+      display: flex; align-items: center; padding: 0 2vw; gap: 2vw;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 9.8s both;
+    }
+    
+    .ui-header-circle { width: 4vh; height: 4vh; border-radius: 50%; background: var(--surface-3); }
+    .ui-header-line { height: 2vh; width: 15vw; background: var(--surface-3); border-radius: 1vh; }
+
+    .ui-button {
+      height: 4vh; padding: 0 2vw;
+      background: var(--accent-1); color: white;
+      border-radius: 1vh; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.8vh; margin-left: auto; 
+      animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 9.9s both;
+    }
+
+    .ui-grid { display: flex; gap: 3vw; flex: 1; }
+    .ui-sidebar {
+      flex: 0 0 20vw; background: var(--surface-2); border-radius: 2vh;
+      padding: 4vh 2vw; display: flex; flex-direction: column; gap: 2vh;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 10.0s both;
+    }
+    .ui-sidebar-item { height: 3vh; width: 100%; background: var(--surface-3); border-radius: 1vh; }
+
+    .ui-main { flex: 1; display: flex; flex-direction: column; gap: 3vw; }
+    .card-row { display: flex; gap: 3vw; height: 15vh; }
+    .stat-card {
+      flex: 1; background: var(--surface-2); border-radius: 2vh;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
+    }
+    .chart-card {
+      flex: 1; background: var(--surface-2); border-radius: 2vh;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      padding: 4vh 4vw; display: flex; align-items: flex-end; justify-content: center;
+      animation: cardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) 10.6s both;
+    }
+    .chart-bars { display: flex; gap: 3vw; width: 100%; height: 100%; align-items: flex-end; }
+    .bar-wrap {
+      flex: 1; height: 100%; display: flex; align-items: flex-end;
+      background: var(--surface-3); border-radius: 1vh 1vh 0 0; overflow: hidden;
+    }
+    .bar {
+      width: 100%; background: linear-gradient(0deg, var(--accent-1), var(--accent-2));
+      border-radius: 1vh 1vh 0 0;
+      animation: barGrow 0.8s cubic-bezier(0.16, 1, 0.3, 1) var(--delay) both;
+    }
+
+    @keyframes cardEnter {
+      0% { visibility: hidden; transform: translateY(100px) scale(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translateY(0) scale(1); }
+    }
+    @keyframes barGrow {
+      0% { visibility: hidden; transform: scaleY(0); transform-origin: bottom; }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: scaleY(1); transform-origin: bottom; }
+    }
+
+    /* ════════════ SCENE 5: MAGNIFYING GLASS ════════════ */
+    #scene5 {
+      z-index: 35; background: transparent;
+      animation: 
+        sceneFadeIn 0.5s ease-out 13.6s both,
+        canvasSwipeClean 0.8s cubic-bezier(0.5, 0, 0.1, 1) 18.5s forwards;
+    }
+    @keyframes sceneFadeIn {
+      0% { opacity: 0; visibility: visible; }
+      100% { opacity: 1; visibility: visible; }
+    }
+    
+    .data-grid {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      display: flex; flex-direction: column; gap: 4vh; padding: 10vh 5vw;
+    }
+    .d-row { display: flex; gap: 3vw; align-items: center; justify-content: center; }
+    .d-line { height: 3vh; border-radius: 1.5vh; background: rgba(255,255,255,0.15); }
+    
+    .blurred { filter: blur(8px); opacity: 0.8; }
+    .crisp .d-line {
+      background: #ffffff;
+      box-shadow: 0 0 24px rgba(255,255,255,0.6);
+    }
+    
+    .lens {
+      position: absolute; top: 0; left: 0; width: 35vh; height: 35vh; border-radius: 50%;
+      overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.3), inset 0 0 0 6px #ffffff;
+      animation: lensPan 4.0s cubic-bezier(0.4, 0, 0.2, 1) 14.3s both;
+    }
+    .lens-inner {
+      position: absolute; width: 100vw; height: 100vh;
+      animation: lensInnerPan 4.0s cubic-bezier(0.4, 0, 0.2, 1) 14.3s both;
+    }
+    
+    @keyframes lensPan {
+      0% { transform: translate(10vw, 75vh); }
+      100% { transform: translate(80vw, 20vh); }
+    }
+    @keyframes lensInnerPan {
+      0% { transform: translate(-10vw, -75vh); }
+      100% { transform: translate(-80vw, -20vh); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="sequence-container">
+    
+    <!-- SCENE 1: Network of Circles -->
+    <div class="scene" id="scene1">
+      <div class="network-container">
+        
+        <div class="satellite-system-spin">
+        <div class="satellite-system">
+          <div class="satellite-wrapper" style="--rot: 0deg;"><div class="satellite-node" style="--delay: 0.7s;"><div class="satellite-counter" style="--rot: 0deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 45deg;"><div class="satellite-node" style="--delay: 0.75s;"><div class="satellite-counter" style="--rot: 45deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 90deg;"><div class="satellite-node" style="--delay: 0.8s;"><div class="satellite-counter" style="--rot: 90deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 135deg;"><div class="satellite-node" style="--delay: 0.85s;"><div class="satellite-counter" style="--rot: 135deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 180deg;"><div class="satellite-node" style="--delay: 0.9s;"><div class="satellite-counter" style="--rot: 180deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 225deg;"><div class="satellite-node" style="--delay: 0.95s;"><div class="satellite-counter" style="--rot: 225deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 270deg;"><div class="satellite-node" style="--delay: 1.0s;"><div class="satellite-counter" style="--rot: 270deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div></div></div></div>
+          <div class="satellite-wrapper" style="--rot: 315deg;"><div class="satellite-node" style="--delay: 1.05s;"><div class="satellite-counter" style="--rot: 315deg;"><div class="satellite-counter-inner"><svg class="satellite-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div></div></div></div>
+        </div>
+        </div>
+
+        <div class="center-node">
+          <svg class="center-icon" viewBox="0 0 24 24">
+             <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4s1.79-4 4-4h.71C7.37 7.69 9.48 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3s-1.34 3-3 3z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 2: TYPOGRAPHIC WINDOW CUT -->
+    <div class="scene" id="scene2">
+      <div class="text-mask-wrapper">
+        <svg class="text-mask-svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#09090b" />
+              <stop offset="100%" stop-color="#3f3f46" />
+            </linearGradient>
+            <mask id="windowMask">
+              <rect width="100%" height="100%" fill="white" />
+              <text x="50%" y="55%" font-family="Inter, sans-serif" font-size="220" font-weight="900" text-anchor="middle" fill="black" letter-spacing="-2">CONNECT</text>
+            </mask>
+          </defs>
+          <!-- Covers scene 3 underneath, hole reveals scene 3 playing inside the text -->
+          <rect width="100%" height="100%" fill="#ffffff" mask="url(#windowMask)" />
+          <!-- Solid text that fades out to reveal the hole -->
+          <text class="solid-text" x="50%" y="55%" font-family="Inter, sans-serif" font-size="220" font-weight="900" text-anchor="middle" fill="url(#textGrad)" letter-spacing="-2">CONNECT</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- SCENE 3: TESTIMONIAL MARQUEE -->
+    <div class="scene" id="scene3">
+      <div class="marquee-container">
+        <!-- Row 1: Moves Left -->
+        <div class="row-exit-left">
+        <div class="marquee-row marquee-left">
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+        </div>
+        </div>
+        
+        <!-- Row 2: Moves Right (Logos) -->
+        <div class="row-exit-right">
+        <div class="marquee-row marquee-right logo-row">
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="20" cy="20" r="16"/><rect x="46" y="12" width="60" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><path d="M20,4 L36,32 L4,32 Z"/><rect x="46" y="12" width="65" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="16" cy="20" r="12"/><circle cx="28" cy="20" r="12" fill-opacity="0.5"/><rect x="50" y="12" width="55" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><rect x="10" y="20" width="20" height="20" transform="rotate(-45 20 20)"/><rect x="46" y="12" width="50" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><rect x="10" y="20" width="6" height="12" rx="3"/><rect x="20" y="12" width="6" height="20" rx="3"/><rect x="30" y="4" width="6" height="28" rx="3"/><rect x="46" y="12" width="60" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="20" cy="20" r="16"/><rect x="46" y="12" width="60" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><path d="M20,4 L36,32 L4,32 Z"/><rect x="46" y="12" width="65" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="16" cy="20" r="12"/><circle cx="28" cy="20" r="12" fill-opacity="0.5"/><rect x="50" y="12" width="55" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><rect x="10" y="20" width="20" height="20" transform="rotate(-45 20 20)"/><rect x="46" y="12" width="50" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><rect x="10" y="20" width="6" height="12" rx="3"/><rect x="20" y="12" width="6" height="20" rx="3"/><rect x="30" y="4" width="6" height="28" rx="3"/><rect x="46" y="12" width="60" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="20" cy="20" r="16"/><rect x="46" y="12" width="60" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><path d="M20,4 L36,32 L4,32 Z"/><rect x="46" y="12" width="65" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><circle cx="16" cy="20" r="12"/><circle cx="28" cy="20" r="12" fill-opacity="0.5"/><rect x="50" y="12" width="55" height="16" rx="8"/></svg></div>
+          <div class="logo-card"><svg viewBox="0 0 120 40" class="logo-svg"><rect x="10" y="20" width="20" height="20" transform="rotate(-45 20 20)"/><rect x="46" y="12" width="50" height="16" rx="8"/></svg></div>
+        </div>
+        </div>
+
+        <!-- Row 3: Moves Left -->
+        <div class="row-exit-left">
+        <div class="marquee-row marquee-left staggered-row">
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1))"></div><div class="testimonial-lines"><div class="t-line t-long"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-short"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-2))"></div><div class="testimonial-lines"><div class="t-line t-short"></div><div class="t-line t-medium"></div></div></div><div class="testimonial-body"><div class="t-line t-long"></div><div class="t-line t-medium"></div><div class="t-line t-long"></div></div></div>
+          <div class="testimonial-card"><div class="testimonial-header"><div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3))"></div><div class="testimonial-lines"><div class="t-line t-medium"></div><div class="t-line t-short"></div></div></div><div class="testimonial-body"><div class="t-line t-medium"></div><div class="t-line t-long"></div><div class="t-line t-short"></div></div></div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: UI DASHBOARD -->
+    <div class="scene" id="scene4">
+      <div class="ui-wrapper">
+        <div class="ripple-full"></div>
+        <svg class="cursor" viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2 1-3.2-7.4-4.4 4.5z"/></svg>
+
+        <div class="ui-header">
+          <div class="ui-header-circle"></div>
+          <div class="ui-header-line"></div>
+          <div class="ui-button" id="ctaBtn"><span>Analyze</span></div>
+        </div>
+
+        <div class="ui-grid">
+          <div class="ui-sidebar">
+            <div class="ui-sidebar-item" style="background: var(--accent-1); opacity: 0.8;"></div>
+            <div class="ui-sidebar-item" style="width: 80%;"></div>
+            <div class="ui-sidebar-item" style="width: 60%;"></div>
+            <div class="ui-sidebar-item" style="width: 90%;"></div>
+            <div class="ui-sidebar-item" style="width: 70%; margin-top: 4vh;"></div>
+            <div class="ui-sidebar-item" style="width: 85%;"></div>
+          </div>
+          <div class="ui-main">
+            <div class="card-row">
+              <div class="stat-card" style="--delay: 10.2s;"></div>
+              <div class="stat-card" style="--delay: 10.3s;"></div>
+              <div class="stat-card" style="--delay: 10.4s;"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-bars">
+                <div class="bar-wrap"><div class="bar" style="height: 40%; --delay: 10.7s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 70%; --delay: 10.8s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 50%; --delay: 10.9s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 90%; --delay: 11.0s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 60%; --delay: 11.1s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 80%; --delay: 11.2s"></div></div>
+                <div class="bar-wrap"><div class="bar" style="height: 100%; --delay: 11.3s"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: MAGNIFYING GLASS REVEAL -->
+    <div class="scene" id="scene5">
+      <!-- Blurred Background Data Grid -->
+      <div class="data-grid blurred">
+        <div class="d-row"><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 18vw"></div></div>
+        <div class="d-row"><div class="d-line" style="width: 20vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 30vw"></div><div class="d-line" style="width: 10vw"></div></div>
+        <div class="d-row"><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 28vw"></div><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 22vw"></div></div>
+        <div class="d-row"><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 18vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 25vw"></div></div>
+        <div class="d-row"><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 20vw"></div><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 35vw"></div></div>
+        <div class="d-row"><div class="d-line" style="width: 18vw"></div><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 15vw"></div></div>
+      </div>
+      
+      <!-- The Lens containing Crisp Foreground -->
+      <div class="lens">
+        <div class="lens-inner">
+          <div class="data-grid crisp">
+            <!-- Exact duplicate for perfect masking overlay -->
+            <div class="d-row"><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 18vw"></div></div>
+            <div class="d-row"><div class="d-line" style="width: 20vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 30vw"></div><div class="d-line" style="width: 10vw"></div></div>
+            <div class="d-row"><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 28vw"></div><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 22vw"></div></div>
+            <div class="d-row"><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 18vw"></div><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 25vw"></div></div>
+            <div class="d-row"><div class="d-line" style="width: 12vw"></div><div class="d-line" style="width: 20vw"></div><div class="d-line" style="width: 8vw"></div><div class="d-line" style="width: 35vw"></div></div>
+            <div class="d-row"><div class="d-line" style="width: 18vw"></div><div class="d-line" style="width: 15vw"></div><div class="d-line" style="width: 25vw"></div><div class="d-line" style="width: 15vw"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

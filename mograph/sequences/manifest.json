@@ -24,5 +24,6 @@
   { "file": "apple-product-trailer.html", "name": "Apple-Style Product Trailer" },
   { "file": "memphis-design.html", "name": "Memphis Design / Pop-Art" },
   { "file": "vox-explainer.html", "name": "Vox Journalistic Explainer" },
-  { "file": "layered-architecture.html", "name": "Layered Architecture Core (Cake)" }
+  { "file": "layered-architecture.html", "name": "Layered Architecture Core (Cake)" },
+  { "file": "saas-launch-momentum.html", "name": "SaaS Launch Momentum Cut" }
 ]

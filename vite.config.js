@@ -1,7 +1,8 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { Readable } from 'node:stream';
-import { resolve } from 'node:path';
+import { readdirSync, existsSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import puppeteer from 'puppeteer';
 import PptxGenJS from 'pptxgenjs';
@@ -1191,24 +1192,43 @@ export default defineConfig(({ mode }) => {
     if (process.env[k] == null) process.env[k] = v;
   }
 
+  const inputs = {
+    main: resolve(__dirname, 'index.html'),
+    counter: resolve(__dirname, 'counter/index.html'),
+    languages: resolve(__dirname, 'languages/index.html'),
+    tts: resolve(__dirname, 'tts/index.html'),
+    'apbn-pendidikan': resolve(__dirname, 'apbn-pendidikan/index.html'),
+    'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
+    'infographic-generator': resolve(__dirname, 'infographic-generator/index.html'),
+    'citation-generator': resolve(__dirname, 'citation-generator/index.html'),
+    'motion-graphics': resolve(__dirname, 'motion-graphics/index.html'),
+    'image-sequencer': resolve(__dirname, 'image-sequencer/index.html'),
+    'map3d': resolve(__dirname, 'map3d/index.html'),
+    'mograph': resolve(__dirname, 'mograph/index.html'),
+    'threejs': resolve(__dirname, 'threejs/index.html'),
+  };
+
+  // Dynamically add all threejs animations to Vite build
+  try {
+    const animationsDir = resolve(__dirname, 'threejs/animations');
+    if (existsSync(animationsDir)) {
+      const dirs = readdirSync(animationsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+      for (const dir of dirs) {
+        const indexPath = join(animationsDir, dir.name, 'index.html');
+        if (existsSync(indexPath)) {
+          inputs[`threejs/animations/${dir.name}`] = indexPath;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to parse threejs animations', err);
+  }
+
   return {
     plugins: [ttsApiPlugin(), slidesGeneratorPlugin(), infographicGeneratorPlugin(), slidesExportPlugin(), motionGraphicsGeneratorPlugin(), motionGraphicsExportPlugin()],
     build: {
       rollupOptions: {
-        input: {
-          main: resolve(__dirname, 'index.html'),
-          counter: resolve(__dirname, 'counter/index.html'),
-          languages: resolve(__dirname, 'languages/index.html'),
-          tts: resolve(__dirname, 'tts/index.html'),
-          'apbn-pendidikan': resolve(__dirname, 'apbn-pendidikan/index.html'),
-          'slides-generator': resolve(__dirname, 'slides-generator/index.html'),
-          'infographic-generator': resolve(__dirname, 'infographic-generator/index.html'),
-          'citation-generator': resolve(__dirname, 'citation-generator/index.html'),
-          'motion-graphics': resolve(__dirname, 'motion-graphics/index.html'),
-          'image-sequencer': resolve(__dirname, 'image-sequencer/index.html'),
-          'map3d': resolve(__dirname, 'map3d/index.html'),
-          'mograph': resolve(__dirname, 'mograph/index.html'),
-        },
+        input: inputs,
       },
     },
     server: {

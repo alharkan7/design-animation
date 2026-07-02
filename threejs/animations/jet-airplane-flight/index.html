@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jet Airplane Flight</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #7ec0ee; /* Sky blue background */
+            font-family: 'Outfit', sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #ui-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            pointer-events: none;
+        }
+        #focus-hint {
+            font-size: 0.95rem;
+            font-weight: 600; 
+            color: #1a2639;
+            cursor: pointer;
+            pointer-events: auto; /* Re-enable pointer events just for the text */
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        #focus-hint:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div id="focus-hint">✈ Click anywhere to activate flight controls</div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x7ec0ee); // Sky Blue
+        scene.fog = new THREE.Fog(0x7ec0ee, 100, 250); // Pushed further back for zoomed out view
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(65, 45, 65); // Zoomed out diorama view
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Lowered intensity
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2); // Standard sunlight
+        dirLight.position.set(40, 60, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 10;
+        dirLight.shadow.camera.far = 150;
+        dirLight.shadow.camera.left = -40;
+        dirLight.shadow.camera.right = 40;
+        dirLight.shadow.camera.top = 40;
+        dirLight.shadow.camera.bottom = -40;
+        dirLight.shadow.bias = -0.001; // Fix shadow acne
+        scene.add(dirLight);
+
+        // 3. The Jet Airplane (Static in X/Z, controlled in Y, Roll, Pitch)
+        const planeGroup = new THREE.Group();
+        scene.add(planeGroup);
+
+        const planeMat = new THREE.MeshStandardMaterial({ 
+            color: 0xdddddd, 
+            roughness: 0.3, 
+            metalness: 0.2,
+            flatShading: true
+        });
+        const darkMat = new THREE.MeshStandardMaterial({ 
+            color: 0x222233, 
+            roughness: 0.5, 
+            flatShading: true 
+        });
+        const accentMat = new THREE.MeshStandardMaterial({
+            color: 0xff3344, 
+            roughness: 0.3,
+            metalness: 0.1
+        });
+
+        // Fuselage
+        const fuselageGeo = new THREE.CylinderGeometry(0.6, 1.2, 10, 16);
+        fuselageGeo.rotateX(Math.PI / 2); 
+        const fuselage = new THREE.Mesh(fuselageGeo, planeMat);
+        fuselage.castShadow = true;
+        planeGroup.add(fuselage);
+
+        // Nose Cone
+        const noseGeo = new THREE.ConeGeometry(1.2, 3, 16);
+        noseGeo.rotateX(-Math.PI / 2); 
+        const nose = new THREE.Mesh(noseGeo, darkMat);
+        nose.position.z = -6.5;
+        nose.castShadow = true;
+        planeGroup.add(nose);
+
+        // Cockpit window
+        const cockpitGeo = new THREE.CapsuleGeometry(0.4, 0.8, 4, 8);
+        cockpitGeo.rotateX(Math.PI / 2);
+        const cockpit = new THREE.Mesh(cockpitGeo, darkMat);
+        cockpit.position.set(0, 0.9, -4);
+        planeGroup.add(cockpit);
+
+        // Extrusion settings for flat aerodynamic parts
+        const extrudeSettings = { depth: 0.15, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.05, bevelThickness: 0.05 };
+
+        // Main Wings (Swept back)
+        const wingShape = new THREE.Shape();
+        wingShape.moveTo(0, 1);  // Inner trailing edge
+        wingShape.lineTo(8, -1); // Outer trailing edge (swept backwards)
+        wingShape.lineTo(8, 1.5);  // Outer leading edge
+        wingShape.lineTo(0, 5);  // Inner leading edge (further front)
+        wingShape.lineTo(0, 1);
+
+        const wingGeo = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+        wingGeo.rotateX(-Math.PI / 2); 
+        wingGeo.translate(0, 0, -1); 
+        
+        const wingR = new THREE.Mesh(wingGeo, planeMat);
+        wingR.castShadow = true;
+        planeGroup.add(wingR);
+
+        const wingL = new THREE.Mesh(wingGeo, planeMat);
+        wingL.scale.set(-1, 1, 1); 
+        wingL.castShadow = true;
+        planeGroup.add(wingL);
+
+        // Tail Fin (Vertical Stabilizer)
+        const tailShape = new THREE.Shape();
+        tailShape.moveTo(0, 0); 
+        tailShape.lineTo(1.5, 3.0); 
+        tailShape.lineTo(3.0, 3.0); 
+        tailShape.lineTo(2.5, 0);   
+        tailShape.lineTo(0, 0);
+        
+        const tailGeo = new THREE.ExtrudeGeometry(tailShape, extrudeSettings);
+        tailGeo.rotateY(-Math.PI / 2); 
+        tailGeo.translate(-0.075, 0.5, 2.5); 
+        const tail = new THREE.Mesh(tailGeo, accentMat);
+        tail.castShadow = true;
+        planeGroup.add(tail);
+
+        // Horizontal Stabilizers (Rear wings)
+        const hStabShape = new THREE.Shape();
+        hStabShape.moveTo(0, 1);
+        hStabShape.lineTo(3.5, 0); // Outer trailing edge (swept backwards)
+        hStabShape.lineTo(3.5, 1.2); // Outer leading edge
+        hStabShape.lineTo(0, 3.0); // Inner leading edge
+        hStabShape.lineTo(0, 1);
+
+        const hStabGeo = new THREE.ExtrudeGeometry(hStabShape, extrudeSettings);
+        hStabGeo.rotateX(-Math.PI / 2);
+        hStabGeo.translate(0, 0.4, 6.5); // Shift back to attach to the tail
+        
+        const hStabR = new THREE.Mesh(hStabGeo, planeMat);
+        hStabR.castShadow = true;
+        planeGroup.add(hStabR);
+
+        const hStabL = new THREE.Mesh(hStabGeo, planeMat);
+        hStabL.scale.set(-1, 1, 1);
+        hStabL.castShadow = true;
+        planeGroup.add(hStabL);
+
+        // Jet Exhaust Glow
+        const exhaustGeo = new THREE.ConeGeometry(0.5, 4, 16);
+        exhaustGeo.rotateX(Math.PI / 2); 
+        exhaustGeo.translate(0, 0, 7); 
+        const exhaustMat = new THREE.MeshBasicMaterial({ 
+            color: 0x00dfff, 
+            transparent: true, 
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
+        planeGroup.add(exhaust);
+
+        // Scale and position plane for the diorama
+        planeGroup.scale.setScalar(0.6); // Made the plane a bit bigger
+        planeGroup.position.set(0, 12, 0); // Hovering high above the diorama
+
+        // 4. Moving Diorama (Static Cube, Undulating Surface)
+        // Instead of moving chunks, we use a single fixed cube. 
+        // We simulate movement by manipulating the procedural noise along the Z-axis dynamically!
+        const dioramaSize = 32;
+        let dioramaGeo = new THREE.BoxGeometry(dioramaSize, 10, dioramaSize, 64, 1, 64);
+        dioramaGeo = dioramaGeo.toNonIndexed(); // Important for crisp faceted low-poly shading
+        
+        const dioramaMat = new THREE.MeshStandardMaterial({ 
+            vertexColors: true, 
+            flatShading: true, 
+            roughness: 0.8 
+        });
+        
+        const dioramaMesh = new THREE.Mesh(dioramaGeo, dioramaMat);
+        dioramaMesh.position.set(0, 0, 0); 
+        dioramaMesh.castShadow = true;
+        dioramaMesh.receiveShadow = true;
+        
+        // Cache original coordinates
+        dioramaMesh.userData.baseY = new Float32Array(dioramaGeo.attributes.position.count);
+        dioramaMesh.userData.baseZ = new Float32Array(dioramaGeo.attributes.position.count);
+        for(let j=0; j<dioramaGeo.attributes.position.count; j++) {
+            dioramaMesh.userData.baseY[j] = dioramaGeo.attributes.position.getY(j);
+            dioramaMesh.userData.baseZ[j] = dioramaGeo.attributes.position.getZ(j);
+        }
+        scene.add(dioramaMesh);
+
+        // Colors
+        const cSnow = new THREE.Color(0xffffff);
+        const cRock = new THREE.Color(0x795548);
+        const cForest = new THREE.Color(0x2e7d32);
+        const cGrass = new THREE.Color(0x4caf50);
+        const cDirt = new THREE.Color(0x4a3b32);
+        
+        // Complex procedural noise that never perfectly repeats
+        function updateDiorama(timeOffset) {
+            const pos = dioramaMesh.geometry.attributes.position;
+            const baseY = dioramaMesh.userData.baseY;
+            const baseZ = dioramaMesh.userData.baseZ;
+            const colors = [];
+
+            for(let i=0; i<pos.count; i++) {
+                let lx = pos.getX(i);
+                let originalY = baseY[i];
+                let lz = baseZ[i];
+                
+                // If it's a top face vertex
+                if (originalY > 4.9) {
+                    let globalZ = lz + timeOffset; // Shift terrain backwards
+                    
+                    // Mix irrational frequencies so the pattern never truly repeats
+                    let h = Math.sin(lx * 0.15 + globalZ * 0.113) * 2.0;
+                    h += Math.cos(lx * 0.31 - globalZ * 0.271) * 1.5;
+                    h += Math.sin(lx * 0.73 + globalZ * 0.51) * 0.5;
+                    
+                    // Add some huge mountains
+                    let mountain = Math.max(0, Math.sin(lx * 0.05) * Math.cos(globalZ * 0.04)) * 6.0;
+                    h += mountain;
+                    
+                    pos.setY(i, 5 + h);
+                    
+                    // Color logic based on height
+                    let finalH = 5 + h;
+                    if (finalH > 9.0) colors.push(cSnow.r, cSnow.g, cSnow.b);
+                    else if (finalH > 6.0) colors.push(cRock.r, cRock.g, cRock.b);
+                    else if (finalH > 3.0) colors.push(cForest.r, cForest.g, cForest.b);
+                    else colors.push(cGrass.r, cGrass.g, cGrass.b);
+                } else {
+                    // Side and bottom vertices remain completely flat to maintain the cube shape
+                    colors.push(cDirt.r, cDirt.g, cDirt.b);
+                }
+            }
+            
+            dioramaMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            dioramaMesh.geometry.computeVertexNormals(); // Recomputes lighting to make the flowing hills look real
+            pos.needsUpdate = true;
+        }
+
+        // Initialize frame 0
+        updateDiorama(0);
+
+        // 5. Moving Clouds (Confined to a fixed square block)
+        const cloudCount = 20;
+        const cloudGeo = new THREE.IcosahedronGeometry(1.5, 0); // Low-poly chunks
+        const cloudMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            emissive: 0xffffff,
+            emissiveIntensity: 0.4, // Prevents them from looking like dark rain clouds
+            flatShading: true,
+            transparent: true,
+            opacity: 0.95
+        });
+        const clouds = new THREE.InstancedMesh(cloudGeo, cloudMat, cloudCount);
+        clouds.castShadow = true;
+        
+        const cloudData = [];
+        const cloudDummy = new THREE.Object3D();
+
+        for(let i=0; i<cloudCount; i++) {
+            // Spawn strictly inside the diorama boundaries
+            let x = (Math.random() - 0.5) * dioramaSize;
+            let y = 22 + Math.random() * 12; // Raised clouds much higher
+            let z = (Math.random() - 0.5) * dioramaSize;
+            let scale = 0.5 + Math.random() * 1.5;
+            
+            cloudData.push({ x, y, z, scale });
+            
+            cloudDummy.position.set(x, y, z);
+            cloudDummy.scale.setScalar(scale);
+            cloudDummy.updateMatrix();
+            clouds.setMatrixAt(i, cloudDummy.matrix);
+        }
+        scene.add(clouds);
+
+        // 6. Camera Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 5, 0); // Focus in the middle of the diorama
+        controls.enableDamping = true;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+
+        // 7. User Flight Controls
+        const keys = { up: false, down: false, left: false, right: false };
+        
+        // Ensure iframe is focused when clicking so keystrokes don't leak to parent window
+        const focusHint = document.getElementById('focus-hint');
+        
+        function activateFocus() {
+            window.focus();
+            if (focusHint) focusHint.style.display = 'none';
+        }
+        
+        window.addEventListener('mousedown', activateFocus);
+        if (focusHint) {
+            focusHint.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent double firing
+                activateFocus();
+            });
+        }
+
+        function handleKey(e, isDown) {
+            let captured = false;
+            if(e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') { keys.up = isDown; captured = true; }
+            if(e.key === 'ArrowDown' || e.key.toLowerCase() === 's') { keys.down = isDown; captured = true; }
+            if(e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') { keys.left = isDown; captured = true; }
+            if(e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') { keys.right = isDown; captured = true; }
+            
+            if (captured) {
+                e.stopPropagation(); // Overwrite/block the Mograph Player timeline skip!
+                e.preventDefault(); // Stop window scrolling
+            }
+        }
+        
+        window.addEventListener('keydown', e => handleKey(e, true), { capture: true }); // Use capture phase to intercept before player
+        window.addEventListener('keyup', e => handleKey(e, false), { capture: true });
+
+        // Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 8. Animation Loop
+        const clock = new THREE.Clock();
+        const scrollSpeed = 15; // Lowered terrain and cloud speed
+        
+        let planeBaseX = 0; // Horizontal movement
+        let planeBaseY = 18; // Plane starts much higher
+        let planeBasePitch = 0.05; // Slight pitch up by default
+        let planeBaseRoll = 0;
+        let terrainOffset = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            let delta = clock.getDelta();
+            delta = Math.min(delta, 0.1); // Prevent massive jumps if tab is inactive
+            const time = clock.getElapsedTime();
+
+            // --- User Controls & Physics ---
+            const moveSpeed = 12;
+            
+            if (keys.up) planeBaseY += moveSpeed * delta;
+            if (keys.down) planeBaseY -= moveSpeed * delta;
+            
+            if (keys.left) planeBaseX -= moveSpeed * delta;
+            if (keys.right) planeBaseX += moveSpeed * delta;
+            
+            // Limit flight boundaries within the diorama
+            planeBaseY = Math.max(12, Math.min(26, planeBaseY)); // Adjusted limits for higher flight
+            planeBaseX = Math.max(-10, Math.min(10, planeBaseX));
+
+            // Determine Target Rotations based on keys
+            let targetPitch = 0.05; // Default slight pitch up
+            if (keys.up) targetPitch = 0.4; // Pitch nose UP (positive X)
+            else if (keys.down) targetPitch = -0.3; // Pitch nose DOWN (negative X)
+            
+            let targetRoll = 0;
+            if (keys.left) targetRoll = 0.6; // Bank LEFT
+            else if (keys.right) targetRoll = -0.6; // Bank RIGHT
+
+            // Smooth interpolation for rotational physics
+            planeBasePitch += (targetPitch - planeBasePitch) * 8 * delta;
+            planeBaseRoll += (targetRoll - planeBaseRoll) * 8 * delta;
+
+            // Apply base positions + gentle idle bobbing noise
+            planeGroup.position.y = planeBaseY + Math.sin(time * 3) * 0.2;
+            planeGroup.rotation.x = planeBasePitch + Math.sin(time * 2.2) * 0.05;
+            planeGroup.rotation.z = planeBaseRoll + Math.sin(time * 1.5) * 0.05;
+            // Apply horizontal X position + extra offset based on roll for dynamic leaning
+            planeGroup.position.x = planeBaseX - planeBaseRoll * 2.0; 
+
+            // Animate Jet Exhaust
+            exhaust.scale.setScalar(0.8 + Math.random() * 0.4);
+            exhaustMat.opacity = 0.5 + Math.random() * 0.5;
+
+            // --- Animate Diorama Terrain (Static Cube, Flowing Surface) ---
+            terrainOffset += scrollSpeed * delta;
+            updateDiorama(terrainOffset);
+
+            // --- Animate Clouds (Confined to Cube) ---
+            for(let i=0; i<cloudCount; i++) {
+                let data = cloudData[i];
+                data.z += scrollSpeed * 1.5 * delta; // Clouds move slightly faster
+                
+                // If cloud hits the front edge of the diorama, warp it to the back
+                if (data.z > dioramaSize/2) {
+                    data.z = -dioramaSize/2;
+                    data.x = (Math.random() - 0.5) * dioramaSize;
+                    data.y = 22 + Math.random() * 12; // Raised clouds much higher
+                }
+                
+                cloudDummy.position.set(data.x, data.y, data.z);
+                cloudDummy.rotation.x = time * 0.5;
+                cloudDummy.rotation.y = time * 0.3;
+                cloudDummy.scale.setScalar(data.scale);
+                cloudDummy.updateMatrix();
+                clouds.setMatrixAt(i, cloudDummy.matrix);
+            }
+            clouds.instanceMatrix.needsUpdate = true;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

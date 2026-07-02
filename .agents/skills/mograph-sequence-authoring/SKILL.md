@@ -5,204 +5,71 @@ description: Use when the user wants to create a new motion graphics animation H
 
 # Mograph Sequence Authoring
 
-This skill guides the creation of motion graphics sequences for the Mograph Player (`/mograph/sequences/`). The Mograph Player is a custom viewer and video exporter that renders HTML sequences perfectly frame-by-frame. 
+The Mograph Player (`/mograph/sequences/`) renders HTML sequences frame-by-frame for video export. Strict rules regarding layout, CSS animations, and design must be followed.
 
-To ensure the sequences work smoothly and can be exported as video, strict rules regarding layout, CSS animations, and design must be followed.
+## 1. Core Architecture Contract
 
-## 1. The Architecture Contract (WAAPI / CSS)
+*   **CSS/WAAPI Only:** Rely exclusively on CSS `@keyframes` or native Web Animations API (`element.animate`).
+*   **No External Libraries:** 🚫 No GSAP or JS animation libraries unless explicitly requested.
+*   **No Infinite Loops:** 🚫 No `infinite` animations. They break duration calculations. Use fixed repeats or forwards fills.
+*   **No JS Timing:** 🚫 No `requestAnimationFrame` or `setInterval`.
+*   **No Dynamic Runtime Layout:** 🚫 Do not use `getBoundingClientRect()`. Use deterministic CSS relative units (`vw`, `vh`, `%`).
+*   **No Heavy Assets:** 🚫 No videos or unpredictably loading assets.
 
-The Mograph Player uses the **Web Animations API** (`document.getAnimations()`) to step through frames perfectly during video export. 
-Because of this, you MUST rely exclusively on **CSS Animations** (`@keyframes`) or the native Web Animations API (`element.animate`).
+## 2. Animation & Timing Fundamentals
 
-**Never do the following:**
-- 🚫 **No GSAP or external animation libraries** unless explicitly requested and tested. Stick to CSS `@keyframes` or WAAPI.
-- 🚫 **No `infinite` animations**. Video export calculates duration based on the longest animation end time. If an animation is infinite, the duration will default to maximum and the recording will capture endless loops. Use fixed repeats (`animation-iteration-count: 3`) or forwards fills.
-- 🚫 **No `requestAnimationFrame` or `setInterval`**. JS-driven custom timing loops will break during the frame-stepping export process.
-- 🚫 **No videos or heavy external assets** that load unpredictably.
-- 🚫 **Don't calculate layout dynamically at runtime** (e.g. `getBoundingClientRect()`). Measure everything with CSS relative units (`vw`, `vh`, `%`) so it's deterministic.
+*   **End State First:** Position elements in their final visible state statically. Animate *from* a hidden/offset state *to* the normal state.
+*   **Fill Modes & Chaining:**
+    *   **Entry Animations:** Use `animation-fill-mode: both`. The `0%` keyframe MUST fully define the absolute invisible state (e.g. `transform: scale(0)` or `clip-path`).
+    *   **Exit Animations:** Use `animation-fill-mode: forwards`. **Never use `both` for exits**, as its `0%` state will leak backward and override earlier states in chained animations.
+    *   **Property Conflicts:** If sequential animations target the same property (e.g. `transform`), use `forwards` on the later animation, or use independent CSS properties (`translate` vs `scale`).
+*   **Orchestration & Speed:**
+    *   Chain scenes with `animation-delay`. (Note: To override delay on multiple chained animations, supply comma-separated values: `animation-delay: 0s, 1.5s;`).
+    *   Offset first animation by `0.1s - 0.3s` to avoid a jump cut at `t=0`.
+    *   **Entrances:** Longer (0.4s-0.8s), use `ease-out` (starts fast, decelerates). e.g., `cubic-bezier(0.16, 1, 0.3, 1)`.
+    *   **Exits:** Shorter (0.2s-0.3s), use `ease-in` (starts slow, accelerates). e.g., `cubic-bezier(0.76, 0, 0.24, 1)`.
+    *   **Keyframe-Specific Easing:** For chained motions needing the same curve on each segment, set global timing to `linear` and inject `animation-timing-function: cubic-bezier(...)` directly into keyframes.
+*   **Scene Transitions (The Stage Pattern):**
+    *   Overlap transitions: Next scene's entry should begin *while* previous scene's exit is in motion.
+    *   Wrap entire scenes in `.stage` containers. Animate the `.stage` itself on/off screen.
+    *   **Final Scene:** Always animate the exit of the final sequence back to a blank canvas for seamless looping.
 
-## 2. Animation & Timing Rules
+## 3. Layout, Composition & Scale
 
-1. **Fill Modes & 0% Keyframes**: Use `animation-fill-mode: both` for entry animations with `animation-delay`! 
-   - **CRITICAL BUG AVOIDANCE**: The `0%` keyframe MUST fully define the absolute invisible state (e.g. `transform: scale(0)` or `clip-path: inset(100% 0 0 0)`). If your `0%` keyframe is merely `scale(0.8)`, the element will sit partially visible on the screen during the delay period, creating visual bugs where it overlaps earlier scenes. Use `forwards` only for exit animations.
-   - **Multiple Animations Gotcha**: If you chain an entry AND an exit animation on the same element (e.g. `animation: enter 1s both, exit 1s forwards`), NEVER use `both` on the exit animation! If you do, the exit animation's `0%` state will leak backward and override your entry animation during the initial delay period, blocking the screen. Always use `both` for enters and `forwards` for exits.
-2. **Chain with `animation-delay`**: Orchestrate your scenes by staggering `animation-delay` across elements.
-   ```css
-   .word-1 { animation: slideUp 1.2s 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-   .word-2 { animation: scaleIn 0.8s 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-   ```
-3. **End State First (Layout Before Animation)**: 
-   - Position elements where they belong in their final visible state using static CSS.
-   - Animate *from* a hidden/offset state (`opacity: 0`, `transform: translateY(80px)`) *to* the normal state (`opacity: 1`, `transform: translateY(0)`).
-   - This ensures layout doesn't break regardless of screen size.
-4. **Don't start at t=0**: Offset the first animation by 0.1-0.3s. A zero-delay entrance feels like a jump cut.
-5. **Vary your entrances**: Do not enter every element from the same direction (e.g., everything sliding up). Mix it up: slide from left, scale up, opacity fade, blur reveal. Use at least 3 different directions/eases per scene.
-6. **Asymmetry in Speed**: 
-   - Entrances should take longer (0.4s - 0.8s) than exits (0.2s - 0.3s). 
-   - Use `ease-out` (starts fast, decelerates) for entrances.
-   - Use `ease-in` (starts slow, accelerates) for exits.
-7. **Clean Loops & Fluid Exits**: Do not use simple global container fade-outs to end a scene. Apply specific, modern exit animations (like `slideUpOut`, `exitShrink`, `shiftDownOut`) to individual elements before their scene container hides. **Always animate the exit of the final scene back to a pristine blank canvas**, so the video loops seamlessly and does not abruptly end on a static frame.
-8. **Overlap Scene Transitions**: Do not wait for the disappearance animation of the previous scene to fully complete before starting the appearance animation of the next scene. The next scene's entry should begin *while* the previous scene's exit is still in motion, creating a fluid, uninterrupted sequence.
-9. **The Stage Pattern (Multi-Scene Choreography)**: To manage overlapping scenes elegantly, wrap entire scenes in a `.stage` container. The stage itself can be animated on and off screen (e.g., `animation: stageInRight 0.8s 3.2s both, stageOutUp 0.6s 7s forwards`). The `both` fill mode naturally keeps the stage fully off-screen during the `0s` to `3.2s` waiting period without needing manual `visibility` toggles.
+*   **Scale Everything Up:**
+    *   Use `100vw`/`100vh` for root `.scene` containers. 🚫 No fixed pixel max-heights/widths.
+    *   Use `clamp()` for fonts and padding. e.g., Headlines: `clamp(4rem, 10vw, 8rem)`.
+*   **Bulletproof Centering (The Flexbox Squish Bug):**
+    *   🚫 Flexbox centering + fixed large canvas = scaling clipping issues.
+    *   ✅ **Fix:** Use absolute centering (`left: 50%; top: 50%; transform: translate(-50%, -50%)`). If dynamic scaling is needed, calculate with JS (`Math.min(window.innerWidth / 1920)`) and apply via `transform: scale()`.
+*   **Marquee Translation:** When sliding containers off-screen, calculate the *entire trailing width* (e.g. `-350vw`), not just `-100vw`.
+*   **Frame Density:** 8-10 elements per scene (Background texture, Midground message, Foreground accents). Avoid floating single items. Anchor to edges.
 
-## 3. Specific Motion Graphics Patterns
+## 4. Design Aesthetics & Visual Patterns
 
-Motion graphics often involve kinetic typography, data visualization, and stylish overlays. Move beyond generic "popping up" or sliding DOM nodes by applying professional broadcast techniques:
+*   **Theme & Color:**
+    *   **Theme Lock:** Hardcode hex colors and enforce `color-scheme`. 🚫 No dynamic OS theme adjustments.
+    *   **Palette:** Favor dark modes (`#0a0a0f`). High contrast.
+    *   **Gradients:** 🚫 No full-screen linear gradients on dark backgrounds (video banding). Use radial glows.
+*   **Motion Elements:**
+    *   **Cinematic Reveals:** Use `clip-path: inset(...)` wipes or circular masks rather than generic opacity/scale bounces.
+    *   **Virtual Camera:** Use a massive `.canvas` wrapper and pan/zoom a `.camera` wrapper using deterministic `translate`/`scale`. Keep hero elements centered.
+    *   **Isometric 3D:** 🚫 Do NOT mix tilt (`rotateX/Z`) and scroll (`translateY`) on the same element. Nest an outer `.tilt-wrapper` and an inner `.scroll-camera`.
+    *   **Typography:** Modern Google Fonts. Use Marker Sweeps, Burst Lines, or Cascades for emphasis. 🚫 No emojis (use inline SVGs).
+*   **SVG Flowcharts:**
+    *   **Orthogonal Connections:** Beziers should have strictly vertical/horizontal tangents. Set `fill="none"`.
+    *   **Path Tracing:** 🚫 Don't use `pathLength="100"` (fails in headless). Use exact pixel length. 🚫 Don't use bouncy easing for drawing paths.
+    *   **Routing (`offset-path`):** Use `offset-anchor: auto` to center shapes. `offset-rotate: auto` aligns axis to tangent (great for velocity squash/stretch via `scaleX/Y`).
 
-### Cinematic Reveals & Masking
-- **Clip-Path Wipes**: Do not use generic bouncy scales or spinning (`spinScaleIn`) for UI elements. Use `clip-path: inset(...)` or `wipeUpIn` with a snappy ease-out (`cubic-bezier(0.16, 1, 0.3, 1)`) to mask elements as they slide in. This is much more elegant and cinematic.
-- **The SaaS Wipe (Momentum Cut)**: To transition seamlessly between two full-screen UI states, use a clip-path mask combined with parallax scaling. Scene 1 wipes away (`clip-path: inset(0 100% 0 0)`) while slightly scaling down and sliding left. Scene 2 perfectly unmasks (`clip-path: inset(0 0 0 100%)` to `inset(0 0 0 0)`) while sliding in from the right. Bind both to a sharp Expo In-Out curve (e.g., `cubic-bezier(0.76, 0, 0.24, 1)`) overlapping at the exact same time.
-- **Iris Reveals**: Use `clip-path: circle(0% at center)` to `100%` for dramatic circular expansions that feel very "digital" or "processing" oriented.
+## 5. Chroma Key (Green Screen) Safe Design
 
-### Flowcharts & SVG Paths
-- **Orthogonal Connections**: For a clean, symmetrical flowchart aesthetic, ensure SVG bezier curves (`C`) start and end with perfectly vertical or horizontal tangents. They should connect exactly at the center of the node edges (e.g., leaving a node from the absolute bottom center and entering the next node at the top center).
-- **Beware the Default Fill**: When upgrading straight SVG lines (`L`) to Bezier curves (`C`, `Q`), the browser will automatically apply a black `fill` to the curve's interior. You MUST explicitly set `fill="none"` on all curved `<path>` elements to prevent ugly black shapes.
-- **Path Tracing Easing**: When animating SVG `stroke-dashoffset` for glowing traces or drawing paths, NEVER use bouncy easing (`cubic-bezier(0.34, 1.56...)`). This causes the drawn line to "rubber-band" and shoot past the endpoint. Always use strict `ease-in-out` or `linear` easing for path drawing to keep the coloring smooth and simple.
-- **Synchronized Tracing Math**: To make an animated camera perfectly follow a drawn SVG path, the camera translation and the SVG `stroke-dashoffset` animation must share the exact same `duration`, `delay`, and `cubic-bezier` easing. Crucially, the length used for `stroke-dasharray` and `stroke-dashoffset` must be the **exact mathematical pixel length** of the SVG path (use Node.js scripts to calculate bezier lengths if necessary). Arbitrary large values will cause the line drawing to render visibly late, ruining the synchronization.
-- **Orthogonal Bezier Routing**: To make diagonal paths organically exit from the flat sides (center points) of rectangular nodes rather than their corners, use Quadratic Beziers (`Q`) or Cubic Beziers (`C`) with control points aligned orthogonally. For example, to route from the Top of Node A to the Right of Node B, place the control point such that it shares Node A's X-coordinate and Node B's Y-coordinate.
+*   **No Opacity Fades:** 🚫 Fading elements blend into green screens, causing muddy ghosting. Use `transform: scale()` or slide them on/off. Use `visibility` instead of `opacity`.
+*   **No Soft Shadows:** 🚫 Semi-transparent drop shadows cannot be cleanly keyed out. Use solid, hard borders or hard-offset drop shadows instead.
+*   **Safe Colors:** 🚫 Avoid greens close to `#00FF00` or `#00B140`. Ensure high contrast at edges.
 
-### The Virtual Camera (Diagram Panning)
-Instead of destroying and recreating DOM scenes chronologically, build a single massive flowchart or diagram inside a `.canvas` wrapper (e.g. `300vmin x 200vmin`). Then, animate a `.camera` wrapper using deterministic `transform: scale(...) translate(...)` to physically pan and zoom across the diagram in sync with the voiceover. Use `cubic-bezier(0.64, 0, 0.36, 1)` for buttery smooth ease-in-out camera moves.
-- **Persistent Centerpieces**: To keep a hero element or watermark visible throughout a camera pan, place it at the absolute center of the `.canvas` and omit any exit animations. It will act as a fixed focal point that only vanishes when the entire `.camera` scales to 0 at the end of the sequence.
-- **Perfect Symmetrical Centering**: When absolutely positioning a central anchor node (e.g., `left: 50%; top: 50%;`), do not use hard-coded negative margins (e.g. `margin-top: -15vmin`). Because dynamic text content dictates the height of the node, a hard-coded margin will make the layout mathematically asymmetrical. Always use `transform: translate(-50%, -50%)`.
+## 6. Workflow Checklist
 
-### Design Elements & Visual Weight
-- **No Emojis**: 🚫 Do not use emojis for icons. Always use crisp, scalable inline SVGs.
-- **Solid Visual Weight**: Ensure animated objects (like labels, badges, or pills) have solid background fill colors mapped from the palette. Outlined elements with transparent backgrounds lack the necessary visual weight to punch through during rapid motion graphics.
-- **High-Contrast Light Mode (Sleek SaaS)**: When designing a "sleek SaaS" aesthetic intended for a white/light background, do not convert the primary UI cards to white because they will lose distinction and blend in. Instead, use a high-contrast palette: pure black or dark slate UI cards with soft drop shadows, pure black animated traces, and light-grey baseline paths. This creates immense premium distinction.
-
-### Kinetic Typography & Emphasis
-- **Karaoke Highlights**: Animate colors of words sequentially. To make it high-energy, add an accent glow and a 15% scale pop to the active word.
-- **Marker Sweep (Highlight Mode)**: A yellow (or accent color) marker sweep behind text. Achieve this with an absolutely positioned `.highlight-bar` behind the text, `transform-origin: left center;`, and animating `transform: scaleX(0)` to `scaleX(1)`.
-- **Hand-drawn Circle (Circle Mode)**: Create an organic circle around a key metric or word. Use `border-radius: 50%`, slightly rotate it (`rotate(-3deg)`), and animate `transform: scale(0)` to `scale(1)` with a bouncy `cubic-bezier(0.34, 1.56, 0.64, 1)` ease.
-- **Burst Lines**: Radiating lines from the center of a text element to add impact ("WOW"). Use multiple absolutely positioned `.burst-line` elements rotated around the center, animating their `scaleY` (and translating them outward) rather than using `opacity` fades to keep them chroma-safe.
-- **Marquee Backgrounds**: To create infinitely scrolling typography bands without using the banned `infinite` keyword, create a long flex row of duplicate words and apply a linear translation (e.g., `scrollLeft 4s linear both`) that covers a large fixed distance before the scene exits. For chroma-safe background texture, style them with `-webkit-text-stroke: 2px var(--grid); color: transparent;`.
-- **Cascades & Staircases**: Build momentum by aligning words in a diagonal staircase (using staggered `margin-left` offsets) and staggering their entrance animations by rapid 0.15s increments (e.g., `slideUpFloor`). This forces the viewer's eye to travel down the screen in time with the animation.
-
-### Data in Motion (Stats & Charts)
-- **Visual Weight**: A number on its own floats in empty space. Pair every metric with a visual element that gives it presence—a proportional fill bar, a background color shift, or a progress ring.
-- **Visual Continuity**: When showing successive stats of the same concept (e.g., Q1 -> Q2 -> Q3), keep the visual aesthetic the same. Only change the aesthetic when shifting to a completely new concept.
-- **Avoid Web Dashboards**: 
-  - 🚫 **No pie charts** (hard to read in motion).
-  - 🚫 **No multi-axis charts**.
-  - 🚫 **No gridlines, tick marks, or legends** (visual noise).
-  - 🚫 **No 6-panel dashboards** (2-3 metrics side-by-side maximum).
-
-## 4. Video Composition & Scale
-
-Video frames are not web pages. Web sizes are invisible on video.
-
-1. **Scale Everything Up & Use Full Viewport Containers**:
-   - Sequences should use `100vw` and `100vh` for their root `.scene` containers rather than fixed max heights (like `900px`).
-   - Use viewport-relative units (`vh`, `vw`, `clamp()`) for all padding, margins, and dimensions. Fixed pixels will cause content to overflow and clip aggressively if the user previews the sequence on a smaller aspect ratio.
-   - Headlines: `64px` - `120px` (use `clamp(4rem, 10vw, 8rem)`)
-   - Body Text: `28px` - `42px` (use `clamp(1.5rem, 4vw, 3rem)`)
-   - Padding: `60px` - `140px`
-   - Borders: `2px` - `4px`
-2. **Density (8-10 elements per scene)**: A frame with 3 elements feels empty. Every scene needs:
-   - **Background texture**: Radial glow, grain, grid, oversized ghost type. *Never solid flat color.*
-   - **Midground content**: The actual message.
-   - **Foreground accents**: Dividers, labels, data bars, registration marks, monospace metadata. These make it feel "produced".
-3. **Frame Composition**:
-   - Minimum two focal points so the eye can travel.
-   - Anchor content to edges (left/top or right/bottom) rather than always floating in the center.
-   - Use structural elements like rules and border panels to guide the eye.
-
-## 5. Design Aesthetics & Color
-
-1. **Theme Locking**: 🚫 Do not leave coloring to dynamic browser/OS theme adjustments. Explicitly hardcode your CSS variables using hex colors and enforce `color-scheme: light` or `color-scheme: dark` on the body. This guarantees the video exporter renders the exact intended design regardless of the host machine's settings.
-2. **Typography**: Use modern Google Fonts. Pair a bold, expressive font (e.g., `Space Grotesk`, `Outfit`, `Syne`) with a clean sans-serif (`Inter`, `Roboto`).
-3. **Color Presence**: 
-   - Muted is fine, flat is not. Every scene must have a highly visible accent color.
-   - Favor dark modes (`#0a0a0f`) for maximum contrast.
-   - **WARNING:** Do NOT use full-screen linear gradients on dark backgrounds (they cause banding under video compression). Use radial gradients or solid fills + localized glows instead.
-   - Use CSS text gradients for premium typography:
-     ```css
-     background: linear-gradient(135deg, #ff6600, #ffcc00);
-     -webkit-background-clip: text;
-     -webkit-text-fill-color: transparent;
-     ```
-3. **Ambient Motion**: Static decoratives feel dead. Every decorative element (glows, lines, grids) should have slow ambient motion (breathe, drift, pulse). 
-4. **Custom Easing**: Never use standard `ease` or `linear` for primary motion. Subtle reads as static at 30fps. Use custom `cubic-bezier` curves for snappy, professional motion.
-   ```css
-   /* Snappy entrance */
-   cubic-bezier(0.16, 1, 0.3, 1)
-   /* Bouncy entrance */
-   cubic-bezier(0.34, 1.56, 0.64, 1)
-   ```
-
-## 6. Chroma Key (Green Screen) Safe Design
-
-To support users who edit videos in basic NLEs like CapCut (which do not support WebM alpha channels), sequences must be perfectly compatible with Green Screen / Chroma Key removal.
-
-1. **No Opacity Fades**: 
-   - 🚫 Do NOT use `opacity` transitions (`fadeIn`, `fadeOut`).
-   - Fading elements blend with the green background, creating a muddy green ghosting effect when keyed out.
-   - ✅ Instead, make elements appear and disappear physically using `transform: scale()` (scaling 0 to 1) or sliding them off-screen.
-   - ✅ Use `visibility: hidden` to `visibility: visible` for scene containers instead of `opacity: 0` to `1`.
-2. **No Soft Shadows**:
-   - 🚫 Remove all `box-shadow` properties from objects. Soft, semi-transparent drop shadows cannot be cleanly keyed out and will leave dark green fringes.
-   - ✅ Use solid, hard borders (`border: 2px solid`) to provide contrast and separation instead of shadows.
-3. **Safe Colors & Contrast**:
-   - 🚫 Avoid using greens or any colors that are close to standard chroma key green (`#00FF00`, `#00B140`).
-   - ✅ Ensure all text and graphics have strong contrast against bright backgrounds so the edges key out with absolute sharpness.
-
-## 7. Technical Lessons & Gotchas (From Flowchart & 3D Morphs)
-
-1. **Bulletproof Responsive Scaling (The Flexbox Squish Bug):**
-   - 🚫 Do NOT use CSS `transform: scale(calc(...vw...))` to dynamically scale a 1920x1080 canvas. `scale()` strictly accepts a unitless number, and passing dimension-based math into it causes fatal CSS parsing errors that drop the entire `transform` property.
-   - 🚫 Do NOT rely on Flexbox to center an oversized (1920x1080) fixed canvas in a smaller viewport. `flex-shrink` will aggressively squish the DOM layout out of sync with the SVG `viewBox`, causing severe coordinate misalignment and clipping.
-   - ✅ **The Fix:** Absolutely center the `.diagram` wrapper (`position: absolute; left: 50%; top: 50%; transform-origin: center`) to bypass Flexbox limits entirely. Then, use a tiny, synchronous Javascript block on load (e.g. `const scale = Math.min(window.innerWidth / 1920, ...)`) to calculate the raw decimal and apply it to `transform: scale()`.
-
-2. **SVG Path Drawing & Particle Routing (`offset-path`):**
-   - 🚫 Avoid using `pathLength="100"` in SVGs for percentage-based line drawing, as it fails in specific headless browser engines. Instead, manually declare the exact pixel length (`--len: 500`) and enforce unit casting (`stroke-dasharray: calc(var(--len) * 1px)`).
-   - ✅ When animating `.packet` elements along an SVG path using `offset-path`, do **not** use manual `margin` values to center the shape. Simply apply `offset-anchor: auto`, which mathematically centers the element (including its borders) over the path flawlessly.
-   - ✅ **Velocity Squash & Stretch:** By enabling `offset-rotate: auto`, the particle aligns its local axis to the path tangent. You can then apply `transform: scaleX(2.5) scaleY(0.6)` in the middle of a keyframe animation to create high-end, velocity-based squash and stretch effects along the path of travel!
-
-3. **Premium 2.5D Extrusion & Depth Layering:**
-   - To achieve a tactile 3D box without massive soft shadows (which break chroma keying), use hard-offset layered drop shadows (`0 8px 0 #090e17`) paired with bright inset rim lights. Animate `translateY(-4px)` alongside an outer glow to physically lift the boxes on hit.
-   - Establish strict DOM layering with `z-index` (e.g., Lines=1, Particles=5, UI Boxes=10). By sandwiching travelling particles *between* the SVG lines and the boxes, particles dive cleanly underneath the boxes. If the boxes use `backdrop-filter: blur`, the particle's glowing core will beautifully blur out beneath the frosted surface right before it vanishes.
-
-4. **Isometric 3D & "Fake Scroll" Mechanics:**
-   - 🚫 **Do NOT mix tilt and scroll:** Never apply `translateY` scroll animations and `rotateX`/`rotateZ` isometric tilts to the same DOM element. It makes framing adjustments impossible without breaking scroll offsets.
-   - ✅ **The Fix:** Separate concerns by nesting. Use an outer `.tilt-wrapper` exclusively for `rotateX(55deg) rotateZ(-35deg)` and fixed `translate3d(X,Y,Z)` framing adjustments. Use an inner `.scroll-camera` to handle the `translateY` page scroll.
-   - ✅ **Universal Exit Collapses:** To elegantly reverse a complex 3D teardown sequence, write dedicated `*Collapse` keyframes that invert the transforms (e.g. `translateZ(0)`) and shadow offsets. Chain these onto the element's `animation` property with a delayed `forwards` fill (e.g. `animation: enter 1.2s both, collapse 0.8s 11.0s forwards`).
-   - ✅ **Child Selector Delay Override:** When overriding `animation-delay` on elements that have multiple chained animations (like an enter and a collapse), you MUST supply multiple comma-separated values (`animation-delay: 4.1s, 11s;`). If you only supply one value, it overwrites the delay for ALL chained animations on that element.
-
-## 8. Technical Lessons & Gotchas (From SaaS Launch Momentum)
-
-1. **Animation Property Conflicts (The Fill-Mode Trap):**
-   - 🚫 If two sequential animations target `transform` on the same element (e.g., a cursor swoop, then a cursor click) and both use `fill-mode: both`, the second animation's `0%` state will leak backward during its delay and brutally override the first animation!
-   - ✅ **The Fix:** Strictly use `fill-mode: forwards` on the later animation so it doesn't assert its initial state backward. Alternatively, use independent modern CSS properties (`translate` vs `scale`) to avoid property collisions entirely.
-2. **Organic Exits vs Scene Slides:**
-   - Instead of sliding an entire container off-screen to clear a scene, animate the elements themselves. For infinite scrolling marquees, apply an aggressive `rowExit` animation that blasts rows off-screen in opposite directions.
-   - **Critical Width Calculation:** When translating scrolling rows off-screen, your `-vw` transform must account for the *entire trailing width* of the content, not just the viewport width. Moving a 9-item row by `-150vw` will leave its tail sitting dead in the center of the screen! Use aggressive values like `-350vw` or `250vw` to guarantee clearance.
-3. **Seamless Background Handoffs:**
-   - To transition smoothly from a massive expanding UI ripple into a new visual scene, do NOT fade a solid color block over the layout. Instead, give the new scene a `background: transparent`, allow the UI ripple to stay permanently on screen underneath it, and fade in just the new scene's content (text/grids). This makes the ripple organically *become* the new background.
-4. **Precision Camera Targets (`transform-origin`):**
-   - When zooming through a typographic portal (like the hole of a letter 'O'), do not eyeball the `transform-origin`. Mathematically calculate the percentage center of the specific character based on relative font widths, otherwise the camera will crash into the solid letter mass and ruin the portal illusion.
-5. **Breaking the Marquee Grid:**
-   - Rigid grids of matching cards moving in unison look robotic. To instantly elevate a multi-row marquee to a premium SaaS aesthetic, apply a visual offset (e.g. `margin-left: -11vw`, exactly half a card width) to alternating rows. This forces a classic, highly-aesthetic "brick-lay" masonry stagger while allowing all rows to animate fluidly at the same speed.
-6. **Kinetic Cursor Timing:**
-   - To make UI interactions feel incredibly deliberate, hide the cursor entirely off-screen (`120vw, 3vh`, `opacity: 0`). When the dashboard camera begins to zoom into a button, trigger a 2-second cursor swoop in parallel that lands on the target exactly as the click executes.
-7. **Marquee Parallax Velocity:**
-   - Instead of a monolithic scrolling speed, applying distinct animation durations (e.g., `9.5s`, `11.5s`, `8.2s`) to different rows creates a gorgeous organic parallax depth-of-field. Ensure all durations are mathematically longer than the trigger time of the exit animation, so they are all still actively moving when they get violently wiped away.
-8. **Kinetic Scale (The VW/VH Trap):**
-   - When expanding a circular element (like a click ripple) to cover a widescreen monitor, calculating the final radius accurately is extremely important. A diameter dialed tightly to the diagonal corners (e.g., `210vw`) guarantees the slow deceleration phase happens visibly *on-screen*. Overestimating the radius (e.g., `300vw`) causes the visual expansion to clear the edges in the first 25% of the animation time, completely hiding the deceleration phase outside the browser window.
-9. **Perfect Physics Handoffs (The Shrink/Slide):**
-   - To achieve a buttery smooth handoff between two layered objects (e.g., an object shrinking away while the background slides to wipe the scene), their timings must overlap perfectly. Mathematically synchronize their starting millisecond and total duration (e.g. exactly `0.8s`) so the entire shrink happens 1:1 during the entire slide.
-10. **Cartoon Anticipation (The Momentum Gather):**
-   - Creating an organic exit involves a scale-up (anticipation) followed by a scale-down. To prevent a dead "stop" at the peak of the bounce, use an `ease-in` curve for the growth phase so it accelerates *into* the peak, and an `ease-out` for the shrink so it leaves the peak at max velocity.
-11. **Keyframe-Specific Easing for Chained Motions:**
-   - When a single element needs multiple distinct movements (like a lens panning diagonally, then horizontally) but requires the exact same physics curve (e.g., fast start, slow end) on *both* movements independently, do not use chained animation properties. Instead, define the global timing as `linear` and inject the `animation-timing-function: cubic-bezier(...)` explicitly into each segment's starting keyframe (e.g. `0%` and `50%`).
-
-## Workflow / Checklist
-
-When adding a new sequence:
-1. Create the new HTML file in `/mograph/sequences/<name>.html`.
-2. Follow the design and animation rules above.
-3. Update `/mograph/sequences/manifest.json` by adding the new sequence to the array:
-   ```json
-   { "file": "<name>.html", "name": "Beautiful Name" }
-   ```
-4. Inform the user they can test it in the Mograph player and export it as video.
+1. Create the HTML sequence in `/mograph/sequences/<name>.html`.
+2. Apply the design and animation rules.
+3. Update `/mograph/sequences/manifest.json`: `{ "file": "<name>.html", "name": "..." }`
+4. Inform the user they can test in the Mograph player and export as video.

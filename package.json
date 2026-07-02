@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host ::",
-    "build": "vite build && mkdir -p dist/mograph/sequences && cp -r mograph/sequences/* dist/mograph/sequences/",
+    "build": "vite build && mkdir -p dist/mograph/sequences && cp -r mograph/sequences/* dist/mograph/sequences/ && mkdir -p dist/threejs/animations && cp threejs/animations/manifest.json dist/threejs/animations/",
     "preview": "vite preview"
   },
   "devDependencies": {

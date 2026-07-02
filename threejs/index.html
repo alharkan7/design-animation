@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional 3D web animation player — preview and control Three.js sequences.">
+  <title>Three.js Player</title>
+  <link rel="icon" type="image/svg+xml" href="/vite.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="mg-app">
+
+    <!-- ═══════ TOOLBAR ═══════ -->
+    <header class="mg-toolbar">
+      <!-- Brand -->
+      <div class="mg-brand">
+        <div class="mg-brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div class="mg-brand-name">ThreeJS<span>Player</span></div>
+      </div>
+
+      <div class="mg-toolbar-divider"></div>
+
+      <!-- Sequence selector in toolbar -->
+      <div class="mg-toolbar-section">
+        <div class="mg-select-wrap">
+          <select id="sequence-select" class="mg-select" style="width: 260px;">
+            <option value="">— Select a 3D animation —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mg-toolbar-spacer"></div>
+
+      <!-- Recording indicator -->
+      <div class="mg-recording-indicator" id="recording-indicator">
+        <span class="dot"></span>
+        REC
+      </div>
+    </header>
+
+    <!-- ═══════ MAIN AREA ═══════ -->
+    <main class="mg-main">
+      <!-- Sidebar Controls -->
+      <aside class="mg-sidebar">
+
+        <!-- Aspect Ratio -->
+        <div>
+          <div class="mg-panel-header">
+            <span class="mg-panel-title">Composition</span>
+          </div>
+          <div class="mg-panel-body">
+            <div class="mg-field">
+              <span class="mg-label">Aspect Ratio</span>
+              <div class="mg-btn-group">
+                <button class="mg-ratio-btn" data-ratio="16:9" data-tooltip="Landscape (16:9)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>16:9</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="9:16" data-tooltip="Portrait (9:16)">
+                  <div class="ratio-icon portrait"></div>
+                  <span>9:16</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="1:1" data-tooltip="Square (1:1)">
+                  <div class="ratio-icon square"></div>
+                  <span>1:1</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="4:3" data-tooltip="Classic (4:3)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>4:3</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="3:4" data-tooltip="Portrait (3:4)">
+                  <div class="ratio-icon portrait"></div>
+                  <span>3:4</span>
+                </button>
+                <button class="mg-ratio-btn" data-ratio="21:9" data-tooltip="Ultra-wide (21:9)">
+                  <div class="ratio-icon landscape"></div>
+                  <span>21:9</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="mg-field" style="margin-top: 20px;">
+              <span class="mg-label">Background</span>
+              <div class="mg-select-wrap" style="display: flex; gap: 8px;">
+                <input type="color" id="bg-color-picker" value="#ffffff" style="width: 40px; height: 32px; padding: 0; border: 1px solid var(--mg-border); border-radius: 4px; cursor: pointer; background: transparent;">
+                <select id="bg-preset-select" class="mg-select" style="flex: 1;">
+                  <option value="transparent">Transparent (None)</option>
+                  <option value="solid" selected>Solid Color</option>
+                  <option value="grid">Blueprint Grid</option>
+                  <option value="dots">Polka Dots</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Viewport -->
+      <section class="mg-viewport">
+        <!-- Info badge -->
+        <div class="mg-viewport-info" id="viewport-info">16:9 • 960×540</div>
+
+        <!-- Frame container -->
+        <div class="mg-viewport-frame" id="viewport-frame" style="display: none;">
+          <iframe id="viewport-iframe" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>
+        </div>
+
+        <!-- Empty state -->
+        <div class="mg-empty-state" id="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="4"/>
+            <polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/>
+          </svg>
+          <p>
+            <strong>No animation loaded</strong><br>
+            Select a 3D animation from the dropdown above<br>
+            to start previewing.
+          </p>
+        </div>
+
+        <!-- Keyboard shortcuts hint -->
+        <div class="mg-shortcuts-hint">
+          <span><kbd>Space</kbd> Play / Pause</span>
+          <span><kbd>←</kbd> Rewind</span>
+          <span><kbd>→</kbd> Skip +5s</span>
+          <span><kbd>R</kbd> Restart</span>
+          <span><kbd>F</kbd> Full Screen</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- ═══════ TIMELINE ═══════ -->
+    <footer class="mg-timeline">
+      <!-- Transport -->
+      <div class="mg-transport">
+        <button class="mg-btn mg-btn--icon" id="rewind-btn" data-tooltip="Rewind">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11,19 2,12 11,5" fill="currentColor"/>
+            <polygon points="22,19 13,12 22,5" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon mg-play-btn" id="play-btn" data-tooltip="Play / Pause">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="6,4 20,12 6,20"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon" id="stop-btn" data-tooltip="Stop">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+        </button>
+        <button class="mg-btn mg-btn--icon" id="skip-forward-btn" data-tooltip="Skip +5s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13,19 22,12 13,5" fill="currentColor"/>
+            <polygon points="2,19 11,12 2,5" fill="currentColor"/>
+          </svg>
+        </button>
+        <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 8px;"></div>
+        <button class="mg-btn mg-btn--icon" id="record-btn" data-tooltip="Export Video (WebM)" style="color: #ef4444;">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="8"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="mg-toolbar-divider"></div>
+
+      <!-- Timeline Track -->
+      <div class="mg-timeline-track">
+        <div class="mg-time-display" id="time-display">
+          <span class="current">00:00.00</span>
+        </div>
+
+        <div class="mg-scrubber-wrap" id="scrubber-wrap">
+          <div class="mg-scrubber-track">
+            <div class="mg-scrubber-fill" id="scrubber-fill"></div>
+            <div class="mg-scrubber-head" id="scrubber-head"></div>
+          </div>
+        </div>
+
+        <div class="mg-fps-display" id="fps-display">— fps</div>
+
+        <button class="mg-btn mg-btn--icon" id="fullscreen-btn" data-tooltip="Full Screen" style="margin-left: 12px; margin-right: 4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

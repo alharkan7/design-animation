@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voxel Trees</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const scene = new THREE.Scene();
+        
+        // Add soft lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        
+        // Configure shadow properties
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.camera.left = -15;
+        dirLight.shadow.camera.right = 15;
+        dirLight.shadow.camera.top = 15;
+        dirLight.shadow.camera.bottom = -15;
+        scene.add(dirLight);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(15, 12, 15);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2.0;
+
+        const voxelGeo = new THREE.BoxGeometry(1, 1, 1);
+        
+        // Voxel materials with a slight bevel/outline effect using roughness
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.9, flatShading: true });
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.8, flatShading: true });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x557a2b, roughness: 1.0 });
+        
+        const group = new THREE.Group();
+        scene.add(group);
+
+        // Ground
+        const ground = new THREE.Mesh(new THREE.BoxGeometry(20, 1, 20), groundMat);
+        ground.position.y = -0.5;
+        ground.receiveShadow = true;
+        group.add(ground);
+
+        // Function to create a voxel tree
+        function createTree(x, z, height) {
+            const tree = new THREE.Group();
+            
+            // Trunk
+            for(let y=0; y<height; y++) {
+                const trunk = new THREE.Mesh(voxelGeo, trunkMat);
+                trunk.position.set(0, y + 0.5, 0);
+                trunk.castShadow = true;
+                trunk.receiveShadow = true;
+                tree.add(trunk);
+            }
+            
+            // Leaves
+            const radius = 2;
+            for(let lx = -radius; lx <= radius; lx++) {
+                for(let ly = -radius; ly <= radius; ly++) {
+                    for(let lz = -radius; lz <= radius; lz++) {
+                        // Create a spherical shape for the canopy
+                        if(lx*lx + ly*ly + lz*lz <= radius*radius + 1) {
+                            // Leave out some voxels randomly to make it look organic
+                            if(Math.random() > 0.15) {
+                                const leaf = new THREE.Mesh(voxelGeo, leafMat);
+                                leaf.position.set(lx, height + 0.5 + ly, lz);
+                                leaf.castShadow = true;
+                                leaf.receiveShadow = true;
+                                tree.add(leaf);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            tree.position.set(x, 0, z);
+            return tree;
+        }
+
+        // Add multiple trees to create a small forest
+        group.add(createTree(0, 0, 5));
+        group.add(createTree(-5, -4, 4));
+        group.add(createTree(6, 3, 6));
+        group.add(createTree(-4, 5, 3));
+        group.add(createTree(4, -6, 4));
+        group.add(createTree(-7, 2, 5));
+        group.add(createTree(3, 7, 3));
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // Required if controls.enableDamping or controls.autoRotate are set
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

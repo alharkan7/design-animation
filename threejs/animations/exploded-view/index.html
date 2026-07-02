@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploded View Assembly - Flashlight</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+
+        // 2. Camera Setup (Orthographic for blueprint/engineering feel)
+        const aspect = window.innerWidth / window.innerHeight;
+        const frustumSize = 26; // Large enough to see all exploded parts
+        const camera = new THREE.OrthographicCamera(
+            frustumSize * aspect / - 2,
+            frustumSize * aspect / 2,
+            frustumSize / 2,
+            frustumSize / - 2,
+            1,
+            1000
+        );
+        camera.position.set(20, 0, 20); // Look at center from an angle
+        camera.lookAt(0, 0, 0);
+
+        // 3. Renderer Setup
+        const renderer = new THREE.WebGLRenderer({ 
+            alpha: true, 
+            antialias: true, 
+            preserveDrawingBuffer: true 
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        document.body.appendChild(renderer.domElement);
+
+        // 4. Lighting (Bright Studio Setup)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        keyLight.position.set(10, 20, 15);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 2048;
+        keyLight.shadow.mapSize.height = 2048;
+        keyLight.shadow.camera.left = -15;
+        keyLight.shadow.camera.right = 15;
+        keyLight.shadow.camera.top = 15;
+        keyLight.shadow.camera.bottom = -15;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x88bbff, 0.5);
+        fillLight.position.set(-15, 5, -15);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffddaa, 0.8);
+        rimLight.position.set(0, -10, -20);
+        scene.add(rimLight);
+
+        // 5. Build the Assembly (A Classic Flashlight)
+        const assemblyGroup = new THREE.Group();
+        // Rotate the entire assembly to lay horizontally across the screen
+        assemblyGroup.rotation.z = -Math.PI / 2;
+        scene.add(assemblyGroup);
+
+        const parts = [];
+
+        function createPart(geometry, material, assembledPos, explodedPos) {
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(assembledPos);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            // Add Edges/Wireframe overlay for the CAD blueprint aesthetic
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ 
+                color: 0x00ffff, 
+                transparent: true, 
+                opacity: 0.3,
+                depthTest: true
+            }));
+            mesh.add(line);
+            
+            assemblyGroup.add(mesh);
+            
+            parts.push({
+                mesh,
+                line, // Reference to fade wireframes
+                assembledPos,
+                explodedPos
+            });
+            return mesh;
+        }
+
+        // Materials
+        const matRedBody = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.6, metalness: 0.3 });
+        const matBlackRubber = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+        const matChrome = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 1.0, roughness: 0.1 });
+        const matBattery = new THREE.MeshStandardMaterial({ color: 0x114488, roughness: 0.5 });
+        const matContact = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.4 });
+        const matGlass = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 0.9, opacity: 1, roughness: 0.05, ior: 1.5, transparent: true });
+        const matBulb = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffffee, emissiveIntensity: 2 });
+
+        // --- Flashlight Components (Top to Bottom along Y axis) ---
+
+        // 1. Bezel (Outer ring holding the lens)
+        createPart(new THREE.CylinderGeometry(1.5, 1.5, 0.4, 32), matRedBody, 
+            new THREE.Vector3(0, 5.5, 0), 
+            new THREE.Vector3(0, 11.5, 0));
+
+        // 2. Glass Lens
+        createPart(new THREE.CylinderGeometry(1.4, 1.4, 0.1, 32), matGlass, 
+            new THREE.Vector3(0, 5.3, 0), 
+            new THREE.Vector3(0, 10.0, 0));
+
+        // 3. Chrome Reflector Cone
+        createPart(new THREE.CylinderGeometry(1.4, 0.3, 1, 32), matChrome, 
+            new THREE.Vector3(0, 4.8, 0), 
+            new THREE.Vector3(0, 8.5, 0));
+
+        // 4. Light Bulb
+        const bulb = createPart(new THREE.SphereGeometry(0.3, 16, 16), matBulb, 
+            new THREE.Vector3(0, 4.5, 0), 
+            new THREE.Vector3(0, 7.2, 0));
+        
+        // Add actual light to bulb
+        const bulbLight = new THREE.PointLight(0xffffee, 0, 10);
+        bulbLight.position.set(0, 0, 0); // Relative to bulb mesh
+        bulb.add(bulbLight);
+
+        // 5. Head Housing (Tapers to body)
+        createPart(new THREE.CylinderGeometry(1.5, 1, 2, 32), matRedBody, 
+            new THREE.Vector3(0, 4, 0), 
+            new THREE.Vector3(0, 5.5, 0));
+
+        // 6. Main Body Tube
+        createPart(new THREE.CylinderGeometry(1, 1, 6, 32), matRedBody, 
+            new THREE.Vector3(0, 0, 0), 
+            new THREE.Vector3(0, 0, 0)); // Body is the anchor, stays at 0
+
+        // 7. Rubber Switch (Explodes outwards on Z axis)
+        createPart(new THREE.BoxGeometry(0.5, 1.2, 0.3), matBlackRubber, 
+            new THREE.Vector3(0, 1.5, 1), 
+            new THREE.Vector3(0, 1.5, 4));
+
+        // 8. Battery 1 (Top)
+        createPart(new THREE.CylinderGeometry(0.8, 0.8, 2.5, 32), matBattery, 
+            new THREE.Vector3(0, 1, 0), 
+            new THREE.Vector3(0, -4.0, 0));
+        // Battery 1 Nub
+        createPart(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 16), matContact, 
+            new THREE.Vector3(0, 2.35, 0), 
+            new THREE.Vector3(0, -2.65, 0));
+
+        // 9. Battery 2 (Bottom)
+        createPart(new THREE.CylinderGeometry(0.8, 0.8, 2.5, 32), matBattery, 
+            new THREE.Vector3(0, -1.6, 0), 
+            new THREE.Vector3(0, -7.5, 0));
+        // Battery 2 Nub
+        createPart(new THREE.CylinderGeometry(0.2, 0.2, 0.2, 16), matContact, 
+            new THREE.Vector3(0, -0.25, 0), 
+            new THREE.Vector3(0, -6.15, 0));
+
+        // 10. Tail Spring (Using a thick Torus as a washer/spring proxy)
+        createPart(new THREE.TorusGeometry(0.6, 0.1, 16, 32), matContact, 
+            new THREE.Vector3(0, -3.1, 0), 
+            new THREE.Vector3(0, -10.0, 0));
+        createPart(new THREE.TorusGeometry(0.6, 0.1, 16, 32), matContact, 
+            new THREE.Vector3(0, -3.3, 0), 
+            new THREE.Vector3(0, -10.5, 0));
+
+        // 11. Tail Cap
+        createPart(new THREE.CylinderGeometry(1.05, 1.05, 0.8, 32), matRedBody, 
+            new THREE.Vector3(0, -3.4, 0), 
+            new THREE.Vector3(0, -12.0, 0));
+
+
+        // 6. Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.0;
+
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -frustumSize * aspect / 2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = -frustumSize / 2;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 7. Easing Function
+        function easeInOutExpo(x) {
+            return x === 0 ? 0 : x === 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2;
+        }
+
+        // 8. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+
+            // Timeline phase: 6 second loop
+            const cycle = (time * 0.6) % 6; 
+            let t = 0; 
+            let wireframeOpacity = 0.3;
+            
+            if (cycle < 1) { // 0-1: Assembled hold
+                t = 0;
+            } else if (cycle < 2.5) { // 1-2.5: Explode outward
+                t = easeInOutExpo((cycle - 1) / 1.5);
+                wireframeOpacity = 0.3 + t * 0.7; // Fade up wireframes
+            } else if (cycle < 4) { // 2.5-4: Exploded hold
+                t = 1;
+                wireframeOpacity = 1.0;
+                
+                // Add a subtle hover float to parts while exploded
+                parts.forEach((p, index) => {
+                    // Only float parts that moved (exclude body)
+                    if (p.explodedPos.y !== 0) {
+                        p.mesh.position.y = p.explodedPos.y + Math.sin(time * 3 + index) * 0.15;
+                    }
+                });
+            } else if (cycle < 5.5) { // 4-5.5: Assemble inward
+                t = 1 - easeInOutExpo((cycle - 4) / 1.5);
+                wireframeOpacity = 0.3 + t * 0.7;
+            } else { // 5.5-6: Assembled hold
+                t = 0;
+            }
+
+            // Turn on the flashlight bulb when fully assembled!
+            if (t < 0.01) {
+                matBulb.emissiveIntensity = 4 + Math.sin(time * 10) * 0.5; // Slight flicker
+                bulbLight.intensity = 2;
+            } else {
+                matBulb.emissiveIntensity = 0;
+                bulbLight.intensity = 0;
+            }
+
+            // Apply transforms (unless in hover phase)
+            if (t < 1) {
+                parts.forEach(p => {
+                    p.mesh.position.lerpVectors(p.assembledPos, p.explodedPos, t);
+                    p.line.material.opacity = wireframeOpacity;
+                });
+            } else {
+                 parts.forEach(p => { p.line.material.opacity = 1.0; });
+            }
+
+            // Gentle bobbing of the whole assembly
+            assemblyGroup.position.y = Math.sin(time * 1.5) * 0.2;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

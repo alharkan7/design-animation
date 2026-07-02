@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earth Crust Cross-Section</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        // Isometric-style angle looking at the front and right cut faces
+        camera.position.set(25, 20, 30);
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(20, 40, 20);
+        scene.add(dirLight);
+
+        // 3. Main Terrain Block
+        const blockWidth = 20;
+        const blockHeight = 24; // Massive crust depth to drop magma into the abyss
+        const blockDepth = 20;
+
+        let geo = new THREE.BoxGeometry(blockWidth, blockHeight, blockDepth, 64, 1, 64);
+        geo = geo.toNonIndexed(); // Required for crisp, low-poly flat shading
+
+        const pos = geo.attributes.position;
+        const colors = [];
+
+        // Extracted terrain height function for reuse (trees, etc.)
+        function getTerrainHeight(x, z) {
+            let h = 0;
+            // Volcano
+            let distV = Math.hypot(x - (-4), z - 10);
+            if (distV < 6) {
+                let vHeight = (Math.cos(distV * Math.PI / 6) + 1) * 3.5;
+                if (distV < 1.5) vHeight -= (1.5 - distV) * 2; 
+                h += vHeight;
+            }
+            // Trench
+            if (x > 2) h -= (x - 2) * 0.8;
+            
+            // Primary Noise
+            h += Math.sin(x * 1.5) * Math.cos(z * 1.5) * 0.2;
+            // Secondary High-Frequency Detail Noise
+            h += Math.sin(x * 5.0) * Math.cos(z * 5.0) * 0.1;
+            
+            return 6 + h;
+        }
+        
+        // Geological Color Palette
+        const cSnow = new THREE.Color(0xffffff);
+        const cRock = new THREE.Color(0x4a535c);
+        const cGrass = new THREE.Color(0x426b3c);
+        const cSand = new THREE.Color(0xd4c098);
+        const cDirt = new THREE.Color(0x5c4033);
+        const cCrust = new THREE.Color(0x3a2818);
+        const cMantle = new THREE.Color(0x221100);
+
+        for (let i = 0; i < pos.count; i++) {
+            let x = pos.getX(i);
+            let y = pos.getY(i);
+            let z = pos.getZ(i);
+
+            // Is this vertex on the top face (or the top edge of the side walls)?
+            if (y > blockHeight / 2 - 0.1) { 
+                let finalH = getTerrainHeight(x, z);
+                
+                // Apply height
+                pos.setY(i, finalH);
+
+                // Paint the terrain based on height
+                if (finalH > 10) colors.push(cSnow.r, cSnow.g, cSnow.b);
+                else if (finalH > 7.5) colors.push(cRock.r, cRock.g, cRock.b);
+                else if (finalH > 5.5) colors.push(cGrass.r, cGrass.g, cGrass.b);
+                else if (finalH > 4.2) colors.push(cSand.r, cSand.g, cSand.b);
+                else colors.push(cDirt.r, cDirt.g, cDirt.b);
+            } else {
+                // Paint the side cuts with deep geological layers
+                if (y > 2) colors.push(cDirt.r, cDirt.g, cDirt.b);
+                else if (y > -2) colors.push(cCrust.r, cCrust.g, cCrust.b);
+                else colors.push(cMantle.r, cMantle.g, cMantle.b);
+            }
+        }
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geo.computeVertexNormals();
+
+        const terrainMat = new THREE.MeshStandardMaterial({ 
+            vertexColors: true, 
+            roughness: 0.9, 
+            flatShading: true 
+        });
+        const terrain = new THREE.Mesh(geo, terrainMat);
+        scene.add(terrain);
+
+        // 4. The Ocean
+        // Increased the height of the ocean box significantly so it reaches the deep ocean bed
+        let oceanGeo = new THREE.BoxGeometry(8, 8, 20, 16, 1, 32);
+        oceanGeo = oceanGeo.toNonIndexed(); // Essential for crisp, flat-shaded low-poly waves
+        
+        // Cache the base Y coordinates so we can animate the waves from a stable baseline
+        const oceanBaseY = new Float32Array(oceanGeo.attributes.position.count);
+        for(let i=0; i<oceanGeo.attributes.position.count; i++) {
+            oceanBaseY[i] = oceanGeo.attributes.position.getY(i);
+        }
+
+        const oceanMat = new THREE.MeshPhysicalMaterial({
+            color: 0x0088ff,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.1,
+            flatShading: true, // Forces faceted rendering
+            transmission: 0.4,
+            thickness: 2.0
+        });
+        const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+        // Position it deeper so the bottom fully submerges into the trench topography
+        ocean.position.set(6, 1.5, 0); 
+        scene.add(ocean);
+
+        // 4.5 Pine Trees (Scatter detail on the land)
+        const treeCount = 200;
+        const treeGeo = new THREE.ConeGeometry(0.3, 1.2, 5);
+        const treeMat = new THREE.MeshStandardMaterial({ color: 0x1f4d1f, flatShading: true });
+        const trees = new THREE.InstancedMesh(treeGeo, treeMat, treeCount);
+        scene.add(trees);
+
+        const treeDummy = new THREE.Object3D();
+        let treesPlaced = 0;
+        
+        // Randomly place trees only on the green grass areas
+        while (treesPlaced < treeCount) {
+            let tx = (Math.random() - 0.5) * blockWidth;
+            let tz = (Math.random() - 0.5) * blockDepth;
+            let th = getTerrainHeight(tx, tz);
+            
+            // Restrict to grass heights, avoiding steep slopes and oceans
+            if (th > 4.5 && th < 7.2) {
+                treeDummy.position.set(tx, th + 0.6, tz);
+                treeDummy.rotation.y = Math.random() * Math.PI;
+                treeDummy.rotation.z = (Math.random() - 0.5) * 0.2; // Slight tilt
+                treeDummy.scale.setScalar(0.7 + Math.random() * 0.6);
+                treeDummy.updateMatrix();
+                trees.setMatrixAt(treesPlaced, treeDummy.matrix);
+                treesPlaced++;
+            }
+        }
+
+        // 5. Magma Chamber Cross Section
+        // Pasted exactly on the front face (z=10) to look like a true cross-section slice
+        const magmaGroup = new THREE.Group();
+        magmaGroup.position.set(0, 0, 10.05); // Just barely outside the front face to prevent z-fighting
+        scene.add(magmaGroup);
+
+        const magmaMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+        
+        // Helper to safely add magma shapes without overwriting the parent group's position!
+        function addMagma(geometry, x, y, rotZ = 0) {
+            let m = new THREE.Mesh(geometry, magmaMat);
+            m.position.set(x, y, 0);
+            m.rotation.z = rotZ;
+            magmaGroup.add(m);
+        }
+
+        // Massive, chaotic magma pool sliced cleanly at the bottom edge of the diorama
+        // Using thetaStart=0, thetaLength=Math.PI to draw ONLY the top half of the circles!
+        addMagma(new THREE.CircleGeometry(4.5, 32, 0, Math.PI), -4.0, -12.0); // Flush with bottom edge
+        addMagma(new THREE.CircleGeometry(2.5, 32, 0, Math.PI), -1.0, -12.0);
+        addMagma(new THREE.CircleGeometry(2.8, 32, 0, Math.PI), -6.5, -12.0);
+        
+        // Add a smaller full circle slightly higher up to break the perfect semi-circle and make it organic
+        addMagma(new THREE.CircleGeometry(1.8, 16), -3, -9.5);
+
+        // Jagged main vent shaft built from stacked offset planes spanning huge vertical distance
+        for(let i=0; i<12; i++) {
+            addMagma(
+                new THREE.PlaneGeometry(0.8 + Math.random()*0.8, 2), 
+                -4 + (Math.random()-0.5)*0.8, 
+                -8.0 + i*1.5, 
+                (Math.random()-0.5)*0.3
+            );
+        }
+
+        // Large branching magma veins cracking sideways through the deep crust
+        addMagma(new THREE.PlaneGeometry(0.4, 4), -2.0, -9.0, -0.6);
+        addMagma(new THREE.PlaneGeometry(0.3, 4), -6.0, -8.0, 0.5);
+
+        // 6. Eruption Particles (InstancedMesh)
+        const particleCount = 40;
+        const pGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        const particles = new THREE.InstancedMesh(pGeo, magmaMat, particleCount);
+        scene.add(particles);
+
+        const pData = [];
+        for(let i=0; i<particleCount; i++) {
+            pData.push({
+                x: -4 + (Math.random() - 0.5),
+                y: 11, // Crater height
+                z: 10,
+                vx: (Math.random() - 0.5) * 4,
+                vy: 5 + Math.random() * 5,
+                vz: (Math.random() - 0.5) * 4,
+                life: Math.random() * 2
+            });
+        }
+        const dummy = new THREE.Object3D();
+
+        // 7. Labels / UI (Leader Lines to prevent overlap)
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x1a2639, linewidth: 2 }); // Dark Navy
+
+        function createLabel(text, targetPos, elbowPos, textOffset) {
+            // 1. Leader Line
+            const points = [
+                targetPos,
+                new THREE.Vector3(targetPos.x, elbowPos.y, targetPos.z), // Vertical segment
+                elbowPos // Horizontal segment
+            ];
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+            
+            // Anchor dot exactly at the target
+            const dot = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshBasicMaterial({color: 0x1a2639}));
+            dot.position.copy(targetPos);
+            dot.position.z += 0.01;
+            scene.add(dot);
+
+            // 2. Text Sprite
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 36px "Outfit", sans-serif';
+            
+            // Dark text with white halo guarantees readability against ANY background (white HTML background or dark 3D object)
+            ctx.fillStyle = '#1a2639'; 
+            ctx.shadowColor = 'rgba(255,255,255,1)';
+            ctx.shadowBlur = 10;
+            
+            if (textOffset.x < 0) {
+                ctx.textAlign = 'right';
+                ctx.fillText(text, 500, 64);
+            } else {
+                ctx.textAlign = 'left';
+                ctx.fillText(text, 10, 64);
+            }
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+            sprite.scale.set(12, 3, 1);
+            sprite.position.copy(elbowPos).add(textOffset);
+            scene.add(sprite);
+        }
+
+        // Pushed up high into empty space, pointing down to the Magma Chamber
+        createLabel(
+            "ACTIVE MAGMA CHAMBER", 
+            new THREE.Vector3(-4, -10.0, 10.05), // Target (Top half of the cut chamber)
+            new THREE.Vector3(-7, 8, 10.05),  // Elbow (Up high in the sky)
+            new THREE.Vector3(-6, 0, 0)       // Sprite Offset (Pushed Left)
+        );
+
+        // Pushed up high into empty space, pointing down to the Ocean
+        createLabel(
+            "OCEANIC TRENCH", 
+            new THREE.Vector3(6, 3, 10.05), 
+            new THREE.Vector3(12, 8, 10.05), 
+            new THREE.Vector3(6, 0, 0)
+        );
+
+        // 8. Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, -3, 0); // Shift camera focus downwards to perfectly frame the deep crust
+        controls.enableDamping = true;
+        // Restrict rotation so the user can't look behind the cross-section
+        controls.maxAzimuthAngle = Math.PI / 2;
+        controls.minAzimuthAngle = 0;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+
+        // 9. Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // Animate volcanic eruption using simple velocity physics
+            for(let i=0; i<particleCount; i++) {
+                let p = pData[i];
+                p.life -= dt;
+                if(p.life <= 0) {
+                    p.x = -4 + (Math.random() - 0.5);
+                    p.y = 10.5; // Reset to crater
+                    p.z = 10;
+                    p.vx = (Math.random() - 0.5) * 3;
+                    p.vy = 4 + Math.random() * 4;
+                    p.vz = (Math.random() - 0.5) * 2;
+                    p.life = 1.5 + Math.random();
+                }
+                
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.z += p.vz * dt;
+                p.vy -= 9.8 * dt; // Gravity
+
+                dummy.position.set(p.x, p.y, p.z);
+                dummy.rotation.x += dt;
+                dummy.rotation.y += dt;
+                dummy.scale.setScalar(p.life);
+                dummy.updateMatrix();
+                particles.setMatrixAt(i, dummy.matrix);
+            }
+            particles.instanceMatrix.needsUpdate = true;
+
+            // Animate Low-Poly Ocean Waves
+            const oPos = oceanGeo.attributes.position;
+            for(let i=0; i<oPos.count; i++) {
+                let baseY = oceanBaseY[i];
+                // Only animate the top surface vertices (Box height is now 8, top is at local y=4)
+                if (baseY > 3.9) { 
+                    let x = oPos.getX(i);
+                    let z = oPos.getZ(i);
+                    // Compound sine waves for a rolling, organic ocean surface
+                    let wave = Math.sin(x * 1.5 + time * 3.0) * 0.15;
+                    wave += Math.cos(z * 1.0 + time * 2.0) * 0.15;
+                    oPos.setY(i, baseY + wave);
+                }
+            }
+            oceanGeo.computeVertexNormals(); // Recompute normals so flat shading dynamically catches the light
+            oPos.needsUpdate = true;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

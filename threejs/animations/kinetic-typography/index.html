@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic 3D Typography</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: sans-serif; color: white; font-size: 24px; font-weight: bold;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">LOADING FONT...</div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+        // Dark fog to blend background elements
+        scene.fog = new THREE.FogExp2(0x050510, 0.015);
+
+        // 2. Camera Setup
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(0, 0, 90); // Pulled further back for breathing room
+
+        // 3. Renderer Setup
+        const renderer = new THREE.WebGLRenderer({ 
+            alpha: true, 
+            antialias: true, 
+            preserveDrawingBuffer: true 
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        // 4. Lighting & Environment 
+        // Strong ambient and front lighting ensures text is always brightly visible
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        const frontLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        frontLight.position.set(0, 20, 100); // Pointing straight at the text faces
+        scene.add(frontLight);
+
+        // Create flying neon lights that will reflect perfectly in the chrome
+        const neonLights = [];
+        const colors = [0xff0055, 0x00ffff, 0xffaa00, 0x8800ff];
+        
+        for (let i = 0; i < 4; i++) {
+            const color = colors[i];
+            const light = new THREE.PointLight(color, 150, 100);
+            const bulbGeo = new THREE.SphereGeometry(1, 16, 16);
+            const bulbMat = new THREE.MeshBasicMaterial({ color: color });
+            const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+            light.add(bulb);
+            scene.add(light);
+            neonLights.push({
+                light,
+                speed: 0.5 + Math.random(),
+                radius: 25 + Math.random() * 15,
+                offset: Math.random() * Math.PI * 2
+            });
+        }
+
+        // 5. Materials with Custom Shader (onBeforeCompile)
+        // Two materials for high readability: Bright White face, Glowing Neon Blue sides
+        const frontMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            emissive: 0x333333, // Prevents shadows from making it completely dark
+            roughness: 0.1, 
+            metalness: 0.1 
+        });
+        const sideMat = new THREE.MeshStandardMaterial({ 
+            color: 0x0088ff, 
+            emissive: 0x0055ff, 
+            emissiveIntensity: 1.5, // Literally glows in the dark
+            roughness: 0.3, 
+            metalness: 0.8 
+        });
+
+        const customUniforms = {
+            uTime: { value: 0 },
+            uStrength: { value: 0 } // 0 = flat/readable, 1 = twisted cylinder
+        };
+
+        const shaderInjector = (shader) => {
+            shader.uniforms.uTime = customUniforms.uTime;
+            shader.uniforms.uStrength = customUniforms.uStrength;
+            
+            shader.vertexShader = `
+                uniform float uTime;
+                uniform float uStrength;
+                ${shader.vertexShader}
+            `;
+            
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `
+                vec3 transformed = vec3(position);
+                
+                // 1. Dynamic Wave (Subtle constant wave, amplified when twisted)
+                float wave = sin(transformed.x * 0.08 + uTime * 1.5);
+                transformed.y += wave * (0.15 + uStrength * 0.85); // Never fully stops!
+                
+                // 2. Cylinder Wrap (Wider, static radius for elegance)
+                float radius = 35.0; 
+                float angle = transformed.x / radius;
+                
+                vec3 bentPos = transformed;
+                bentPos.x = sin(angle) * (radius + transformed.z);
+                bentPos.z = cos(angle) * (radius + transformed.z) - radius;
+                
+                transformed = mix(transformed, bentPos, uStrength);
+                `
+            );
+        };
+
+        frontMat.onBeforeCompile = shaderInjector;
+        sideMat.onBeforeCompile = shaderInjector;
+
+        // 6. Load Font & Create Text
+        const textMeshes = [];
+        const loader = new FontLoader();
+        
+        // Using the font we downloaded via bash
+        loader.load('/fonts/helvetiker_bold.typeface.json', function (font) {
+            document.getElementById('loading').style.display = 'none';
+
+            const strings = [
+                "KINETIC TYPOGRAPHY",
+                "CUSTOM GLSL SHADERS",
+                "LIQUID CHROME"
+            ];
+            
+            strings.forEach((str, index) => {
+                const textGeo = new TextGeometry(str, {
+                    font: font,
+                    size: 3.0, // Smaller for better screen fit
+                    height: 0.25, // Shallower depth
+                    curveSegments: 16, 
+                    bevelEnabled: true,
+                    bevelThickness: 0.05,
+                    bevelSize: 0.03,
+                    bevelSegments: 4
+                });
+                
+                // Center the geometry
+                textGeo.computeBoundingBox();
+                const centerOffset = -0.5 * (textGeo.boundingBox.max.x - textGeo.boundingBox.min.x);
+                textGeo.translate(centerOffset, 0, 0);
+
+                const textMesh = new THREE.Mesh(textGeo, [frontMat, sideMat]);
+                
+                // Stack them vertically
+                textMesh.position.y = (1 - index) * 6; // Tighter vertical spacing
+                scene.add(textMesh);
+                textMeshes.push(textMesh);
+            });
+            
+            // Start animation loop only after font is loaded
+            animate();
+        });
+
+        // 7. Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        // Don't auto-rotate the camera, we will rotate the text meshes instead!
+        controls.autoRotate = false; 
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 8. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+
+            customUniforms.uTime.value = time;
+
+            // 15-second elegant timeline
+            const cycle = time % 15; 
+            let strengthTarget = 1;
+            let targetRotations = [0, 0, 0];
+            
+            if (cycle < 5) {
+                // PHASE 1: Flat & Readable (Seconds 0-5)
+                strengthTarget = 0; 
+                targetRotations = [0, 0, 0]; 
+            } else if (cycle < 12) {
+                // PHASE 2: Slow Kinetic Cylinder (Seconds 5-12)
+                strengthTarget = 1;
+                const t = cycle - 5; // 0 to 7
+                // Spin very slowly and elegantly (significantly reduced speed)
+                targetRotations = [
+                    t * 0.3,     
+                    -t * 0.4,    
+                    t * 0.3      
+                ];
+            } else {
+                // PHASE 3: Unwind (Seconds 12-15)
+                strengthTarget = 0; 
+                targetRotations = [0, 0, 0]; 
+            }
+            
+            // Slower, smoother lerp for elegance
+            customUniforms.uStrength.value += (strengthTarget - customUniforms.uStrength.value) * 0.05;
+            
+            textMeshes.forEach((mesh, index) => {
+                mesh.rotation.y += (targetRotations[index] - mesh.rotation.y) * 0.05;
+                // Add a very subtle continuous hover effect to each line of text
+                mesh.position.y = (1 - index) * 6 + Math.sin(time * 1.5 + index) * 0.15;
+            });
+
+            // Animate the neon lights flying around
+            // This creates stunning moving reflections on the chrome text
+            neonLights.forEach((n, index) => {
+                const angle = time * n.speed + n.offset;
+                // Figure-8 orbits
+                n.light.position.x = Math.sin(angle) * n.radius;
+                n.light.position.y = Math.cos(angle * 1.5) * 15;
+                n.light.position.z = Math.cos(angle) * n.radius;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,12 @@
 [
   { "folder": "cube-spin", "name": "Rotating Cube" },
-  { "folder": "voxel-trees", "name": "Voxel Forest" }
+  { "folder": "voxel-trees", "name": "Voxel Forest" },
+  { "folder": "isometric-diorama", "name": "Isometric Diorama" },
+  { "folder": "low-poly-landscape", "name": "Low-Poly Landscape" },
+  { "folder": "exploded-view", "name": "Exploded View Assembly" },
+  { "folder": "data-topography", "name": "Data Topography" },
+  { "folder": "kinetic-typography", "name": "Kinetic 3D Typography" },
+  { "folder": "abstract-particle-morphing", "name": "Abstract Particle Morphing" },
+  { "folder": "schematic-blueprint", "name": "Line Art & Schematic Blueprint" },
+  { "folder": "earth-cross-section", "name": "Earth Crust Cross-Section" }
 ]

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Line Art & Schematic Blueprint</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        // Post-processing imports required for the glowing Bloom effect
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(30, 20, 45);
+
+        // preserveDrawingBuffer and alpha MUST be true for the video exporter
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Clear to transparent so the CSS background (or Player background) shows through
+        renderer.setClearColor(0x000000, 0); 
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Post-Processing (Bloom)
+        const composer = new EffectComposer(renderer);
+        
+        const renderPass = new RenderPass(scene, camera);
+        // Important: clear must be true so the canvas wipes properly
+        renderPass.clear = true;
+        composer.addPass(renderPass);
+
+        // UnrealBloomPass(resolution, strength, radius, threshold)
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.1);
+        bloomPass.strength = 0.6; // Reduced so text doesn't become an unreadable smear
+        bloomPass.radius = 0.15; // Tighter, crisper glow
+        bloomPass.threshold = 0.1; 
+        composer.addPass(bloomPass);
+
+        // 3. Blueprint Generator (Orbital Satellite)
+        const satellite = new THREE.Group();
+        scene.add(satellite);
+
+        // Deep cyan for blueprint lines
+        const lineColor = 0x00eeff;
+        const lineMat = new THREE.LineBasicMaterial({ 
+            color: lineColor, 
+            transparent: true, 
+            opacity: 0.9 
+        });
+
+        // Helper to convert solid geometry into purely glowing wireframe edges
+        function addBlueprintPart(geometry, y, z) {
+            const edges = new THREE.EdgesGeometry(geometry);
+            const lines = new THREE.LineSegments(edges, lineMat);
+            lines.position.set(0, y, z || 0);
+            satellite.add(lines);
+            return lines;
+        }
+
+        // Main Body (Hexagonal Cylinder)
+        // radiusTop, radiusBottom, height, radialSegments, heightSegments
+        addBlueprintPart(new THREE.CylinderGeometry(3, 3, 12, 6, 6), 0);
+        
+        // Solar Panels (Left and Right)
+        const panelGeo = new THREE.BoxGeometry(24, 0.2, 6, 8, 1, 3);
+        const panels = addBlueprintPart(panelGeo, 0);
+
+        // Antenna Dish (Top)
+        // Using a sphere cut in half to look like a concave dish
+        const dishGeo = new THREE.SphereGeometry(4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+        const dish = addBlueprintPart(dishGeo, 6.5);
+        dish.rotation.x = Math.PI; // Face the dish upwards
+
+        // Dish receiver node (The little spire in the center of the dish)
+        addBlueprintPart(new THREE.CylinderGeometry(0.1, 0.1, 4), 8.5);
+
+        // Thruster Engine (Bottom)
+        addBlueprintPart(new THREE.CylinderGeometry(1.5, 2.5, 4, 12, 3), -8);
+
+        // 4. Environment (Grid Floor)
+        const gridHelper = new THREE.GridHelper(60, 30, 0x00eeff, 0x0044aa);
+        gridHelper.position.y = -15;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.3; // Keep the grid subtle so the satellite pops
+        scene.add(gridHelper);
+
+        // 5. Holographic Scanner Plane
+        // A glowing plane that moves up and down like a 3D scanner
+        const scannerGeo = new THREE.PlaneGeometry(30, 20);
+        const scannerMat = new THREE.MeshBasicMaterial({ 
+            color: 0x00ffff, 
+            transparent: true, 
+            opacity: 0.05,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const scanner = new THREE.Mesh(scannerGeo, scannerMat);
+        scanner.rotation.x = Math.PI / 2;
+        scene.add(scanner);
+
+        // Adding a sharp, solid line to the edge of the transparent scanner plane
+        const scannerEdgeGeo = new THREE.EdgesGeometry(scannerGeo);
+        const scannerEdge = new THREE.LineSegments(scannerEdgeGeo, new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.8, transparent: true }));
+        scanner.add(scannerEdge);
+
+        // 6. UI Callout Sprites
+        function createUISprite(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Use a massive, non-bold font to combat the Bloom blur
+            // By making it huge, the gaps between letters are wider, preventing bloom bleed
+            ctx.font = '64px "Courier New", monospace'; 
+            ctx.fillStyle = '#00ccff'; // Slightly darker cyan to reduce its bloom intensity
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
+            // Add a heavy black shadow to artificially "cut" into the bloom
+            ctx.shadowColor = 'rgba(0,0,0,1)';
+            ctx.shadowBlur = 10;
+            
+            ctx.fillText(text, 20, 100);
+            
+            // Draw a precise technical line under the text
+            ctx.beginPath();
+            ctx.moveTo(20, 160);
+            ctx.lineTo(800, 160);
+            ctx.strokeStyle = '#00ccff';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+            sprite.scale.set(16, 4, 1); // Increased scale to match new resolution
+            return sprite;
+        }
+
+        const ui1 = createUISprite("SYS.01: COM DISH");
+        ui1.position.set(14, 9, 0); // Pushed right slightly for the wider sprite
+        scene.add(ui1);
+
+        const ui2 = createUISprite("SYS.02: SOLAR ARRAY");
+        ui2.position.set(20, 2, 0);
+        scene.add(ui2);
+
+        // 7. Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = false; // We animate the satellite manually
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Must update composer size as well!
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 8. Animation Timeline
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now() * 0.001;
+
+            // Smoothly rotate the entire satellite model
+            satellite.rotation.y = time * 0.2;
+
+            // The massive solar panels tilt back and forth tracking a theoretical sun
+            panels.rotation.x = Math.sin(time * 0.5) * 0.15;
+
+            // The scanner plane sweeps up and down the model
+            // 10 second loop: sweeps from -12 to +12
+            scanner.position.y = Math.sin(time * (Math.PI * 2 / 10)) * 12;
+
+            controls.update();
+            
+            // CRITICAL: We use composer.render() instead of renderer.render() to apply the Bloom!
+            composer.render();
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

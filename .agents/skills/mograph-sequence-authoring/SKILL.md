@@ -185,6 +185,16 @@ To support users who edit videos in basic NLEs like CapCut (which do not support
    - Rigid grids of matching cards moving in unison look robotic. To instantly elevate a multi-row marquee to a premium SaaS aesthetic, apply a visual offset (e.g. `margin-left: -11vw`, exactly half a card width) to alternating rows. This forces a classic, highly-aesthetic "brick-lay" masonry stagger while allowing all rows to animate fluidly at the same speed.
 6. **Kinetic Cursor Timing:**
    - To make UI interactions feel incredibly deliberate, hide the cursor entirely off-screen (`120vw, 3vh`, `opacity: 0`). When the dashboard camera begins to zoom into a button, trigger a 2-second cursor swoop in parallel that lands on the target exactly as the click executes.
+7. **Marquee Parallax Velocity:**
+   - Instead of a monolithic scrolling speed, applying distinct animation durations (e.g., `9.5s`, `11.5s`, `8.2s`) to different rows creates a gorgeous organic parallax depth-of-field. Ensure all durations are mathematically longer than the trigger time of the exit animation, so they are all still actively moving when they get violently wiped away.
+8. **Kinetic Scale (The VW/VH Trap):**
+   - When expanding a circular element (like a click ripple) to cover a widescreen monitor, calculating the final radius accurately is extremely important. A diameter dialed tightly to the diagonal corners (e.g., `210vw`) guarantees the slow deceleration phase happens visibly *on-screen*. Overestimating the radius (e.g., `300vw`) causes the visual expansion to clear the edges in the first 25% of the animation time, completely hiding the deceleration phase outside the browser window.
+9. **Perfect Physics Handoffs (The Shrink/Slide):**
+   - To achieve a buttery smooth handoff between two layered objects (e.g., an object shrinking away while the background slides to wipe the scene), their timings must overlap perfectly. Mathematically synchronize their starting millisecond and total duration (e.g. exactly `0.8s`) so the entire shrink happens 1:1 during the entire slide.
+10. **Cartoon Anticipation (The Momentum Gather):**
+   - Creating an organic exit involves a scale-up (anticipation) followed by a scale-down. To prevent a dead "stop" at the peak of the bounce, use an `ease-in` curve for the growth phase so it accelerates *into* the peak, and an `ease-out` for the shrink so it leaves the peak at max velocity.
+11. **Keyframe-Specific Easing for Chained Motions:**
+   - When a single element needs multiple distinct movements (like a lens panning diagonally, then horizontally) but requires the exact same physics curve (e.g., fast start, slow end) on *both* movements independently, do not use chained animation properties. Instead, define the global timing as `linear` and inject the `animation-timing-function: cubic-bezier(...)` explicitly into each segment's starting keyframe (e.g. `0%` and `50%`).
 
 ## Workflow / Checklist
 

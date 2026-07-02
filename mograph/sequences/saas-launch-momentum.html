@@ -59,7 +59,7 @@
       border-radius: 50%; z-index: 5; display: flex; align-items: center; justify-content: center;
       animation: 
         popInCenter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both,
-        centerExit 0.8s cubic-bezier(0.7, 0, 0.3, 1) 2.7s forwards;
+        centerExit 1.6s linear 1.9s forwards;
       box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
     }
     .center-icon { width: 45%; height: 45%; fill: #fff; }
@@ -69,8 +69,17 @@
       100% { visibility: visible; transform: translate(-50%, -50%) scale(1); }
     }
     @keyframes centerExit {
-      0% { transform: translate(-50%, -50%) scale(1); }
-      100% { transform: translate(-150vw, -50%) scale(1); }
+      0% { 
+        transform: translate(-50%, -50%) scale(1); 
+        animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
+      }
+      50% { 
+        transform: translate(-50%, -50%) scale(1.15); 
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+      }
+      100% { 
+        transform: translate(-50%, -50%) scale(0); 
+      }
     }
 
     .satellite-system {
@@ -190,8 +199,9 @@
     
     .staggered-row { margin-left: -11vw; }
 
-    .marquee-left { animation: scrollLeft 8s linear 2.7s both; }
-    .marquee-right { animation: scrollRight 8s linear 2.7s both; }
+    .marquee-left { animation: scrollLeft 9.5s linear 2.7s both; }
+    .marquee-right { animation: scrollRight 11.5s linear 2.7s both; }
+    .marquee-left.staggered-row { animation-duration: 8.2s; }
     .row-exit-left { animation: rowExitLeft 1s cubic-bezier(0.4, 0, 0.1, 1) 9.5s forwards; }
     .row-exit-right { animation: rowExitRight 1s cubic-bezier(0.4, 0, 0.1, 1) 9.5s forwards; }
 
@@ -233,11 +243,11 @@
       background: var(--accent-1); 
       border-radius: 50%; transform: translate(-50%, -50%);
       z-index: 90;
-      animation: rippleFullExpand 0.6s ease-out 13.5s both;
+      animation: rippleFullExpand 3.5s cubic-bezier(0.25, 1, 0.5, 1) 13.5s both;
     }
     @keyframes rippleFullExpand {
       0% { width: 0; height: 0; opacity: 0.9; }
-      100% { width: 300vw; height: 300vw; opacity: 1; }
+      100% { width: 210vw; height: 210vw; opacity: 1; }
     }
 
     .cursor {
@@ -245,11 +255,11 @@
       fill: #09090b; stroke: #ffffff; stroke-width: 1px;
       filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); z-index: 100;
       animation: 
-        cursorSwoop 2.0s cubic-bezier(0.2, 0.8, 0.2, 1) 11.5s both,
+        cursorSwoop 2.0s cubic-bezier(0.16, 1, 0.3, 1) 11.5s both,
         cursorClick 0.3s ease-out 13.5s forwards;
     }
     @keyframes cursorSwoop {
-      0% { transform: translate(120vw, 3vh); opacity: 0; }
+      0% { transform: translate(120vw, 120vh); opacity: 0; }
       1% { opacity: 1; }
       100% { transform: translate(75vw, 3vh); opacity: 1; }
     }
@@ -325,7 +335,7 @@
     #scene5 {
       z-index: 35; background: transparent;
       animation: 
-        sceneFadeIn 0.5s ease-out 13.6s both,
+        sceneFadeIn 2.5s ease-out 13.6s both,
         canvasSwipeClean 0.8s cubic-bezier(0.5, 0, 0.1, 1) 18.5s forwards;
     }
     @keyframes sceneFadeIn {
@@ -349,20 +359,38 @@
     .lens {
       position: absolute; top: 0; left: 0; width: 35vh; height: 35vh; border-radius: 50%;
       overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.3), inset 0 0 0 6px #ffffff;
-      animation: lensPan 4.0s cubic-bezier(0.4, 0, 0.2, 1) 14.3s both;
+      animation: lensPan 3.8s linear 14.5s both;
     }
     .lens-inner {
       position: absolute; width: 100vw; height: 100vh;
-      animation: lensInnerPan 4.0s cubic-bezier(0.4, 0, 0.2, 1) 14.3s both;
+      animation: lensInnerPan 3.8s linear 14.5s both;
     }
     
     @keyframes lensPan {
-      0% { transform: translate(10vw, 75vh); }
-      100% { transform: translate(80vw, 20vh); }
+      0% { 
+        transform: translate(10vw, 75vh); 
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      50% { 
+        transform: translate(80vw, 20vh); 
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      100% { 
+        transform: translate(20vw, 20vh); 
+      }
     }
     @keyframes lensInnerPan {
-      0% { transform: translate(-10vw, -75vh); }
-      100% { transform: translate(-80vw, -20vh); }
+      0% { 
+        transform: translate(-10vw, -75vh); 
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      50% { 
+        transform: translate(-80vw, -20vh); 
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      100% { 
+        transform: translate(-20vw, -20vh); 
+      }
     }
 
   </style>

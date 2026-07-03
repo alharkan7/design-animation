@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Sans:wght@400;600&display=swap');
+
+    :root {
+      /* Frame rates for stop motion feel */
+      --fps-12: steps(12, end);
+      --fps-8: steps(8, end);
+      --fps-6: steps(6, end);
+      --fps-4: steps(4, end);
+      --fps-3: steps(3, end);
+      
+      /* Colors */
+      --c-ink: #111111;
+      --c-primary: #00BFA5; /* Mint Green */
+      --c-secondary: #FF4C00; /* Fluorescent Orange */
+      --c-accent: #FFD100; /* Sunny Yellow */
+      
+      /* Durations */
+      --dur-fast: 0.4s;
+      --dur-med: 0.8s;
+      --dur-slow: 1.5s;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'IBM Plex Sans', sans-serif;
+      color: var(--c-ink);
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+    }
+
+    .stage {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .stage-1 { z-index: 10; }
+    .stage-2 { z-index: 20; pointer-events: none; } /* Scene 2 overlay */
+
+    /* Typography */
+    .title-group {
+      position: relative;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(3rem, 10vw, 12rem);
+      line-height: 0.9;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      z-index: 10;
+      text-align: center;
+    }
+
+    .overprint { mix-blend-mode: multiply; }
+
+    .text-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      white-space: pre-wrap;
+    }
+
+    .base-layer { position: relative; z-index: 5; }
+    .layer-primary { color: var(--c-primary); transform: translate(0.4vw, 0.4vh); z-index: 4; }
+    .layer-secondary { color: var(--c-secondary); transform: translate(-0.4vw, 0.2vh); z-index: 3; }
+    .layer-accent { color: var(--c-accent); transform: translate(0.2vw, -0.4vh); z-index: 2; }
+
+    /* Stop Motion Keyframes */
+    @keyframes roughPop {
+      0% { transform: scale(0) rotate(-10deg); visibility: hidden; }
+      100% { transform: scale(1) rotate(0deg); visibility: visible; }
+    }
+
+    @keyframes roughPopAlt {
+      0% { transform: scale(0) rotate(15deg); visibility: hidden; }
+      100% { transform: scale(1) rotate(0deg); visibility: visible; }
+    }
+
+    @keyframes roughPopCenter {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-5deg); visibility: hidden; }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); visibility: visible; }
+    }
+
+    @keyframes slideWipeRight {
+      0% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+      100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+    }
+
+    @keyframes dropIn {
+      0% { transform: translateY(-50vh) rotate(20deg); visibility: hidden; }
+      100% { transform: translateY(0) rotate(0deg); visibility: visible; }
+    }
+    
+    @keyframes dropInCenter {
+      0% { transform: translate(-50%, -100vh) rotate(-15deg); visibility: hidden; }
+      100% { transform: translate(-50%, -50%) rotate(0deg); visibility: visible; }
+    }
+    
+    @keyframes slideLeft {
+      0% { transform: translateX(50vw) rotate(-5deg); visibility: hidden; }
+      100% { transform: translateX(0) rotate(0deg); visibility: visible; }
+    }
+
+    @keyframes scaleOut {
+      0% { transform: scale(1); visibility: visible; }
+      100% { transform: scale(0); visibility: hidden; }
+    }
+
+    @keyframes scaleOutCenter {
+      0% { transform: translate(-50%, -50%) scale(1); visibility: visible; }
+      100% { transform: translate(-50%, -50%) scale(0); visibility: hidden; }
+    }
+
+    @keyframes slideOutLeft {
+      0% { transform: translateX(0); visibility: visible; }
+      100% { transform: translateX(-150vw) rotate(-10deg); visibility: hidden; }
+    }
+    
+    @keyframes slideOutRight {
+      0% { transform: translateX(0); visibility: visible; }
+      100% { transform: translateX(150vw) rotate(10deg); visibility: hidden; }
+    }
+    
+    @keyframes wipeOutLeft {
+      0% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); visibility: visible; }
+      100% { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); visibility: hidden; }
+    }
+
+    /* ═════════ STAGE 1 ELEMENTS ═════════ */
+    .title-layer {
+      animation: 
+        roughPop var(--dur-fast) var(--fps-4) both,
+        scaleOut 0.4s var(--fps-4) forwards;
+    }
+    .layer-primary { animation-delay: 0.1s, 6.1s; }
+    .layer-secondary { animation-delay: 0.2s, 6.2s; }
+    .layer-accent { animation-delay: 0.3s, 6.3s; }
+    .base-layer { animation-delay: 0.4s, 6.4s; }
+
+    .highlighter {
+      position: absolute;
+      bottom: -5%;
+      left: -5%;
+      width: 110%;
+      height: 50%;
+      background: var(--c-accent);
+      z-index: 1;
+      mix-blend-mode: multiply;
+      animation: slideWipeRight var(--dur-med) var(--fps-8) both;
+      animation-delay: 0.6s;
+    }
+
+    .shape {
+      position: absolute;
+      mix-blend-mode: multiply;
+    }
+
+    .shape-1 {
+      width: 20vw; height: 20vw;
+      background: var(--c-secondary);
+      border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+      top: 10%; left: 10%;
+      animation: 
+        dropIn var(--dur-med) var(--fps-8) both,
+        scaleOut 0.4s var(--fps-4) forwards;
+      animation-delay: 1.0s, 5.7s;
+    }
+
+    .shape-2 {
+      width: 35vw; height: 12vw;
+      background: var(--c-primary);
+      border-radius: 2px;
+      bottom: 15%; right: 5%;
+      transform-origin: bottom right;
+      border: 6px solid var(--c-ink);
+      animation: 
+        slideLeft var(--dur-med) var(--fps-6) both,
+        slideOutRight 0.5s var(--fps-6) forwards;
+      animation-delay: 1.4s, 5.8s;
+    }
+
+    .shape-3 {
+      width: 12vw; height: 12vw;
+      background: var(--c-accent);
+      border-radius: 50%;
+      top: 20%; right: 20%;
+      border: 4px dashed var(--c-ink);
+      animation: 
+        roughPopAlt var(--dur-fast) var(--fps-4) both,
+        scaleOut 0.3s var(--fps-4) forwards;
+      animation-delay: 1.8s, 5.6s;
+    }
+    
+    .scribble-wrap {
+      position: absolute;
+      top: 50%; left: 15%;
+      width: 40vw; height: 25vw;
+      z-index: 15;
+      animation: 
+        slideWipeRight 1s var(--fps-12) both,
+        wipeOutLeft 0.5s var(--fps-6) forwards;
+      animation-delay: 2.2s, 5.9s;
+    }
+
+    .scribble {
+      width: 100%; height: 100%;
+      overflow: visible;
+    }
+    
+    .scribble path {
+      fill: none;
+      stroke: var(--c-ink);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .scribble-bg { stroke: var(--c-primary) !important; transform: translate(1vw, 1vw); mix-blend-mode: multiply; }
+    .scribble-bg-2 { stroke: var(--c-secondary) !important; transform: translate(-0.5vw, 0.5vw); mix-blend-mode: multiply; }
+
+    .subtitle-card {
+      position: absolute;
+      bottom: 25%;
+      left: 12%;
+      background: var(--c-ink);
+      color: var(--c-accent);
+      padding: 1vw 2.5vw;
+      font-size: clamp(1.5rem, 3.5vw, 4rem);
+      font-weight: 600;
+      border: 4px solid var(--c-primary);
+      box-shadow: 15px 15px 0 var(--c-secondary);
+      z-index: 20;
+      animation: 
+        dropIn 0.6s var(--fps-6) both,
+        slideOutLeft 0.5s var(--fps-6) forwards;
+      animation-delay: 2.8s, 6.0s;
+    }
+    
+    .subtitle-card span { position: relative; z-index: 2; }
+
+    .crosshair {
+      position: absolute;
+      width: 4vw; height: 4vw;
+      animation: 
+        roughPop 0.3s var(--fps-3) both,
+        scaleOut 0.3s var(--fps-3) forwards;
+    }
+    
+    .crosshair::before, .crosshair::after { content: ''; position: absolute; background: var(--c-ink); }
+    .crosshair::before { top: 50%; left: 0; width: 100%; height: 4px; transform: translateY(-50%); }
+    .crosshair::after { left: 50%; top: 0; height: 100%; width: 4px; transform: translateX(-50%); }
+    
+    .ch-1 { top: 8%; right: 8%; animation-delay: 3.2s, 5.5s; }
+    .ch-2 { bottom: 8%; left: 8%; animation-delay: 3.4s, 5.5s; }
+
+    /* ═════════ STAGE 2 ELEMENTS ═════════ */
+    .s2-bg-circle {
+      position: absolute;
+      width: 180vw; height: 180vw;
+      background: var(--c-primary);
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      mix-blend-mode: multiply;
+      animation: 
+        roughPopCenter 1.2s var(--fps-8) both,
+        scaleOutCenter 0.8s var(--fps-6) forwards;
+      animation-delay: 6.2s, 11.8s;
+    }
+
+    .s2-tv {
+      position: absolute;
+      width: 40vw;
+      bottom: 10%; left: 5%;
+      z-index: 5;
+      filter: sepia(0.3) hue-rotate(10deg) contrast(1.1);
+      animation: 
+        slideLeft 0.8s var(--fps-6) both,
+        slideOutLeft 0.5s var(--fps-6) forwards;
+      animation-delay: 6.8s, 11.2s;
+    }
+
+    .s2-sunflower {
+      position: absolute;
+      width: 30vw;
+      top: 15%; right: 10%;
+      z-index: 6;
+      mix-blend-mode: multiply;
+      filter: saturate(1.5);
+      animation: 
+        roughPopAlt 0.6s var(--fps-4) both,
+        scaleOut 0.4s var(--fps-4) forwards;
+      animation-delay: 7.2s, 11.4s;
+    }
+
+    .s2-collage {
+      position: absolute;
+      width: 28vw;
+      top: 35%; left: 35%;
+      z-index: 4;
+      animation: 
+        dropIn 0.7s var(--fps-6) both,
+        scaleOut 0.4s var(--fps-4) forwards;
+      animation-delay: 7.6s, 11.3s;
+    }
+
+    .s2-title-container {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(4rem, 12vw, 15rem);
+      line-height: 0.85;
+      text-align: center;
+      z-index: 15;
+      color: var(--c-accent);
+      text-shadow: 
+        0.5vw 0.5vw 0 var(--c-secondary),
+        -0.2vw -0.2vw 0 var(--c-ink),
+        -0.2vw 0.5vw 0 var(--c-ink),
+        0.5vw -0.2vw 0 var(--c-ink);
+      white-space: nowrap;
+      animation: 
+        dropInCenter 0.6s var(--fps-6) both,
+        scaleOutCenter 0.5s var(--fps-6) forwards;
+      animation-delay: 8.0s, 11.6s;
+    }
+
+    .s2-badge {
+      position: absolute;
+      top: 25%; left: 20%;
+      width: 14vw; height: 14vw;
+      background: var(--c-ink);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--c-secondary);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1rem, 2vw, 3rem);
+      line-height: 1.1;
+      text-align: center;
+      border: 4px dashed var(--c-primary);
+      box-shadow: 8px 8px 0 var(--c-accent);
+      z-index: 16;
+      animation: 
+        roughPop 0.5s var(--fps-4) both,
+        scaleOut 0.3s var(--fps-3) forwards;
+      animation-delay: 8.5s, 11.0s;
+    }
+
+    .s2-line {
+      position: absolute;
+      top: 55%; left: 0;
+      width: 100vw;
+      height: 2vw;
+      background: var(--c-ink);
+      z-index: 12;
+      animation: 
+        slideWipeRight 0.8s var(--fps-8) both,
+        wipeOutLeft 0.5s var(--fps-6) forwards;
+      animation-delay: 8.8s, 11.1s;
+    }
+
+    .s2-line-2 {
+      position: absolute;
+      top: 57%; left: 0;
+      width: 100vw;
+      height: 0.5vw;
+      background: var(--c-secondary);
+      z-index: 13;
+      mix-blend-mode: multiply;
+      animation: 
+        slideWipeRight 0.8s var(--fps-8) both,
+        wipeOutLeft 0.5s var(--fps-6) forwards;
+      animation-delay: 9.0s, 11.1s;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="scene">
+    <!-- ═════════ STAGE 1 ═════════ -->
+    <div class="stage stage-1">
+      <!-- Abstract Shapes -->
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+
+      <!-- Arrow Scribble -->
+      <div class="scribble-wrap">
+        <svg class="scribble" viewBox="0 0 400 250">
+          <path class="scribble-bg" d="M 50,50 Q 200,-20 300,100 T 150,220" />
+          <path class="scribble-bg-2" d="M 50,50 Q 200,-20 300,100 T 150,220" />
+          <path d="M 50,50 Q 200,-20 300,100 T 150,220" />
+          <!-- Arrow head -->
+          <path class="scribble-bg" d="M 120,180 L 150,220 L 190,190" />
+          <path class="scribble-bg-2" d="M 120,180 L 150,220 L 190,190" />
+          <path d="M 120,180 L 150,220 L 190,190" />
+        </svg>
+      </div>
+
+      <!-- Main Title -->
+      <div class="title-group overprint">
+        <div class="text-layer layer-primary title-layer">STOP MOTION<br>EXPLAINER</div>
+        <div class="text-layer layer-secondary title-layer">STOP MOTION<br>EXPLAINER</div>
+        <div class="text-layer layer-accent title-layer">STOP MOTION<br>EXPLAINER</div>
+        <div class="base-layer title-layer">STOP MOTION<br>EXPLAINER
+          <div class="highlighter"></div>
+        </div>
+      </div>
+
+      <!-- Subtitle -->
+      <div class="subtitle-card">
+        <span>OVERPRINT / LO-FI</span>
+      </div>
+
+      <!-- Decorative -->
+      <div class="crosshair ch-1"></div>
+      <div class="crosshair ch-2"></div>
+    </div>
+
+    <!-- ═════════ STAGE 2 ═════════ -->
+    <div class="stage stage-2">
+      <!-- Background Transition Circle -->
+      <div class="s2-bg-circle"></div>
+      
+      <!-- Mixed Media Images -->
+      <img class="s2-collage" src="/assets/collage-cutout.png" alt="Collage">
+      <img class="s2-tv" src="/assets/tv-cutout.webp" alt="Retro TV">
+      <img class="s2-sunflower" src="/assets/guitar-cutout.png" alt="Sunflower">
+      
+      <!-- Overprint Lines -->
+      <div class="s2-line"></div>
+      <div class="s2-line-2"></div>
+
+      <!-- Large Title -->
+      <div class="s2-title-container">
+        MIXED<br>MEDIA
+      </div>
+
+      <!-- Decorative Badge -->
+      <div class="s2-badge">
+        ASSETS<br>&<br>CUTOUTS
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

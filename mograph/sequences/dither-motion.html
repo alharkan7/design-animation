@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800&family=IBM+Plex+Mono:wght@700&display=swap');
+
+    :root {
+      /* Stop-motion framing */
+      --fps-12: steps(12, end);
+      --fps-8: steps(8, end);
+      --fps-6: steps(6, end);
+      --fps-4: steps(4, end);
+      
+      /* Color Palette: Cyber Neon */
+      --c-dark: #09090b; /* Zinc 950 */
+      --c-light: #22d3ee; /* Cyan 400 */
+      --c-accent: #f43f5e; /* Rose 500 */
+    }
+
+    * { box-sizing: border-box; }
+    
+    body, html {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--c-dark); /* Ensure player background doesn't bleed */
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ═════════ COLOR MAPPING WRAPPER ═════════ */
+    .color-wrapper {
+      position: absolute;
+      inset: 0;
+      background: var(--c-dark);
+      z-index: 10;
+    }
+    
+    .color-tint {
+      position: absolute;
+      inset: 0;
+      background: var(--c-light);
+      mix-blend-mode: multiply;
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    /* ═════════ DITHER ENGINE ═════════ */
+    .dither-container {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      /* The magic thresholding: */
+      filter: contrast(60) grayscale(1);
+      mix-blend-mode: screen;
+      z-index: 20;
+      overflow: hidden;
+    }
+
+    .bayer-overlay {
+      position: absolute;
+      inset: -50%;
+      /* 4x4 Bayer Matrix Data URI */
+      background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='0' width='1' height='1' fill='%23888'/%3E%3Crect x='2' y='0' width='1' height='1' fill='%23222'/%3E%3Crect x='3' y='0' width='1' height='1' fill='%23aaa'/%3E%3Crect x='0' y='1' width='1' height='1' fill='%23ccc'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23444'/%3E%3Crect x='2' y='1' width='1' height='1' fill='%23eee'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23666'/%3E%3Crect x='0' y='2' width='1' height='1' fill='%23333'/%3E%3Crect x='1' y='2' width='1' height='1' fill='%23bbb'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23111'/%3E%3Crect x='3' y='2' width='1' height='1' fill='%23999'/%3E%3Crect x='0' y='3' width='1' height='1' fill='%23fff'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23777'/%3E%3Crect x='2' y='3' width='1' height='1' fill='%23ddd'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23555'/%3E%3C/svg%3E");
+      background-size: 8px 8px;
+      mix-blend-mode: overlay;
+      opacity: 0.8;
+      z-index: 50;
+      pointer-events: none;
+      /* Animate the dither pattern itself */
+      animation: ditherMotion 5.8s var(--fps-12) both;
+    }
+
+    /* ═════════ CONTENT LAYER (Grayscale Only) ═════════ */
+    .content {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+    }
+
+    /* ═════════ ANIMATIONS ═════════ */
+    @keyframes ditherMotion {
+      0% { opacity: 0.1; background-position: 0 0; background-size: 4px 4px; }
+      20% { opacity: 1.0; background-position: -20px 30px; background-size: 16px 16px; }
+      40% { opacity: 0.4; background-position: 40px -10px; background-size: 6px 6px; }
+      60% { opacity: 0.9; background-position: -10px 50px; background-size: 24px 24px; }
+      80% { opacity: 0.5; background-position: 20px 20px; background-size: 8px 8px; }
+      100% { opacity: 0.2; background-position: 0 0; background-size: 4px 4px; }
+    }
+
+    @keyframes scaleIn {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    
+    @keyframes scaleOut {
+      0% { transform: translate(-50%, -50%) scale(1); visibility: visible; }
+      100% { transform: translate(-50%, -50%) scale(0); visibility: hidden; }
+    }
+    
+    @keyframes scaleOutGlobal {
+      0% { transform: scale(1); visibility: visible; }
+      100% { transform: scale(0); visibility: hidden; }
+    }
+
+    @keyframes sweepPan {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100vw); }
+    }
+    
+    @keyframes slideAcross {
+      0% { transform: translate(-50vw, 150vh) rotate(-45deg); }
+      100% { transform: translate(150vw, -50vh) rotate(45deg); }
+    }
+
+    @keyframes pulseScale {
+      0% { transform: translate(-50%, -50%) scale(0); }
+      50% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-50%, -50%) scale(0); }
+    }
+
+    @keyframes roughPop {
+      0% { transform: scale(0) rotate(-10deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    
+    @keyframes roughPopOut {
+      0% { transform: scale(1) rotate(0deg); visibility: visible; }
+      100% { transform: scale(0) rotate(15deg); visibility: hidden; }
+    }
+
+    /* ═════════ ELEMENTS ═════════ */
+    .bg-sweep {
+      position: absolute;
+      top: 0; left: 0;
+      width: 200vw; height: 100vh;
+      background: linear-gradient(to right, #000000 0%, #666666 30%, #111111 70%, #000000 100%);
+      animation: sweepPan 5.8s var(--fps-12) both;
+    }
+
+    .bg-pulse {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 150vw; height: 150vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, #555555 0%, #000000 60%);
+      animation: pulseScale 5.5s var(--fps-8) both;
+    }
+
+    .gradient-sphere-wrap {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      animation: slideAcross 4.5s var(--fps-12) both;
+      animation-delay: 1.0s;
+    }
+    
+    .gradient-sphere {
+      position: absolute;
+      width: 60vw; height: 60vw;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #808080 40%, #000000 80%);
+      /* Keep it centered in the wrapper */
+      top: 0; left: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    .text-seq {
+      position: absolute;
+      top: 50%; left: 50%;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 18vw;
+      text-align: center;
+      /* Apply gradient to text so the dither engine affects the inner surface */
+      background: linear-gradient(to bottom, #ffffff 0%, #888888 60%, #222222 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
+      /* Add a solid stroke so the edges remain crisp and readable */
+      -webkit-text-stroke: 4px #ffffff;
+    }
+
+    .t-1 { animation: scaleIn 0.4s var(--fps-6) both, scaleOut 0.3s var(--fps-4) forwards; animation-delay: 0.5s, 1.8s; }
+    .t-2 { animation: scaleIn 0.4s var(--fps-6) both, scaleOut 0.3s var(--fps-4) forwards; animation-delay: 2.0s, 3.3s; }
+    .t-3 { animation: scaleIn 0.4s var(--fps-6) both, scaleOut 0.3s var(--fps-4) forwards; animation-delay: 3.5s, 5.0s; }
+
+    /* Clean Overlay (Outside Dither Engine) */
+    .clean-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .accent-box {
+      position: absolute;
+      bottom: 10%; right: 10%;
+      width: 20vw; height: 20vw;
+      background: var(--c-accent);
+      border: 6px solid #fff;
+      border-radius: 40% 10% 30% 20%; /* Organic shape */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 700;
+      font-size: 2.5vw;
+      color: #fff;
+      text-align: center;
+      box-shadow: 1vw 1vw 0 #000;
+      animation: 
+        roughPop 0.5s var(--fps-6) both,
+        roughPopOut 0.4s var(--fps-4) forwards;
+      animation-delay: 1.0s, 5.2s;
+    }
+    
+    .accent-box span {
+      transform: rotate(-10deg);
+    }
+
+    /* Final Scene Exit */
+    .scene.exit-seq {
+      animation: scaleOutGlobal 0.4s var(--fps-4) forwards;
+      animation-delay: 5.8s;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="scene exit-seq">
+    <!-- ═════════ DITHER ENGINE ═════════ -->
+    <div class="color-wrapper">
+      <div class="dither-container">
+        
+        <div class="content">
+          <!-- Background moving gradients -->
+          <div class="bg-sweep"></div>
+          <div class="bg-pulse"></div>
+          
+          <!-- Moving 3D Sphere -->
+          <div class="gradient-sphere-wrap">
+            <div class="gradient-sphere"></div>
+          </div>
+          
+          <!-- Dithered Typography -->
+          <div class="text-seq t-1">1-BIT</div>
+          <div class="text-seq t-2">DITHER</div>
+          <div class="text-seq t-3">MOTION</div>
+        </div>
+
+        <div class="bayer-overlay"></div>
+      </div>
+      
+      <!-- Tints white pixels to Cyan -->
+      <div class="color-tint"></div>
+    </div>
+
+    <!-- ═════════ CLEAN OVERLAY ═════════ -->
+    <div class="clean-overlay">
+      <!-- Stop-motion shape that sits pristine on top of the gritty dither -->
+      <div class="accent-box">
+        <span>NOISE<br>GATE</span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

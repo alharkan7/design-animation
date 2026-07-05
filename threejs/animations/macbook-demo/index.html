@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MacBook App Demo</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+        #timing-dummy { display: none; }
+    </style>
+</head>
+<body>
+    <div id="timing-dummy"></div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+        const durationMs = 8000;
+        document.getElementById('timing-dummy').animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            { duration: durationMs, iterations: 1 }
+        );
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 5, 25);
+        
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // --- Load UI Texture for GLTF ---
+        const textureLoader = new THREE.TextureLoader();
+        const screenTexture = textureLoader.load('/textures/mac_screen.jpg');
+        screenTexture.colorSpace = THREE.SRGBColorSpace;
+        screenTexture.flipY = false;
+        screenTexture.wrapS = THREE.RepeatWrapping;
+        screenTexture.repeat.x = -1;
+        screenTexture.offset.x = 1;
+
+        // Load the pure SVG file for perfect transparency
+        const logoTexture = textureLoader.load('/textures/apple_logo.svg');
+        logoTexture.colorSpace = THREE.SRGBColorSpace;
+        logoTexture.generateMipmaps = true;
+        logoTexture.minFilter = THREE.LinearMipmapLinearFilter;
+
+        const macbookGroup = new THREE.Group();
+        scene.add(macbookGroup);
+
+        let lidNode = null;
+        let lidDefaultRotX = 0;
+
+        const gltfLoader = new GLTFLoader();
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('/draco/');
+        gltfLoader.setDRACOLoader(dracoLoader);
+
+        gltfLoader.load('/models/macbook.glb', (gltf) => {
+            const model = gltf.scene;
+
+            lidNode = model.getObjectByName('screenflip');
+            if (lidNode) {
+                lidDefaultRotX = lidNode.rotation.x;
+                
+                // Add perfect glowing logo
+                const logoGeom = new THREE.PlaneGeometry(1.1, 1.1);
+                const logoMat = new THREE.MeshBasicMaterial({ 
+                    map: logoTexture, 
+                    color: 0x444444, // Slightly darker than body color
+                    transparent: true,
+                    blending: THREE.NormalBlending, // No longer need Additive since SVG has true alpha
+                    depthWrite: false,
+                    depthTest: false
+                });
+                const logoMesh = new THREE.Mesh(logoGeom, logoMat);
+                // Lowered Y from 4.3 to 2.2 to perfectly center it on the lid
+                logoMesh.position.set(0, 3.2, -0.21);
+                logoMesh.rotation.y = Math.PI; // Face outwards
+                lidNode.add(logoMesh);
+            }
+
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                    materials.forEach((mat, index) => {
+                        if (!mat) return;
+
+                        const name = mat.name ? mat.name.toLowerCase() : '';
+
+                        if (child.name === 'screen' || name === 'screen.001') {
+                            const newMat = new THREE.MeshBasicMaterial({ 
+                                map: screenTexture,
+                                side: THREE.DoubleSide
+                            });
+                            if (Array.isArray(child.material)) child.material[index] = newMat;
+                            else child.material = newMat;
+
+                            if (child.geometry && child.geometry.attributes.uv) {
+                                const uvs = child.geometry.attributes.uv;
+                                for (let i = 0; i < uvs.count; i++) {
+                                    uvs.setX(i, 1 - uvs.getX(i));
+                                }
+                                uvs.needsUpdate = true;
+                            }
+                        }
+                        
+                        // Space Gray Aluminum (Chassis, Base, Trackpad)
+                        else if (name.includes('aluminium') || name.includes('base') || name.includes('trackpad')) {
+                            mat.color.setHex(0x555555);
+                            mat.metalness = 1.0;
+                            mat.roughness = 0.25;
+                        }
+
+                        // Glossy Black (Screen Bezel)
+                        // It turns out 'matte.001' is the bezel, not the Apple logo!
+                        else if (name === 'matte.001') {
+                            mat.color.setHex(0x050505);
+                            mat.metalness = 0.9;
+                            mat.roughness = 0.05;
+                        }
+
+                        // Matte Black (Keyboard Keys, Touchbar)
+                        else if (name.includes('keys') || name.includes('touchbar') || name.includes('keyboard')) {
+                            mat.color.setHex(0x111111);
+                            mat.metalness = 0.2;
+                            mat.roughness = 0.7;
+                        }
+                    });
+                }
+            });
+
+            // Normalize scale and position
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center);
+
+            macbookGroup.add(model);
+
+            const newBox = new THREE.Box3().setFromObject(macbookGroup);
+            const newSize = newBox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(newSize.x, newSize.y, newSize.z);
+            let scale = 14 / maxDim; 
+            
+            if (!isFinite(scale) || scale === 0) scale = 1;
+            macbookGroup.scale.set(scale, scale, scale);
+        });
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = clock.getElapsedTime();
+            const loopProgress = (time % (durationMs / 1000)) / (durationMs / 1000); 
+
+            let baseY = 0;
+            let baseRotY = 0;
+            let baseRotX = Math.PI / 12; 
+            
+            // For the GLTF hinge, the rotation logic depends on its local axes.
+            // Often +Math.PI/2 or -Math.PI/2 closes it from an open position.
+            // We will interpolate to rotate it down.
+            let lidAnimOffset = Math.PI / 2; // Default closed state relative to open
+
+            if (loopProgress < 0.2) {
+                let t = loopProgress / 0.2;
+                let ease = 1 - Math.pow(1 - t, 5);
+                baseY = THREE.MathUtils.lerp(-15, 0, ease);
+                baseRotY = THREE.MathUtils.lerp(-Math.PI / 2, -Math.PI / 5, ease);
+            } else if (loopProgress < 0.35) {
+                let t = (loopProgress - 0.2) / 0.15;
+                let ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                baseY = 0;
+                baseRotY = -Math.PI / 5;
+                lidAnimOffset = THREE.MathUtils.lerp(Math.PI / 2, 0, ease); 
+            } else if (loopProgress < 0.65) {
+                let t = (loopProgress - 0.35) / 0.3;
+                let ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; 
+                baseY = 0;
+                baseRotY = THREE.MathUtils.lerp(-Math.PI / 5, Math.PI / 5, ease);
+                lidAnimOffset = 0; // Fully open
+            } else if (loopProgress < 0.8) {
+                let t = (loopProgress - 0.65) / 0.15;
+                let ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                baseY = 0;
+                baseRotY = Math.PI / 5;
+                lidAnimOffset = THREE.MathUtils.lerp(0, Math.PI / 2, ease);
+            } else {
+                let t = (loopProgress - 0.8) / 0.2;
+                let ease = t * t * t * t * t;
+                baseY = THREE.MathUtils.lerp(0, 15, ease);
+                baseRotY = THREE.MathUtils.lerp(Math.PI / 5, -Math.PI / 2, ease);
+            }
+
+            const hoverY = Math.sin(loopProgress * Math.PI * 2 * 2) * 0.3;
+            
+            macbookGroup.position.y = baseY + hoverY;
+            macbookGroup.rotation.y = baseRotY;
+            macbookGroup.rotation.x = baseRotX;
+
+            if (lidNode) {
+                lidNode.rotation.x = lidDefaultRotX + lidAnimOffset;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

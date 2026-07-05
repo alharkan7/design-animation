@@ -10,5 +10,6 @@
   { "folder": "schematic-blueprint", "name": "Line Art & Schematic Blueprint" },
   { "folder": "earth-cross-section", "name": "Earth Crust Cross-Section" },
   { "folder": "jet-airplane-flight", "name": "Jet Airplane Flight" },
-  { "folder": "iphone-demo", "name": "iPhone App Demo" }
+  { "folder": "iphone-demo", "name": "iPhone App Demo" },
+  { "folder": "macbook-demo", "name": "MacBook App Demo" }
 ]

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>iPhone App Demo</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent; }
+        canvas { display: block; }
+        #timing-dummy { display: none; }
+    </style>
+</head>
+<body>
+    <div id="timing-dummy"></div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // 1. Core Architecture: Dummy element for perfect video export loops
+        const durationMs = 8000;
+        document.getElementById('timing-dummy').animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            { duration: durationMs, iterations: 1 }
+        );
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 10);
+        
+        // 1. Core Architecture: Alpha true, preserveDrawingBuffer true
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Optional: for better color accuracy with GLTF
+        renderer.outputColorSpace = THREE.SRGBColorSpace; 
+        document.body.appendChild(renderer.domElement);
+
+        // 3. Materials & Lighting: Ambient + Directional
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        dirLight.position.set(5, 8, 5);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xaaccff, 1.5);
+        fillLight.position.set(-5, 0, -5);
+        scene.add(fillLight);
+
+        const textureLoader = new THREE.TextureLoader();
+        const screenTexture = textureLoader.load('/textures/screen.jpg');
+        screenTexture.colorSpace = THREE.SRGBColorSpace;
+        screenTexture.flipY = false; 
+        
+        // Fix upside down (flip Y) and stretch horizontally
+        const scaleX = 0.72; // Decreased from 0.85 to stretch wider
+        
+        // A negative repeat.y flips the image vertically so it's upright,
+        // without mirroring it horizontally.
+        screenTexture.repeat.set(scaleX, -1);
+        
+        // Offset counters the scaling and the negative repeat to keep it centered
+        screenTexture.offset.set((1 - scaleX) / 2, 1);
+
+        const iphoneGroup = new THREE.Group();
+        scene.add(iphoneGroup);
+
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load('/models/iphone.glb', (gltf) => {
+            const model = gltf.scene;
+            
+            let screenFound = false;
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    
+                    const matName = child.material.name ? child.material.name.toLowerCase() : '';
+                    const objName = child.name ? child.name.toLowerCase() : '';
+                    
+                    // Identify the screen mesh to apply our UI texture
+                    if (matName.includes('screen') || matName.includes('display') || matName === 'material_10' ||
+                        objName.includes('screen') || objName.includes('display') || objName.includes('scr') ||
+                        matName.includes('material.001') || objName === 'object_4') {
+                        
+                        child.material = new THREE.MeshBasicMaterial({ 
+                            map: screenTexture,
+                            side: THREE.DoubleSide
+                        });
+                        screenFound = true;
+                    } else if (child.material.isMeshStandardMaterial) {
+                        // Make chassis look premium and metallic
+                        child.material.roughness = 0.15;
+                        child.material.metalness = 0.8;
+                    }
+                }
+            });
+
+            // Normalize origin
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center);
+            
+            // Adjust rotation so the phone stands upright and faces the camera.
+            // A positive Math.PI/2 pitch fixes the upside-down and backward orientation.
+            model.rotation.x = Math.PI / 2;
+            
+            iphoneGroup.add(model);
+            
+            // Normalize scale so it fits nicely in view (approx 5 units tall)
+            const newBox = new THREE.Box3().setFromObject(iphoneGroup);
+            const newSize = newBox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(newSize.x, newSize.y, newSize.z);
+            const scale = 6 / maxDim;
+            iphoneGroup.scale.set(scale, scale, scale);
+
+            // Fallback screen overlay if model doesn't have a distinct screen material
+            if (!screenFound) {
+                const aspect = 9 / 16;
+                const h = 5.8;
+                const w = h * aspect;
+                const planeGeom = new THREE.PlaneGeometry(w, h);
+                const planeMat = new THREE.MeshBasicMaterial({ map: screenTexture });
+                const plane = new THREE.Mesh(planeGeom, planeMat);
+                plane.position.set(0, 0, 0.4); 
+                iphoneGroup.add(plane);
+            }
+        });
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.enablePan = false;
+        controls.enableZoom = false;
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 2. Animation & Timing: Native math-based tweening for perfect loops
+            const time = clock.getElapsedTime();
+            const loopProgress = (time % (durationMs / 1000)) / (durationMs / 1000); // 0.0 to 1.0
+
+            let baseY = 0, baseRotY = 0, baseRotX = 0, baseRotZ = 0;
+
+            if (loopProgress < 0.4) {
+                // Reveal Intro (0 to 3.2s)
+                let t = loopProgress / 0.4;
+                let ease = 1 - Math.pow(1 - t, 5); // easeOutQuint for buttery smooth settle
+                
+                // Start far below (-15), turned 180deg (Math.PI) showing the back, and tilted
+                baseY = THREE.MathUtils.lerp(-15, 0, ease);
+                baseRotY = THREE.MathUtils.lerp(Math.PI, 0, ease);
+                baseRotX = THREE.MathUtils.lerp(Math.PI / 4, 0, ease);
+                baseRotZ = THREE.MathUtils.lerp(-Math.PI / 8, 0, ease);
+            } else if (loopProgress > 0.8) {
+                // Exit Outro (6.4s to 8.0s)
+                let t = (loopProgress - 0.8) / 0.2;
+                let ease = t * t * t * t * t; // easeInQuint for snappy exit
+                
+                // Fly up and away to +15, turning away to show the back again
+                baseY = THREE.MathUtils.lerp(0, 15, ease);
+                baseRotY = THREE.MathUtils.lerp(0, -Math.PI, ease);
+                baseRotX = THREE.MathUtils.lerp(0, Math.PI / 4, ease);
+                baseRotZ = THREE.MathUtils.lerp(0, Math.PI / 8, ease);
+            }
+
+            // Continuous organic floating that runs the entire time
+            const hoverY = Math.sin(loopProgress * Math.PI * 2 * 2) * 0.2; // 2 vertical bobs
+            const hoverRotY = Math.sin(loopProgress * Math.PI * 2) * 0.15; // Gentle head shake
+            const hoverRotX = Math.cos(loopProgress * Math.PI * 2 * 2) * 0.05; // Gentle nod
+
+            // Combine cinematic keyframes with organic hover
+            iphoneGroup.position.y = baseY + hoverY;
+            iphoneGroup.rotation.y = baseRotY + hoverRotY;
+            iphoneGroup.rotation.x = baseRotX + hoverRotX;
+            iphoneGroup.rotation.z = baseRotZ;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

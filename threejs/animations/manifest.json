@@ -9,5 +9,6 @@
   { "folder": "abstract-particle-morphing", "name": "Abstract Particle Morphing" },
   { "folder": "schematic-blueprint", "name": "Line Art & Schematic Blueprint" },
   { "folder": "earth-cross-section", "name": "Earth Crust Cross-Section" },
-  { "folder": "jet-airplane-flight", "name": "Jet Airplane Flight" }
+  { "folder": "jet-airplane-flight", "name": "Jet Airplane Flight" },
+  { "folder": "iphone-demo", "name": "iPhone App Demo" }
 ]

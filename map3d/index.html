@@ -593,6 +593,12 @@
           width: auto;
           max-width: calc(100% - 2rem);
         }
+        #th-name, #data-table td:first-child {
+          width: 60%;
+        }
+        #th-count, #data-table td:last-child {
+          width: 40%;
+        }
       }
     </style>
   </head>
@@ -707,7 +713,7 @@
             <thead>
               <tr>
                 <th id="th-name" class="sortable" data-sort="name">Provinsi & Kota/Kab. <span class="sort-icon"></span></th>
-                <th id="th-count" class="sortable sort-active" data-sort="count">Total Count <span class="sort-icon"><i data-lucide="arrow-down" style="width:14px;height:14px;"></i></span></th>
+                <th id="th-count" class="sortable sort-active" data-sort="count">Total<span class="sort-icon"><i data-lucide="arrow-down" style="width:14px;height:14px;"></i></span></th>
               </tr>
             </thead>
             <tbody id="data-table-body">

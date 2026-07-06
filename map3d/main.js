@@ -246,11 +246,32 @@ async function initMap() {
     const maxValue = Math.max(...populationData.map(d => d.value[2]), 1);
 
     // Map Configuration
+    // Detect touch capability once (used by tooltip formatter and touch engine below)
+    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    let currentMode = 'rotate'; // 'rotate' | 'pan' | 'select' — mobile toolbar mode
+
     const option = {
       backgroundColor: '#d6e1e6',
 
       tooltip: {
-        show: false
+        show: true,
+        trigger: 'item',
+        formatter: function(params) {
+          // On mobile in SELECT mode, taps trigger the tooltip internally.
+          // Intercept to show our custom info card instead of the native tooltip.
+          if (isTouchDevice && currentMode === 'select' && window.showCityInfoCard) {
+            const name = params.name || (params.data && params.data.cityName);
+            if (name) {
+              setTimeout(() => window.showCityInfoCard(name), 0);
+            }
+          }
+          return '';
+        },
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        padding: 0,
+        textStyle: { color: 'transparent' },
+        extraCssText: 'box-shadow: none; pointer-events: none;'
       },
 
       visualMap: {
@@ -312,6 +333,10 @@ async function initMap() {
             show: true,
             formatter: function(params) {
               const nameUpper = params.name.toUpperCase();
+              
+              // Track hover natively from the WebGL emphasis engine
+              window.__lastHoveredGeo = params.name;
+              
               const sppgInfo = sppgDataMap.get(nameUpper);
               if (sppgInfo) {
                 return params.name + ' (' + sppgInfo.count + ')';
@@ -418,10 +443,34 @@ async function initMap() {
       myChart.resize();
     });
 
+
+    // ══════════════════════════════════════════════════════════════════════
+    // MOBILE INTERACTION MODE SYSTEM
+    // ══════════════════════════════════════════════════════════════════════
+    // ECharts GL's touch system can't be reliably overridden:
+    //   - 1-finger drag = rotate (hardcoded)
+    //   - 2-finger pinch = zoom (hardcoded)
+    //   - No 2-finger pan support
+    //   - Tap-to-select conflicts with rotation
+    //
+    // Solution: A mode-switching toolbar (like matplotlib 3D controls).
+    // Each mode maps the single-finger gesture to ONE clear action,
+    // eliminating all ambiguity.
+    //
+    //   ROTATE: Default ECharts GL behavior (1-finger rotate, pinch zoom)
+    //   PAN:    1-finger drag pans the map (rotation disabled)
+    //   SELECT: Tap to select a region/bar (rotation disabled, pinch zoom enabled)
+    //
+    // The toolbar only appears on touch devices. Desktop uses standard
+    // mouse interaction (left-click rotate, right-click pan, scroll zoom).
+    // ══════════════════════════════════════════════════════════════════════
+
     // Track hover state for reliable clicks on 3D objects
     let lastHoveredCity = null;
+    let hoverTimeout = null;
 
     myChart.on('mouseover', function(params) {
+      if (hoverTimeout) { clearTimeout(hoverTimeout); hoverTimeout = null; }
       if (params.name) {
         lastHoveredCity = params.name;
       } else if (params.data && params.data.cityName) {
@@ -430,30 +479,213 @@ async function initMap() {
     });
 
     myChart.on('mouseout', function() {
-      lastHoveredCity = null;
+      hoverTimeout = setTimeout(() => { lastHoveredCity = null; }, 150);
     });
 
-    // Handle clicks globally via ZRender to catch geo3D area clicks reliably
-    myChart.getZr().on('click', function(e) {
-      if (!lastHoveredCity) return;
-
+    window.showCityInfoCard = function(cityName) {
+      if (!cityName || cityName === 'Unknown') return;
       let province = 'Unknown';
-      let cityName = lastHoveredCity;
       let count = 0;
-
       const sppgInfo = sppgDataMap.get(cityName.toUpperCase());
-      if (sppgInfo) {
-        province = sppgInfo.province;
-        count = sppgInfo.count;
-      }
+      if (sppgInfo) { province = sppgInfo.province; count = sppgInfo.count; }
 
-      if (cityName !== 'Unknown') {
-        document.getElementById('info-city').textContent = cityName;
-        document.getElementById('info-province').textContent = province;
-        document.getElementById('info-count').textContent = new Intl.NumberFormat('id-ID').format(count);
-        document.getElementById('click-info-card').classList.remove('hidden');
+      document.getElementById('info-city').textContent = cityName;
+      document.getElementById('info-province').textContent = province;
+      document.getElementById('info-count').textContent = new Intl.NumberFormat('id-ID').format(count);
+      document.getElementById('click-info-card').classList.remove('hidden');
+    };
+
+    // Native ECharts click — works reliably on desktop and via synthetic mouse clicks on mobile
+    myChart.on('click', function(params) {
+      // On touch devices, only respond in select mode
+      if (isTouchDevice && currentMode !== 'select') return;
+
+      if (params.seriesType === 'bar3D' && params.data && params.data.cityName) {
+        window.showCityInfoCard(params.data.cityName);
+      }
+      if (params.componentType === 'geo3D' && params.name) {
+        window.showCityInfoCard(params.name);
       }
     });
+
+    // ── ZRender Click Fallback ─────────────────────────
+    // This handles cases where ECharts GL native click fails to trigger on the geo3D base map.
+    // Works natively on desktop, and on mobile via our synthetic mouse events in Select mode.
+    let zrMouseDownX = 0, zrMouseDownY = 0;
+    myChart.getZr().on('mousedown', function(e) {
+      zrMouseDownX = e.offsetX; zrMouseDownY = e.offsetY;
+    });
+    myChart.getZr().on('mouseup', function(e) {
+      if (isTouchDevice && currentMode !== 'select') return;
+      if (Math.abs(e.offsetX - zrMouseDownX) > 10 || Math.abs(e.offsetY - zrMouseDownY) > 10) return;
+      const cityName = lastHoveredCity || window.__lastHoveredGeo;
+      if (cityName) window.showCityInfoCard(cityName);
+    });
+
+    function dispatchSyntheticMouse(type, clientX, clientY, button = 0, buttons = 1, dx = 0, dy = 0) {
+      let targetEl = myChart.getZr().dom;
+      if (!targetEl) return;
+      const canvas = targetEl.querySelector('canvas');
+      if (canvas) targetEl = canvas;
+
+      const rect = targetEl.getBoundingClientRect();
+      const offsetX = clientX - rect.left;
+      const offsetY = clientY - rect.top;
+
+      const opts = {
+        clientX: clientX,
+        clientY: clientY,
+        screenX: clientX,
+        screenY: clientY,
+        button: button,
+        buttons: buttons,
+        bubbles: true,
+        cancelable: true,
+        view: window
+      };
+      
+      const ev = new MouseEvent(type, opts);
+
+      Object.defineProperty(ev, 'offsetX', { value: offsetX, configurable: true });
+      Object.defineProperty(ev, 'offsetY', { value: offsetY, configurable: true });
+      Object.defineProperty(ev, 'movementX', { value: dx, configurable: true });
+      Object.defineProperty(ev, 'movementY', { value: dy, configurable: true });
+      Object.defineProperty(ev, 'which', { value: button === 2 ? 3 : 1, configurable: true });
+      
+      targetEl.dispatchEvent(ev);
+    }
+
+    // ── Mode switching engine (touch devices only) ──────────────────────
+    function setMode(mode) {
+      currentMode = mode;
+
+      // Auto-pause rotation when switching away from rotate mode
+      if (mode !== 'rotate' && isRotating) {
+        setRotation(false);
+      }
+
+      // Update toolbar active state
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+    }
+
+    if (isTouchDevice) {
+      // Show the toolbar and adjust layout
+      const toolbar = document.getElementById('mobile-toolbar');
+      if (toolbar) {
+        toolbar.style.display = 'flex';
+        document.body.classList.add('has-touch-toolbar');
+      }
+
+      // Toolbar button clicks
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          setMode(btn.dataset.mode);
+        });
+      });
+
+      // ── PAN MODE: 1-finger drag pans the map ────────────────────────
+      // We map 1-finger drag to a synthetic right-mouse drag, which ECharts GL
+      // handles natively (and flawlessly) for panning.
+      let isPanning = false;
+      let lastPanTouch = null;
+
+      chartDom.addEventListener('touchstart', function(e) {
+        if (currentMode === 'pan' && e.touches.length === 1) {
+          isPanning = true;
+          e.stopPropagation();
+          const touch = e.touches[0];
+          lastPanTouch = { x: touch.clientX, y: touch.clientY };
+          dispatchSyntheticMouse('mousedown', touch.clientX, touch.clientY, 2, 2, 0, 0);
+        } else if (currentMode === 'pan') {
+          isPanning = false;
+        }
+      }, { capture: true, passive: false });
+
+      chartDom.addEventListener('touchmove', function(e) {
+        if (currentMode !== 'pan') return;
+        if (e.touches.length !== 1 || !isPanning) {
+          if (currentMode === 'pan') isPanning = false;
+          return;
+        }
+
+        e.stopPropagation();
+        const touch = e.touches[0];
+        const dx = lastPanTouch ? touch.clientX - lastPanTouch.x : 0;
+        const dy = lastPanTouch ? touch.clientY - lastPanTouch.y : 0;
+        lastPanTouch = { x: touch.clientX, y: touch.clientY };
+        
+        dispatchSyntheticMouse('mousemove', touch.clientX, touch.clientY, 2, 2, dx, dy);
+      }, { capture: true, passive: false });
+
+      chartDom.addEventListener('touchend', function(e) {
+        if (currentMode === 'pan') {
+          if (isPanning && e.changedTouches && e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            dispatchSyntheticMouse('mouseup', touch.clientX, touch.clientY, 2, 0);
+          }
+          isPanning = false;
+        }
+      }, { capture: true, passive: true });
+
+      // ── SELECT MODE: tap to select nearest element ──────────────────
+      let selectTap = null;
+
+      chartDom.addEventListener('touchstart', function(e) {
+        if (currentMode === 'select' && e.touches.length === 1) {
+          const touch = e.touches[0];
+          selectTap = {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            time: Date.now()
+          };
+          // Intercept touchstart to prevent ECharts GL from starting a drag/rotation
+          e.stopPropagation();
+        } else if (currentMode === 'select') {
+          selectTap = null;
+        }
+      }, { capture: true, passive: false });
+
+      chartDom.addEventListener('touchmove', function(e) {
+        if (currentMode !== 'select') return;
+        // Only isolate single-finger gestures; preserve multi-finger pinch-zoom
+        if (e.touches.length !== 1) return;
+        if (selectTap) {
+          const touch = e.touches[0];
+          const dx = Math.abs(touch.clientX - selectTap.clientX);
+          const dy = Math.abs(touch.clientY - selectTap.clientY);
+          if (dx > 10 || dy > 10) selectTap = null; // It's a drag, not a tap
+        }
+        e.stopPropagation();
+      }, { capture: true, passive: false });
+
+      chartDom.addEventListener('touchend', function(e) {
+        if (currentMode !== 'select') return;
+        if (!selectTap) return;
+        
+        // Prevent default browser click emulation
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        // Prevent event from bubbling down to ECharts touch handlers
+        e.stopPropagation();
+
+        if (Date.now() - selectTap.time > 500) { selectTap = null; return; }
+
+        const clientX = selectTap.clientX;
+        const clientY = selectTap.clientY;
+        selectTap = null;
+
+        // Dispatches synthetic mouse events at the tap coordinates.
+        // This makes ECharts GL run its native WebGL raycaster on mobile!
+        dispatchSyntheticMouse('mousemove', clientX, clientY, 0, 1);
+        dispatchSyntheticMouse('mousedown', clientX, clientY, 0, 1);
+        dispatchSyntheticMouse('mouseup', clientX, clientY, 0, 0);
+        dispatchSyntheticMouse('click', clientX, clientY, 0, 0);
+      }, { capture: true, passive: false });
+    }
 
     let isRotating = true;
 
@@ -466,7 +698,7 @@ async function initMap() {
     function updateRotationIcon() {
       const toggleBtn = document.getElementById('rotation-toggle-btn');
       if (toggleBtn) {
-        toggleBtn.innerHTML = `<i data-lucide="${isRotating ? 'pause' : 'play'}" aria-hidden="true"></i><span id="rotation-text">${isRotating ? 'Pause' : 'Resume'}</span>`;
+        toggleBtn.innerHTML = `<i data-lucide="${isRotating ? 'pause' : 'play'}" aria-hidden="true" style="width: 18px; height: 18px;"></i><span id="rotation-text">${isRotating ? 'Pause' : 'Resume'}</span>`;
         if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
       }
     }
@@ -479,12 +711,15 @@ async function initMap() {
       }
     });
 
-    // Stop rotation when the user interacts anywhere on the map
+    // Stop rotation when the user interacts anywhere on the map.
+    // On touch devices in rotate mode, any touch stops auto-rotate.
+    // In pan/select modes, rotation is already paused by setMode().
     myChart.getZr().on('mousedown', function() {
-      if (isRotating) {
-        isRotating = false;
-        updateRotationIcon();
-      }
+      if (!isRotating) return;
+      // On touch devices, only auto-stop in rotate mode
+      if (isTouchDevice && currentMode !== 'rotate') return;
+      isRotating = false;
+      updateRotationIcon();
     });
 
     // Handle close button
@@ -572,8 +807,10 @@ async function initMap() {
         
         pRow.innerHTML = `
           <td class="prov-name-cell">
-            <span class="prov-icon"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></span>
-            <span class="prov-text">${prov.name}</span>
+            <div class="prov-name-inner">
+              <span class="prov-icon"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></span>
+              <span class="prov-text">${prov.name}</span>
+            </div>
           </td>
           <td>${new Intl.NumberFormat('id-ID').format(prov.total)}</td>
         `;

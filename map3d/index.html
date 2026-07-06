@@ -27,11 +27,14 @@
         top: 0;
         left: 0;
         z-index: 1;
+        touch-action: none; /* Crucial for allowing 2-finger pan on mobile */
       }
       .overlay {
         position: absolute;
         top: 2rem;
         left: 2rem;
+        width: 380px;
+        max-width: calc(100vw - 4rem);
         z-index: 10;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(10px);
@@ -39,7 +42,7 @@
         border: 1px solid rgba(0, 0, 0, 0.1);
         padding: 1.5rem;
         border-radius: 16px;
-        max-width: 320px;
+        box-sizing: border-box;
         box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
         pointer-events: auto; /* allow clicking inside */
         transition: opacity 0.3s ease, transform 0.3s ease;
@@ -187,7 +190,7 @@
         position: absolute;
         bottom: 6rem;
         right: 2rem;
-        z-index: 20;
+        z-index: 1000;
         background: rgba(255, 255, 255, 0.9);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -196,17 +199,15 @@
         padding: 0.75rem 2.5rem 0.75rem 1rem;
         width: auto;
         min-width: 220px;
-        white-space: nowrap;
+        box-sizing: border-box;
         box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
         pointer-events: auto;
-        transform: translateY(0) scale(1);
         opacity: 1;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .info-card.hidden {
         opacity: 0;
         pointer-events: none;
-        transform: translateY(-20px) scale(0.95);
       }
       .info-row {
         display: flex;
@@ -400,6 +401,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         background: #f8fafc;
         z-index: 50;
         display: flex;
@@ -499,6 +501,7 @@
         position: sticky;
         top: 0;
         z-index: 2;
+        white-space: nowrap;
       }
       th.sortable {
         cursor: pointer;
@@ -542,7 +545,7 @@
         font-weight: 400;
         line-height: 1.5;
       }
-      .prov-name-cell {
+      .prov-name-inner {
         display: flex;
         align-items: flex-start;
       }
@@ -560,12 +563,88 @@
         transform: rotate(90deg);
       }
 
+      /* Mobile Touch Mode Toolbar */
+      .mobile-toolbar {
+        position: absolute;
+        top: calc(2rem + 44px + 0.75rem);
+        right: 2rem;
+        z-index: 8;
+        display: none; /* Shown via JS on touch devices */
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        padding: 4px;
+        gap: 4px;
+        width: 44px;
+        box-sizing: border-box;
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.15);
+      }
+      .mode-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+        color: #64748b;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
+      }
+      .mode-btn svg {
+        width: 18px !important;
+        height: 18px !important;
+        flex-shrink: 0;
+      }
+      .show-info-btn svg,
+      .show-data-btn svg,
+      .rotation-toggle-btn svg {
+        width: 18px !important;
+        height: 18px !important;
+        flex-shrink: 0;
+      }
+      .toggle-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+        flex-shrink: 0;
+      }
+      #close-info-card svg,
+      .hint-desktop svg,
+      .hint-mobile svg {
+        width: 16px !important;
+        height: 16px !important;
+        flex-shrink: 0;
+      }
+      .mode-btn.active {
+        background: #ea580c;
+        color: white;
+        box-shadow: 0 2px 10px rgba(234, 88, 12, 0.35);
+      }
+      .mode-btn:not(.active):active {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
       @media (max-width: 768px) {
-        .info-overlay {
+        .mobile-toolbar {
+          top: calc(1rem + 44px + 0.5rem);
+          right: 1rem;
+        }
+        .data-view {
+          padding: 1rem;
+          padding-bottom: 2rem;
+        }
+        .overlay {
           top: 1rem;
           left: 1rem;
-          width: calc(100% - 2rem);
-          max-width: 350px;
+          right: 1rem;
+          width: auto;
+          max-width: none;
         }
         .show-info-btn {
           top: 1rem;
@@ -588,10 +667,13 @@
           height: 40px;
         }
         .info-card {
-          bottom: 5.5rem;
+          bottom: calc(2rem + 40px + 1rem);
           right: 1rem;
-          width: auto;
-          max-width: calc(100% - 2rem);
+        }
+        .info-card .info-row:first-of-type {
+          flex-direction: column-reverse;
+          align-items: flex-start;
+          gap: 0.15rem;
         }
         #th-name, #data-table td:first-child {
           width: 60%;
@@ -606,18 +688,18 @@
     <div id="chart-container"></div>
     
     <button id="show-info" class="show-info-btn hidden" aria-label="Show info" title="Show info">
-      <i data-lucide="info" aria-hidden="true"></i>
+      <i data-lucide="info" aria-hidden="true" style="width: 18px; height: 18px;"></i>
     </button>
 
     <button id="show-data-btn" class="show-data-btn" aria-label="Show Data Table" title="Show Data Table">
-      <i data-lucide="table" aria-hidden="true"></i>
+      <i data-lucide="table" aria-hidden="true" style="width: 18px; height: 18px;"></i>
     </button>
 
     <div id="info-overlay" class="overlay">
       <div class="overlay-header">
         <h1>Sebaran Lokasi SPPG</h1>
         <button id="hide-info" class="toggle-btn" aria-label="Hide info" title="Hide info">
-          <i data-lucide="x" aria-hidden="true"></i>
+          <i data-lucide="x" aria-hidden="true" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
       <p>As of 5 June 2026 21:14:30 WIB from <a href="https://www.bgn.go.id/operasional-sppg" class="source-link" target="_blank" rel="noopener noreferrer">bgn.go.id</a></p>
@@ -652,22 +734,40 @@
         </div>
       </div>
 
-      <ul class="controls-hint" style="list-style: none; margin: 1rem 0 0 0; padding: 1rem 0 0 0; display: flex; flex-direction: column; gap: 0.5rem; color: #334155; font-size: 0.85rem;">
-        <li style="display: flex; align-items: center; gap: 0.5rem;">
+      <ul id="controls-hint-list" class="controls-hint" style="list-style: none; margin: 1rem 0 0 0; padding: 1rem 0 0 0; display: flex; flex-direction: column; gap: 0.5rem; color: #334155; font-size: 0.85rem;">
+        <!-- Desktop hints (hidden on touch devices via JS) -->
+        <li class="hint-desktop" style="display: flex; align-items: center; gap: 0.5rem;">
           <i data-lucide="mouse-pointer-click" style="width: 16px; height: 16px;"></i>
-          <span><strong>Click & Drag</strong> to rotate map</span>
+          <span><strong>Click &amp; Drag</strong> to rotate map</span>
         </li>
-        <li style="display: flex; align-items: center; gap: 0.5rem;">
+        <li class="hint-desktop" style="display: flex; align-items: center; gap: 0.5rem;">
           <i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i>
           <span><strong>Scroll</strong> to zoom</span>
         </li>
-        <li style="display: flex; align-items: center; gap: 0.5rem;">
+        <li class="hint-desktop" style="display: flex; align-items: center; gap: 0.5rem;">
           <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
           <span><strong>Click region</strong> to view details</span>
         </li>
-        <li style="display: flex; align-items: center; gap: 0.5rem;">
+        <li class="hint-desktop" style="display: flex; align-items: center; gap: 0.5rem;">
           <i data-lucide="keyboard" style="width: 16px; height: 16px;"></i>
           <span><strong>Spacebar</strong> to pause/resume</span>
+        </li>
+        <!-- Mobile hints (hidden on desktop via JS) -->
+        <li class="hint-mobile" style="display: none; align-items: center; gap: 0.5rem;">
+          <i data-lucide="layout-grid" style="width: 16px; height: 16px;"></i>
+          <span>Use the <strong>toolbar below</strong> to switch modes</span>
+        </li>
+        <li class="hint-mobile" style="display: none; align-items: center; gap: 0.5rem;">
+          <i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i>
+          <span><strong>Rotate</strong> mode: drag to orbit, pinch to zoom</span>
+        </li>
+        <li class="hint-mobile" style="display: none; align-items: center; gap: 0.5rem;">
+          <i data-lucide="move" style="width: 16px; height: 16px;"></i>
+          <span><strong>Pan</strong> mode: drag to move the map</span>
+        </li>
+        <li class="hint-mobile" style="display: none; align-items: center; gap: 0.5rem;">
+          <i data-lucide="crosshair" style="width: 16px; height: 16px;"></i>
+          <span><strong>Select</strong> mode: tap a region for details</span>
         </li>
       </ul>
     </div>
@@ -682,7 +782,7 @@
         <div id="info-province" class="info-province">Province</div>
       </div>
       <div class="info-row">
-        <div class="stat-label">Data Count:</div>
+        <div class="stat-label">Count:</div>
         <div id="info-count" class="stat-value">0</div>
       </div>
     </div>
@@ -692,9 +792,22 @@
     </a>
 
     <button id="rotation-toggle-btn" class="rotation-toggle-btn" title="Toggle Rotation (Space)">
-      <i data-lucide="pause" aria-hidden="true" id="rotation-icon"></i>
+      <i data-lucide="pause" aria-hidden="true" id="rotation-icon" style="width: 18px; height: 18px;"></i>
       <span id="rotation-text">Pause</span>
     </button>
+
+    <!-- Mobile Touch Mode Toolbar -->
+    <div id="mobile-toolbar" class="mobile-toolbar">
+      <button id="mode-rotate" class="mode-btn active" data-mode="rotate" aria-label="Rotate mode" title="Rotate Mode">
+        <i data-lucide="rotate-cw" aria-hidden="true" style="width: 18px; height: 18px;"></i>
+      </button>
+      <button id="mode-pan" class="mode-btn" data-mode="pan" aria-label="Pan mode" title="Pan Mode">
+        <i data-lucide="move" aria-hidden="true" style="width: 18px; height: 18px;"></i>
+      </button>
+      <button id="mode-select" class="mode-btn" data-mode="select" aria-label="Select mode" title="Select Mode">
+        <i data-lucide="crosshair" aria-hidden="true" style="width: 18px; height: 18px;"></i>
+      </button>
+    </div>
 
     <!-- Data View Container -->
     <div id="data-view-container" class="data-view hidden">
@@ -704,7 +817,7 @@
           <div class="data-controls">
             <button id="toggle-all-cities" class="btn-secondary">Show All</button>
             <button id="close-data-view" aria-label="Close Data View" title="Close Data View">
-              <i data-lucide="x" aria-hidden="true"></i>
+              <i data-lucide="x" aria-hidden="true" style="width: 18px; height: 18px;"></i>
             </button>
           </div>
         </div>
@@ -726,6 +839,13 @@
 
     <script>
       if (window.lucide?.createIcons) window.lucide.createIcons();
+
+      // Toggle desktop/mobile control hints based on touch capability
+      const hasTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      if (hasTouch) {
+        document.querySelectorAll('.hint-desktop').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.hint-mobile').forEach(el => el.style.display = 'flex');
+      }
 
       if (window.innerWidth <= 768) {
         document.getElementById('info-overlay').classList.add('hidden');

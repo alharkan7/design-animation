@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../src/style.css" />
-    <title>Sebaran Data BGN - 3D Map</title>
+    <title>Sebaran Lokasi SPPG di Indonesia</title>
     <!-- Load ECharts and ECharts-GL -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
@@ -18,6 +18,7 @@
         overflow: hidden;
         background: #d6e1e6; /* Soft blue-grey water background matching the project theme */
         color: #1e293b;
+        font-family: 'Lora', serif;
       }
       #chart-container {
         width: 100vw;
@@ -61,16 +62,28 @@
       h1 {
         margin: 0 0 0.5rem 0;
         font-size: 1.8rem;
-        background: linear-gradient(to right, #ea580c, #f59e0b);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #1e293b;
+        background: none;
+        -webkit-text-fill-color: initial;
+        -webkit-background-clip: initial;
+        background-clip: initial;
       }
       p {
         margin: 0;
         color: #475569;
         font-size: 0.95rem;
         line-height: 1.5;
+      }
+      .source-link {
+        color: #ea580c;
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.2s, color 0.2s;
+      }
+      .source-link:hover {
+        color: #c2410c;
+        border-bottom-color: currentColor;
       }
       
       /* Legend styling */
@@ -278,11 +291,11 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(0, 0, 0, 0.1);
         color: #1e293b;
-        padding: 0.75rem;
+        width: 44px;
+        height: 44px;
+        padding: 0;
         border-radius: 8px;
         cursor: pointer;
-        font-family: inherit;
-        font-weight: 500;
         transition: all 0.2s;
         opacity: 1;
         pointer-events: auto;
@@ -291,7 +304,7 @@
         justify-content: center;
       }
       .show-info-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 1);
         border-color: #ea580c;
       }
       .show-info-btn.hidden {
@@ -307,7 +320,8 @@
         color: #1e293b;
         text-decoration: none;
         background: rgba(255, 255, 255, 0.1);
-        padding: 0.75rem 1.5rem;
+        padding: 0 1.5rem;
+        height: 48px;
         border-radius: 8px;
         border: 1px solid rgb(110, 110, 110, 0.5);
         backdrop-filter: blur(10px);
@@ -316,6 +330,9 @@
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
+        font-family: inherit;
+        font-size: 1rem;
+        box-sizing: border-box;
       }
       .home-link:hover {
         background: rgba(255, 255, 255, 0.2);
@@ -330,7 +347,8 @@
         z-index: 10;
         color: #1e293b;
         background: rgba(255, 255, 255, 0.1);
-        padding: 0.75rem 1rem;
+        padding: 0 1.5rem;
+        height: 48px;
         border-radius: 8px;
         border: 1px solid rgb(110, 110, 110, 0.5);
         backdrop-filter: blur(10px);
@@ -340,6 +358,9 @@
         gap: 0.5rem;
         cursor: pointer;
         font-weight: 500;
+        font-family: inherit;
+        font-size: 1rem;
+        box-sizing: border-box;
       }
       .rotation-toggle-btn:hover {
         background: rgba(255, 255, 255, 0.2);
@@ -347,6 +368,198 @@
         color: #ea580c;
         transform: translateY(-2px);
       }
+
+      /* Data View Styles */
+      .show-data-btn {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        z-index: 9;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #1e293b;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .show-data-btn:hover {
+        background: rgba(255, 255, 255, 1);
+        border-color: #ea580c;
+      }
+
+      .data-view {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #f8fafc;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        padding: 2rem;
+        box-sizing: border-box;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      .data-view-inner {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .data-view.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.98);
+      }
+      .data-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      .data-header h2 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 2rem;
+      }
+      .data-controls {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+      .btn-secondary {
+        background: white;
+        border: 1px solid #cbd5e1;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        color: #334155;
+        font-family: inherit;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .btn-secondary:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+      }
+      #close-data-view {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        background: rgba(0,0,0,0.05);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        color: #475569;
+        transition: all 0.2s;
+      }
+      #close-data-view:hover {
+        background: rgba(0,0,0,0.1);
+        color: #1e293b;
+      }
+      .table-container {
+        flex: 1;
+        overflow-y: auto;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+      #data-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      #data-table th, #data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: top;
+      }
+      #data-table th:last-child, #data-table td:last-child {
+        text-align: right;
+      }
+      #data-table th {
+        background: #f8fafc;
+        font-weight: 600;
+        color: #475569;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s;
+      }
+      th.sortable:hover {
+        background: #f1f5f9;
+      }
+      .sort-icon {
+        display: inline-flex;
+        align-items: center;
+        width: 14px;
+        height: 14px;
+        vertical-align: middle;
+        margin-left: 4px;
+        color: #94a3b8;
+      }
+      th.sort-active .sort-icon {
+        color: #1e293b;
+      }
+      .row-province {
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      .row-province:hover {
+        background: #f1f5f9;
+      }
+      .row-city {
+        background: #f8fafc;
+        display: none;
+      }
+      .row-city.visible {
+        display: table-row;
+      }
+      .city-name {
+        padding-left: 2.5rem !important;
+        color: #475569;
+        font-weight: 400;
+        line-height: 1.5;
+      }
+      .prov-name-cell {
+        display: flex;
+        align-items: flex-start;
+      }
+      .prov-icon {
+        flex: 0 0 24px;
+        display: inline-flex;
+        margin-top: 4px;
+        transition: transform 0.2s;
+      }
+      .prov-text {
+        flex: 1;
+        line-height: 1.5;
+      }
+      .row-province.expanded .prov-icon {
+        transform: rotate(90deg);
+      }
+
       @media (max-width: 768px) {
         .info-overlay {
           top: 1rem;
@@ -358,15 +571,21 @@
           top: 1rem;
           left: 1rem;
         }
+        .show-data-btn {
+          top: 1rem;
+          right: 1rem;
+        }
         .home-link {
           bottom: 2rem;
           left: 1rem;
-          padding: 0.5rem 1rem;
+          padding: 0 1rem;
+          height: 40px;
         }
         .rotation-toggle-btn {
           bottom: 2rem;
           right: 1rem;
-          padding: 0.5rem 0.75rem;
+          padding: 0 1rem;
+          height: 40px;
         }
         .info-card {
           bottom: 5.5rem;
@@ -384,14 +603,18 @@
       <i data-lucide="info" aria-hidden="true"></i>
     </button>
 
+    <button id="show-data-btn" class="show-data-btn" aria-label="Show Data Table" title="Show Data Table">
+      <i data-lucide="table" aria-hidden="true"></i>
+    </button>
+
     <div id="info-overlay" class="overlay">
       <div class="overlay-header">
-        <h1>Sebaran Data BGN</h1>
+        <h1>Sebaran Lokasi SPPG</h1>
         <button id="hide-info" class="toggle-btn" aria-label="Hide info" title="Hide info">
           <i data-lucide="x" aria-hidden="true"></i>
         </button>
       </div>
-      <p>Interactive 3D visualization of data distribution across Indonesian regencies/cities.</p>
+      <p>As of 5 June 2026 21:14:30 WIB from <a href="https://www.bgn.go.id/operasional-sppg" class="source-link" target="_blank" rel="noopener noreferrer">bgn.go.id</a></p>
       
       <div class="legend-box">
         <div class="legend-title">Legend</div>
@@ -467,8 +690,41 @@
       <span id="rotation-text">Pause</span>
     </button>
 
+    <!-- Data View Container -->
+    <div id="data-view-container" class="data-view hidden">
+      <div class="data-view-inner">
+        <div class="data-header">
+          <h2>Sebaran Lokasi SPPG</h2>
+          <div class="data-controls">
+            <button id="toggle-all-cities" class="btn-secondary">Show All</button>
+            <button id="close-data-view" aria-label="Close Data View" title="Close Data View">
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table id="data-table">
+            <thead>
+              <tr>
+                <th id="th-name" class="sortable" data-sort="name">Provinsi & Kota/Kab. <span class="sort-icon"></span></th>
+                <th id="th-count" class="sortable sort-active" data-sort="count">Total Count <span class="sort-icon"><i data-lucide="arrow-down" style="width:14px;height:14px;"></i></span></th>
+              </tr>
+            </thead>
+            <tbody id="data-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <script>
       if (window.lucide?.createIcons) window.lucide.createIcons();
+
+      if (window.innerWidth <= 768) {
+        document.getElementById('info-overlay').classList.add('hidden');
+        document.getElementById('show-info').classList.remove('hidden');
+      }
 
       document.getElementById('hide-info').addEventListener('click', () => {
         document.getElementById('info-overlay').classList.add('hidden');

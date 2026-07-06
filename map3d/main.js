@@ -207,29 +207,37 @@ async function initMap() {
       }
       return result;
     }
-    const colorGood = [242, 239, 233];
-    const colorPoor = [224, 122, 95];
 
-    // Generate region colors based on SPPG data
-    const regionsData = geoJson.features.map((feature) => {
-      const name = feature.properties.name;
-      const sppgInfo = sppgDataMap.get(name.toUpperCase());
+    const baseMapColors = {
+      warm: { good: [242, 239, 233], poor: [224, 122, 95] },
+      blue: { good: [230, 240, 248], poor: [120, 160, 210] },
+      mono: { good: [248, 238, 238], poor: [220, 110, 110] }
+    };
 
-      let aqi = 50; // Default medium value
-      if (sppgInfo) {
-        aqi = Math.min(sppgInfo.count, 150);
-      }
+    function getRegionsData(paletteId) {
+      const colors = baseMapColors[paletteId] || baseMapColors.warm;
+      return geoJson.features.map((feature) => {
+        const name = feature.properties.name;
+        const sppgInfo = sppgDataMap.get(name.toUpperCase());
 
-      const factor = (aqi - 10) / 140;
-      const rgb = interpolateColor(colorGood, colorPoor, Math.max(0, Math.min(1, factor)));
-
-      return {
-        name: name,
-        itemStyle: {
-          color: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+        let count = 50; // Default medium value
+        if (sppgInfo) {
+          count = Math.min(sppgInfo.count, 150);
         }
-      };
-    });
+
+        const factor = (count - 10) / 140;
+        const rgb = interpolateColor(colors.good, colors.poor, Math.max(0, Math.min(1, factor)));
+
+        return {
+          name: name,
+          itemStyle: {
+            color: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
+          }
+        };
+      });
+    }
+
+    const regionsData = getRegionsData('warm');
 
     // Register the map
     echarts.registerMap('indonesia', geoJson);
@@ -288,10 +296,10 @@ async function initMap() {
           autoRotate: true,
           autoRotateAfterStill: 99999999,
           autoRotateSpeed: 1.5,
-          distance: 50,
+          distance: window.innerWidth <= 768 ? 60 : 50,
           alpha: 40,
           beta: -20,
-          center: [0, -5, 0],
+          center: window.innerWidth <= 768 ? [-16, -2, 0] : [0, -5, 0],
           panMouseButton: 'right',
           rotateMouseButton: 'left',
           zoomSensitivity: 2,
@@ -346,9 +354,15 @@ async function initMap() {
           tooltip: {
             show: false
           },
-          data: populationData,
+          // Start with zero heights for animation
+          data: populationData.map(item => {
+            if (typeof item === 'object') {
+              return { ...item, value: [item.value[0], item.value[1], 0] };
+            }
+            return [item[0], item[1], 0];
+          }),
           barSize: 0.15,
-          minHeight: 0.2,
+          minHeight: 0,
           itemStyle: {
             opacity: 0.8
           },
@@ -363,7 +377,10 @@ async function initMap() {
             label: {
               show: false
             }
-          }
+          },
+          animation: true,
+          animationDurationUpdate: 2000,
+          animationEasingUpdate: 'cubicOut'
         }
       ]
     };
@@ -386,6 +403,16 @@ async function initMap() {
     window.tooltipDataMap = tooltipDataMap;
 
     myChart.setOption(option);
+
+    // Trigger animation to rise up the spikes
+    setTimeout(() => {
+      myChart.setOption({
+        series: [{
+          data: populationData,
+          minHeight: 0.2
+        }]
+      });
+    }, 100);
 
     window.addEventListener('resize', () => {
       myChart.resize();
@@ -483,16 +510,160 @@ async function initMap() {
     }
 
     document.getElementById('color-palette').addEventListener('change', (e) => {
-      const newPalette = palettes[e.target.value];
+      const paletteId = e.target.value;
+      const newPalette = palettes[paletteId];
+      
       myChart.setOption({
         visualMap: {
           inRange: { color: newPalette }
+        },
+        geo3D: {
+          regions: getRegionsData(paletteId)
         }
       });
+      
       document.querySelector('.legend-color-gradient').style.background = `linear-gradient(to top, ${newPalette.join(', ')})`;
+      
+      const flatBox = document.querySelector('.legend-color-flat');
+      if (flatBox) {
+        const c1 = baseMapColors[paletteId].good;
+        const c2 = baseMapColors[paletteId].poor;
+        flatBox.style.background = `linear-gradient(to top, rgb(${c1[0]},${c1[1]},${c1[2]}), rgb(${c2[0]},${c2[1]},${c2[2]}))`;
+      }
     });
 
+    // -- Data View Table Generation --
+    const provinceMap = new Map();
+    for (const item of sppgData) {
+      const prov = item.PROVINCE || 'Unknown';
+      if (!provinceMap.has(prov)) {
+        provinceMap.set(prov, { name: prov, total: 0, cities: [] });
+      }
+      const pData = provinceMap.get(prov);
+      pData.total += item.COUNT;
+      pData.cities.push({ name: item.CITY_REGENCY, count: item.COUNT });
+    }
 
+    const provincesBase = Array.from(provinceMap.values());
+    let currentSortBy = 'count';
+    let currentSortOrder = 'desc';
+    let allExpanded = false;
+
+    function renderTable() {
+      const tbody = document.getElementById('data-table-body');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      
+      // Sort provinces
+      provincesBase.sort((a, b) => {
+        if (currentSortBy === 'name') {
+          return currentSortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+        } else {
+          return currentSortOrder === 'asc' ? a.total - b.total : b.total - a.total;
+        }
+      });
+
+      provincesBase.forEach((prov, pIndex) => {
+        // Province row
+        const pRow = document.createElement('tr');
+        pRow.className = 'row-province' + (allExpanded ? ' expanded' : '');
+        pRow.dataset.provIndex = pIndex;
+        
+        pRow.innerHTML = `
+          <td class="prov-name-cell">
+            <span class="prov-icon"><i data-lucide="chevron-right" style="width:16px;height:16px;"></i></span>
+            <span class="prov-text">${prov.name}</span>
+          </td>
+          <td>${new Intl.NumberFormat('id-ID').format(prov.total)}</td>
+        `;
+        tbody.appendChild(pRow);
+
+        // Sort cities
+        prov.cities.sort((a, b) => {
+          if (currentSortBy === 'name') {
+            return currentSortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+          } else {
+            return currentSortOrder === 'asc' ? a.count - b.count : b.count - a.count;
+          }
+        });
+
+        // City rows
+        prov.cities.forEach(city => {
+          const cRow = document.createElement('tr');
+          cRow.className = `row-city prov-group-${pIndex}` + (allExpanded ? ' visible' : '');
+          cRow.innerHTML = `
+            <td class="city-name">${city.name}</td>
+            <td>${new Intl.NumberFormat('id-ID').format(city.count)}</td>
+          `;
+          tbody.appendChild(cRow);
+        });
+
+        // Click handler to toggle cities
+        pRow.addEventListener('click', () => {
+          const isExpanded = pRow.classList.toggle('expanded');
+          const cityRows = document.querySelectorAll(`.prov-group-${pIndex}`);
+          cityRows.forEach(row => {
+            if (isExpanded) {
+              row.classList.add('visible');
+            } else {
+              row.classList.remove('visible');
+            }
+          });
+        });
+      });
+      if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+    }
+
+    renderTable();
+
+    // Sorting Headers
+    document.querySelectorAll('#data-table th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const sortBy = th.dataset.sort;
+        if (currentSortBy === sortBy) {
+          currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSortBy = sortBy;
+          currentSortOrder = sortBy === 'name' ? 'asc' : 'desc';
+        }
+        
+        // Update header UI
+        document.querySelectorAll('#data-table th.sortable').forEach(h => {
+          h.classList.remove('sort-active');
+          h.querySelector('.sort-icon').innerHTML = '';
+        });
+        th.classList.add('sort-active');
+        const iconName = currentSortOrder === 'asc' ? 'arrow-up' : 'arrow-down';
+        th.querySelector('.sort-icon').innerHTML = `<i data-lucide="${iconName}" style="width:14px;height:14px;"></i>`;
+        
+        renderTable();
+      });
+    });
+
+    // Toggle Data View
+    const btnShowData = document.getElementById('show-data-btn');
+    const btnCloseData = document.getElementById('close-data-view');
+    const dataContainer = document.getElementById('data-view-container');
+
+    if (btnShowData && btnCloseData && dataContainer) {
+      btnShowData.addEventListener('click', () => {
+        dataContainer.classList.remove('hidden');
+      });
+      btnCloseData.addEventListener('click', () => {
+        dataContainer.classList.add('hidden');
+      });
+    }
+
+    // Show/Hide All Toggle
+    const btnToggleAll = document.getElementById('toggle-all-cities');
+    if (btnToggleAll) {
+      btnToggleAll.addEventListener('click', () => {
+        allExpanded = !allExpanded;
+        btnToggleAll.textContent = allExpanded ? 'Hide All' : 'Show All';
+        renderTable();
+      });
+    }
 
   } catch (error) {
     console.error('Error loading map data:', error);

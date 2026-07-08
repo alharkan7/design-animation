@@ -27,6 +27,5 @@
   { "file": "layered-architecture.html", "name": "Layered Architecture Core (Cake)" },
   { "file": "saas-launch-momentum.html", "name": "SaaS Launch Momentum Cut" },
   { "file": "stop-motion-explainer.html", "name": "Stop Motion Explainer" },
-  { "file": "dither-motion.html", "name": "Dither Motion" },
-  { "file": "logo-spread.html", "name": "Logo Swarm Spread" }
+  { "file": "dither-motion.html", "name": "Dither Motion" }
 ]

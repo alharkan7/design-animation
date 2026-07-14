@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Mermaid Diagram</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --surface-1: #000000;
+      --surface-2: #09090b; 
+      --surface-3: #18181b; 
+      --surface-4: #27272a;
+      --accent-1: #3b82f6;
+      --text-main: #ffffff; 
+      --text-muted: #a1a1aa;
+      --border: #27272a;
+      
+      --mermaid-bg: #18181b;
+      --mermaid-border: #3f3f46;
+      --mermaid-text: #a1a1aa;
+    }
+
+    body {
+      margin: 0; padding: 0; overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      width: 100vw; height: 100vh;
+      background-color: var(--surface-1);
+    }
+
+    .sequence-container {
+      position: relative; width: 100vw; height: 100vh;
+      font-size: min(1.3vw, 2.2vh); 
+    }
+
+    /* SCENE MAIN */
+    .scene-main {
+      position: absolute; width: 100vw; height: 100vh;
+      box-sizing: border-box; display: flex; flex-direction: column;
+      visibility: visible; overflow: hidden; z-index: 1;
+      align-items: center; justify-content: center;
+      animation: sceneWipeOut 0.5s cubic-bezier(0.76, 0, 0.24, 1) 25.5s forwards;
+    }
+
+    @keyframes sceneWipeOut {
+      0% { visibility: visible; transform: scale(1); opacity: 1; filter: saturate(1); }
+      100% { visibility: hidden; transform: scale(0.95); opacity: 0; filter: saturate(0.5); }
+    }
+
+    .camera-pan {
+      width: 100vw; height: 100vh; position: absolute; top: 0; left: 0;
+      animation: camPan 25s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+    }
+    @keyframes camPan {
+      0%, 42.0% { transform: translateX(0); }
+      44.8%, 50.0% { transform: translateX(-200vw); }
+      52.8%, 100% { transform: translateX(0); }
+    }
+
+    .camera-zoom {
+      width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    
+    @media (min-aspect-ratio: 1/1) {
+      .vertical-layout { display: none !important; }
+      .horizontal-layout { display: block; }
+      
+      .diagram-container.left { left: -55.25em; top: 12em; }
+      .diagram-container.right { left: 70.25em; top: 12em; }
+      
+      .camera-zoom { animation: camZoom 25s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+      @keyframes camZoom {
+        0%, 8.4% { transform: scale(2.5) translate(-18.7em, 14.75em); }
+        12.4%, 27.2% { transform: scale(1) translate(0, 0); }
+        31.2%, 44.8% { transform: scale(0.4) translate(-2.25em, -3em); }
+        44.84%, 100% { transform: scale(1.8) translate(-2.25em, -6em); }
+      }
+    }
+
+    @media (max-aspect-ratio: 1/1) {
+      .vertical-layout { display: block; }
+      .horizontal-layout { display: none !important; }
+      
+      .diagram-container.left { left: 7.5em; top: -34em; }
+      .diagram-container.right { left: 7.5em; top: 40em; }
+      
+      .camera-zoom { animation: camZoomVert 25s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+      @keyframes camZoomVert {
+        0%, 8.4% { transform: scale(2.5) translate(-18.7em, 14.75em); }
+        12.4%, 27.2% { transform: scale(1) translate(0, 0); }
+        31.2%, 44.8% { transform: scale(0.9) translate(-5.25em, -16em); }
+        44.84%, 100% { transform: scale(1.2) translate(-2em, -8em); }
+      }
+    }
+
+    .chat-ui {
+      width: 65em; height: 44em;
+      background: transparent;
+      border: 0.1em solid transparent;
+      border-radius: 1.5em;
+      display: flex; flex-direction: column;
+      box-shadow: none;
+      animation: 
+        uiReveal 0.5s cubic-bezier(0.76, 0, 0.24, 1) 2.1s forwards, 
+        uiFadeToTransparent 0.5s 6.8s forwards;
+      position: relative;
+    }
+    @keyframes uiReveal {
+      0% { background-color: transparent; border-color: transparent; box-shadow: none; }
+      100% { background-color: var(--surface-2); border-color: var(--border); box-shadow: 0 1em 3em rgba(0,0,0,0.8); }
+    }
+    @keyframes uiFadeToTransparent {
+      100% { background-color: transparent; border-color: transparent; box-shadow: none; }
+    }
+
+    .chat-header {
+      height: 3.5em;
+      border-bottom: 0.1em solid var(--border);
+      display: flex; align-items: center; padding: 0 1.5em;
+      gap: 0.6em;
+      opacity: 0;
+      animation: headerReveal 0.5s cubic-bezier(0.76, 0, 0.24, 1) 2.1s forwards, elementFadeOut 0.5s 6.8s forwards;
+    }
+    @keyframes headerReveal {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes elementFadeOut {
+      100% { opacity: 0; visibility: hidden; }
+    }
+    
+    .chat-header-dot { width: 0.9em; height: 0.9em; border-radius: 50%; }
+    
+    .chat-body {
+      flex: 1; padding: 2em 3em; display: flex; flex-direction: column; gap: 2.5em;
+      position: relative;
+    }
+
+    .chat-bubble-user {
+      align-self: flex-end;
+      background: var(--surface-3);
+      border-radius: 1em 1em 0 1em;
+      border: 0.05em solid var(--border);
+      font-size: 1.2em; font-weight: 500; color: var(--text-main);
+      box-shadow: 0 0.4em 0.8em rgba(0,0,0,0.2);
+      z-index: 10;
+      
+      box-sizing: border-box;
+      overflow: hidden;
+      white-space: nowrap;
+      padding: 1em 1.5em;
+      height: 3.5em;
+      animation: 
+        bubblePop 0.3s cubic-bezier(0.76, 0, 0.24, 1) 0.2s both,
+        typing 1.5s steps(35, end) 0.5s forwards,
+        fadeOutFast 0.5s ease 12s forwards;
+    }
+
+    @keyframes bubblePop {
+      0% { width: 3em; opacity: 0; transform: scale(0.5); }
+      100% { width: 4em; opacity: 1; transform: scale(1); }
+    }
+    @keyframes typing {
+      0% { width: 4em; }
+      100% { width: 18em; } 
+    }
+
+    .chat-bubble-ai {
+      align-self: flex-start;
+      display: flex; gap: 1.5em;
+      width: 100%;
+      flex: 1;
+      animation: aiEnter 0.6s cubic-bezier(0.76, 0, 0.24, 1) 3.0s both;
+    }
+    @keyframes aiEnter {
+      0% { visibility: hidden; transform: translateY(2vh); opacity: 0; }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translateY(0); opacity: 1; }
+    }
+    
+    .ai-avatar {
+      width: 3em; height: 3em; border-radius: 0.8em; 
+      background: #d97757;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      border: 0.05em solid #d97757;
+      animation: fadeOutFast 0.5s ease 12s forwards;
+    }
+    .ai-avatar svg { width: 1.5em; height: 1.5em; fill: #ffffff; }
+    
+    /* Branch Lines */
+    .branch-lines {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+      animation: fadeOutFast 0.5s ease 12s forwards;
+    }
+    .draw-path {
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      animation: svgDraw 0.6s cubic-bezier(0.76, 0, 0.24, 1) 7.2s forwards;
+    }
+    @keyframes svgDraw {
+      100% { stroke-dashoffset: 0; }
+    }
+
+    /* The Diagram Containers */
+    .diagram-container {
+      flex: 1; background: var(--mermaid-bg); border: 0.1em solid var(--mermaid-border);
+      border-radius: 2em; padding: 2.5em 0;
+      display: flex; flex-direction: column; align-items: center;
+      position: relative;
+    }
+    .diagram-container.center {
+      background: var(--surface-1); border-color: var(--border);
+      animation: uiFadeToTransparent 0.5s ease 12s forwards;
+    }
+    .diagram-container.left, .diagram-container.right {
+      position: absolute; width: 54.5em; height: 28em; opacity: 0;
+      animation: fadeOutFast 0.5s ease 12s forwards;
+    }
+    .diagram-container.left {
+      --mermaid-bg: #0f172a; --mermaid-border: #1d4ed8; --mermaid-text: #93c5fd;
+      animation: s2DiagEnterLeft 0.6s cubic-bezier(0.76, 0, 0.24, 1) 7.3s forwards, fadeOutFast 0.5s ease 12s forwards;
+    }
+    .diagram-container.right {
+      --mermaid-bg: #064e3b; --mermaid-border: #047857; --mermaid-text: #6ee7b7;
+      animation: s2DiagEnterRight 0.6s cubic-bezier(0.76, 0, 0.24, 1) 7.5s forwards, fadeOutFast 0.5s ease 12s forwards;
+    }
+
+    @keyframes s2DiagEnterLeft {
+      0% { transform: translateX(5em); opacity: 0; } 100% { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes s2DiagEnterRight {
+      0% { transform: translateX(-5em); opacity: 0; } 100% { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Mermaid tag */
+    .mermaid-tag {
+      position: absolute; top: 1em; right: 1.5em;
+      background: var(--mermaid-bg); border: 0.05em solid var(--mermaid-border);
+      color: var(--mermaid-text); font-size: 0.8em; font-weight: 700;
+      padding: 0.5em 1em; border-radius: 0.5em; letter-spacing: 2px;
+      animation: tagPop 0.6s cubic-bezier(0.76, 0, 0.24, 1) 4.2s both, fadeOutFast 0.5s ease 12s forwards;
+    }
+    @keyframes tagPop {
+      0% { visibility: hidden; transform: scale(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: scale(1); }
+    }
+
+    @keyframes fadeOutFast {
+      0% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+
+    /* Diagram Nodes */
+    .diagram-row { display: flex; position: relative; z-index: 5; }
+    .diagram-row.node-1 { margin-bottom: 2em; }
+    .diagram-row.node-2 { margin-bottom: 2em; }
+    .diagram-row.node-3 { margin-bottom: 4em; }
+    .diagram-row.node-4 { gap: 8em; }
+    
+    .diagram-node {
+      width: 12em; height: 3em;
+      background: var(--mermaid-bg); border: 0.1em solid var(--mermaid-border);
+      color: var(--mermaid-text); display: flex; align-items: center; justify-content: center;
+      font-family: monospace; font-size: 0.9em; font-weight: bold;
+      border-radius: 2em; text-align: center;
+      animation: nodeEnter 0.5s cubic-bezier(0.76, 0, 0.24, 1) var(--delay) both;
+    }
+
+    @keyframes nodeEnter {
+      0% { visibility: hidden; transform: translateY(2vh); opacity: 0; }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: translateY(0); opacity: 1; }
+    }
+
+    /* Diagram Connections */
+    .conn-line {
+      position: absolute; background: var(--mermaid-border);
+      animation: lineDraw var(--dur) linear var(--delay) both;
+    }
+    .conn-line.static { position: relative; }
+    .conn-line.vertical { width: 0.1em; animation-name: drawV; }
+    .conn-line.horizontal { height: 0.1em; animation-name: drawH; }
+
+    @keyframes drawV {
+      0% { visibility: hidden; transform: scaleY(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: scaleY(1); }
+    }
+    @keyframes drawH {
+      0% { visibility: hidden; transform: scaleX(0); }
+      1% { visibility: visible; }
+      100% { visibility: visible; transform: scaleX(1); }
+    }
+    
+    .branch-label {
+      position: absolute; color: var(--mermaid-text); font-size: 0.8em; font-family: monospace;
+      animation: tagPop 0.3s cubic-bezier(0.76, 0, 0.24, 1) var(--delay) both;
+    }
+
+    /* LIMIT BANNER SECTION */
+    .limit-section {
+      position: absolute;
+      top: 50%; left: calc(50% + 200vw);
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .limit-card {
+      background: var(--surface-2); border: 0.1em solid var(--border); border-radius: 1.5em;
+      padding: 4em 6em; display: flex; flex-direction: column; align-items: center; gap: 1em;
+      box-shadow: 0 1em 4em rgba(0,0,0,0.5);
+    }
+    @keyframes limitCardExit {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.8); opacity: 0; }
+    }
+
+    .limit-icon { width: 5em; height: 5em; fill: #d97757; margin-bottom: 1em; }
+    .limit-title { font-size: 2.2em; font-weight: 900; color: #d97757; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+    .limit-sub { font-size: 1.2em; color: var(--text-muted); white-space: nowrap; }
+
+    /* SVG FREEFORM DIAGRAM (Scene 2 overlap) */
+    .diagram-svg-freeform {
+      position: absolute; inset: -0.1em;
+      border-radius: 2em;
+      background: radial-gradient(circle at top, #ffffff, #f8fafc);
+      border: 0.1em solid #e2e8f0;
+      box-shadow: 0 0 3em rgba(0,0,0,0.1), inset 0 0 1em rgba(0,0,0,0.05);
+      z-index: 20;
+      clip-path: inset(0 100% 0 0);
+      animation: svgWipe 1.5s cubic-bezier(0.76, 0, 0.24, 1) 13.5s forwards;
+      overflow: hidden;
+    }
+
+    @keyframes svgWipe {
+      0% { clip-path: inset(0 100% 0 0); }
+      100% { clip-path: inset(0 0 0 0); }
+    }
+
+    .wipe-scanner {
+      position: absolute; top: 0; left: 0; width: 0.5em; height: 100%;
+      background: #8b5cf6;
+      box-shadow: 0 0 2em 1em #8b5cf6;
+      transform: translateX(-100%);
+      animation: scanWipe 1.5s cubic-bezier(0.76, 0, 0.24, 1) 13.5s forwards;
+    }
+
+    @keyframes scanWipe {
+      0% { left: 0%; transform: translateX(0); opacity: 1; }
+      95% { opacity: 1; }
+      100% { left: 100%; transform: translateX(-100%); opacity: 0; }
+    }
+
+    .svg-tag {
+      position: absolute; top: 1em; left: 1.5em;
+      background: #f1f5f9; border: 0.05em solid #cbd5e1;
+      color: #64748b; font-size: 0.8em; font-weight: 700;
+      padding: 0.5em 1em; border-radius: 0.5em; letter-spacing: 2px;
+      opacity: 0;
+      animation: tagFadeIn 0.5s ease 13.8s forwards;
+      z-index: 10;
+    }
+    @keyframes tagFadeIn {
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sequence-container">
+    <div class="scene-main">
+      <div class="camera-pan">
+        
+        <div class="camera-zoom">
+          <div class="chat-ui">
+            <div class="chat-header">
+              <div class="chat-header-dot" style="background: #ff5f56;"></div>
+              <div class="chat-header-dot" style="background: #ffbd2e;"></div>
+              <div class="chat-header-dot" style="background: #27c93f;"></div>
+            </div>
+            
+            <div class="chat-body">
+              
+              <!-- Orthogonal Branching Lines -->
+              <div class="branch-lines">
+                <!-- HORIZONTAL LAYOUT -->
+                <svg class="branch-svg horizontal-layout" viewBox="-28 3.75 70.5 8.25" style="position: absolute; top: 3.75em; left: -28em; width: 70.5em; height: 8.25em; overflow: visible;">
+                  <path class="draw-path" d="M 42.5 3.75 L -26 3.75 Q -28 3.75, -28 5.75 L -28 12" fill="none" stroke="#71717a" stroke-width="0.4" stroke-linecap="round" />
+                </svg>
+                <svg class="branch-svg horizontal-layout" viewBox="62 3.75 35.5 8.25" style="position: absolute; top: 3.75em; left: 62em; width: 35.5em; height: 8.25em; overflow: visible;">
+                  <path class="draw-path" d="M 62 3.75 L 95.5 3.75 Q 97.5 3.75, 97.5 5.75 L 97.5 12" fill="none" stroke="#71717a" stroke-width="0.4" stroke-linecap="round" />
+                </svg>
+
+                <!-- VERTICAL LAYOUT -->
+                <svg class="branch-svg vertical-layout" viewBox="62 -20 6 23.75" style="position: absolute; top: -20em; left: 62em; width: 6em; height: 23.75em; overflow: visible;">
+                  <path class="draw-path" d="M 62 3.75 L 66 3.75 Q 68 3.75, 68 1.75 L 68 -18 Q 68 -20, 66 -20 L 62 -20" fill="none" stroke="#71717a" stroke-width="0.4" stroke-linecap="round" />
+                </svg>
+                <svg class="branch-svg vertical-layout" viewBox="62 3.75 6 50.25" style="position: absolute; top: 3.75em; left: 62em; width: 6em; height: 50.25em; overflow: visible;">
+                  <path class="draw-path" d="M 62 3.75 L 66 3.75 Q 68 3.75, 68 5.75 L 68 52 Q 68 54, 66 54 L 62 54" fill="none" stroke="#71717a" stroke-width="0.4" stroke-linecap="round" />
+                </svg>
+              </div>
+
+              <!-- Left Diagram -->
+              <!-- Left Diagram -->
+              <div class="diagram-container left" style="justify-content: center; padding: 0;">
+                <div class="mermaid-tag" style="animation-delay: 7.5s">MERMAID</div>
+                <div style="display: flex; flex-direction: row; align-items: center; gap: 1.5em; transform: scale(0.85); transform-origin: center;">
+                  <div class="diagram-node" style="--delay: 7.5s">User Login</div>
+                  <div class="conn-line horizontal static" style="width: 1.5em; transform-origin: left; --delay: 7.6s; --dur: 0.2s;"></div>
+                  <div class="diagram-node" style="--delay: 7.7s">OAuth Provider</div>
+                  <div class="conn-line horizontal static" style="width: 1.5em; transform-origin: left; --delay: 7.8s; --dur: 0.2s;"></div>
+                  <div class="diagram-node" style="--delay: 7.9s">Fetch Profile</div>
+                  <div class="conn-line horizontal static" style="width: 1.5em; transform-origin: left; --delay: 8.0s; --dur: 0.2s;"></div>
+                  <div class="diagram-node" style="--delay: 8.1s">Dashboard</div>
+                </div>
+              </div>
+
+              <!-- Right Diagram -->
+              <div class="diagram-container right" style="justify-content: center; padding: 0;">
+                <div class="mermaid-tag" style="animation-delay: 7.6s">MERMAID</div>
+                <div style="display: flex; flex-direction: row; align-items: center; gap: 1.5em; transform: scale(0.85); transform-origin: center;">
+                  <div class="diagram-node" style="--delay: 7.6s">Auth Request</div>
+                  <div class="conn-line horizontal static" style="width: 1.5em; transform-origin: left; --delay: 7.7s; --dur: 0.2s;"></div>
+                  <div class="diagram-node" style="--delay: 7.8s">2FA Prompt</div>
+                  <div class="conn-line horizontal static" style="width: 1.5em; transform-origin: left; --delay: 7.9s; --dur: 0.2s;"></div>
+                  
+                  <!-- Right column split -->
+                  <div style="display: flex; flex-direction: column; align-items: center; position: relative;">
+                    <div class="diagram-node" style="--delay: 8.0s; border-radius: 1.5em">Approved?</div>
+                    <div class="conn-line vertical" style="top: 3em; left: calc(50% - 0.05em); height: 1.5em; transform-origin: top; --delay: 8.1s; --dur: 0.2s;"></div>
+                    <div class="conn-line horizontal" style="top: 4.5em; right: 50%; width: 4.5em; transform-origin: right; --delay: 8.2s; --dur: 0.2s;"></div>
+                    <div class="conn-line horizontal" style="top: 4.5em; left: 50%; width: 4.5em; transform-origin: left; --delay: 8.2s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 4.5em; left: calc(50% - 4.5em - 0.05em); height: 1.5em; transform-origin: top; --delay: 8.3s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 4.5em; left: calc(50% + 4.5em - 0.05em); height: 1.5em; transform-origin: top; --delay: 8.3s; --dur: 0.2s;"></div>
+                    
+                    <div style="display: flex; gap: 1em; margin-top: 3em;">
+                      <div class="diagram-node" style="width: 8em; --delay: 8.4s">Denied</div>
+                      <div class="diagram-node" style="width: 8em; --delay: 8.4s">Granted</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chat-bubble-user">
+                Draw a login process diagram
+              </div>
+              
+              <div class="chat-bubble-ai">
+                <div class="ai-avatar">
+                  <svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v-1H1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+                </div>
+                
+                <!-- Center Diagram -->
+                <div class="diagram-container center" style="justify-content: center; padding: 0;">
+                  <div class="mermaid-tag" style="animation-delay: 4.2s">MERMAID</div>
+                  
+                  <div class="diagram-graph" style="position: relative; display: flex; flex-direction: column; align-items: center;">
+                    <div class="diagram-row node-1"><div class="diagram-node" style="--delay: 3.8s">Submit Credentials</div></div>
+                    <div class="diagram-row node-2"><div class="diagram-node" style="--delay: 4.0s">Authenticate Token</div></div>
+                    <div class="diagram-row node-3"><div class="diagram-node" style="--delay: 4.2s; border-radius: 1.5em">Is Valid?</div></div>
+                    <div class="diagram-row node-4">
+                      <div class="diagram-node" style="--delay: 4.6s">Show Error</div>
+                      <div class="diagram-node" style="--delay: 4.6s">Load Dashboard</div>
+                    </div>
+
+                    <div class="conn-line vertical" style="top: 3em; left: calc(50% - 0.05em); height: 2em; transform-origin: top; --delay: 3.9s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 8em; left: calc(50% - 0.05em); height: 2em; transform-origin: top; --delay: 4.1s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 13em; left: calc(50% - 0.05em); height: 1.5em; transform-origin: top; --delay: 4.3s; --dur: 0.1s;"></div>
+                    <div class="conn-line horizontal" style="top: 14.5em; right: 50%; width: 10em; transform-origin: right; --delay: 4.4s; --dur: 0.2s;"></div>
+                    <div class="conn-line horizontal" style="top: 14.5em; left: 50%; width: 10em; transform-origin: left; --delay: 4.4s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 14.5em; left: calc(50% - 10em - 0.05em); height: 2.5em; transform-origin: top; --delay: 4.5s; --dur: 0.2s;"></div>
+                    <div class="conn-line vertical" style="top: 14.5em; left: calc(50% + 10em - 0.05em); height: 2.5em; transform-origin: top; --delay: 4.5s; --dur: 0.2s;"></div>
+                    
+                    <div class="branch-label" style="top: 13.5em; left: calc(50% - 6em); --delay: 4.5s;">No</div>
+                    <div class="branch-label" style="top: 13.5em; left: calc(50% + 5em); --delay: 4.5s;">Yes</div>
+                  </div>
+
+                  <!-- NEW SVG FREEFORM DIAGRAM -->
+                  <div class="diagram-svg-freeform">
+                    <div class="wipe-scanner"></div>
+                    <div class="svg-tag">SVG</div>
+                    
+                    <svg viewBox="-40 -20 720 540" width="100%" height="100%" style="position: absolute; top: 0; left: 0; z-index: 1;" preserveAspectRatio="xMidYMid meet">
+                      <defs>
+                        <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+                          <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.2" />
+                        </filter>
+                      </defs>
+
+                      <g font-family="Inter, Helvetica Neue, sans-serif">
+                        <path d="M 320 115 L 320 145" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <path d="M 320 215 L 320 245" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+                        <path d="M 320 315 C 320 360, 120 340, 120 385" fill="none" stroke="#fecdd3" stroke-width="3" stroke-linecap="round" />
+                        <path d="M 320 315 C 320 360, 520 340, 520 385" fill="none" stroke="#bbf7d0" stroke-width="3" stroke-linecap="round" />
+
+                        <!-- Node 1: Blue -->
+                        <g transform="translate(180, 45)">
+                          <rect width="280" height="70" rx="12" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" filter="url(#shadow)"/>
+                          <rect x="20" y="15" width="40" height="40" rx="8" fill="#d1e9ff"/>
+                          <path d="M 32 30 A 8 8 0 1 1 48 30 L 48 34 L 50 34 L 50 46 L 30 46 L 30 34 L 32 34 Z" fill="#00477a" />
+                          <text x="80" y="41" fill="#00477a" font-size="16" font-weight="600">Submit Credentials</text>
+                        </g>
+
+                        <!-- Node 2: Purple -->
+                        <g transform="translate(180, 145)">
+                          <rect width="280" height="70" rx="12" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="2" filter="url(#shadow)"/>
+                          <rect x="20" y="15" width="40" height="40" rx="8" fill="#e2e8f0"/>
+                          <path d="M 40 23 L 52 28 L 52 36 C 52 44 46 50 40 52 C 34 50 28 44 28 36 L 28 28 Z" fill="#3b2f6b" />
+                          <text x="80" y="41" fill="#3b2f6b" font-size="16" font-weight="600">Authenticate Token</text>
+                        </g>
+
+                        <!-- Node 3: Yellow -->
+                        <g transform="translate(180, 245)">
+                          <rect width="280" height="70" rx="35" fill="#fefcf5" stroke="#f3e4c4" stroke-width="2" filter="url(#shadow)"/>
+                          <rect x="20" y="15" width="40" height="40" rx="20" fill="#fbeea3"/>
+                          <text x="40" y="42" fill="#7a5900" font-size="20" font-weight="bold" text-anchor="middle">?</text>
+                          <text x="80" y="41" fill="#7a5900" font-size="16" font-weight="600">Is Valid?</text>
+                        </g>
+
+                        <!-- Node 4 Left: Red -->
+                        <g transform="translate(-20, 385)">
+                          <rect width="280" height="70" rx="12" fill="#fff9f9" stroke="#f6dce0" stroke-width="2" filter="url(#shadow)"/>
+                          <rect x="20" y="15" width="40" height="40" rx="8" fill="#ffd4d6"/>
+                          <path d="M 32 27 L 48 43 M 48 27 L 32 43" stroke="#8f000b" stroke-width="3" stroke-linecap="round"/>
+                          <text x="80" y="41" fill="#8f000b" font-size="16" font-weight="600">Show Error</text>
+                        </g>
+
+                        <!-- Node 4 Right: Green -->
+                        <g transform="translate(380, 385)">
+                          <rect width="280" height="70" rx="12" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" filter="url(#shadow)"/>
+                          <rect x="20" y="15" width="40" height="40" rx="8" fill="#cbf1d8"/>
+                          <path d="M 30 36 L 38 43 L 50 27" stroke="#0e5927" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                          <text x="80" y="41" fill="#0e5927" font-size="16" font-weight="600">Load Dashboard</text>
+                        </g>
+
+                        <!-- Branch Label No -->
+                        <rect x="180" y="340" width="48" height="28" rx="14" fill="#ffffff" stroke="#f6dce0" stroke-width="1.5" filter="url(#shadow)"/>
+                        <text x="204" y="359" fill="#8f000b" font-size="14" font-weight="bold" text-anchor="middle">No</text>
+                        
+                        <!-- Branch Label Yes -->
+                        <rect x="412" y="340" width="48" height="28" rx="14" fill="#ffffff" stroke="#b2e3c6" stroke-width="1.5" filter="url(#shadow)"/>
+                        <text x="436" y="359" fill="#0e5927" font-size="14" font-weight="bold" text-anchor="middle">Yes</text>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="limit-section">
+          <div class="limit-card">
+            <svg class="limit-icon" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div class="limit-title">Plan Limit Reached</div>
+            <div class="limit-sub">Upgrade to continue generating diagrams.</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

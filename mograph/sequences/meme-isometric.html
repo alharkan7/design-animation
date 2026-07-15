@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Isometric Meme Reveal</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0a0f; 
+      --surface-2: #18181b; 
+      --text: #ffffff;
+    }
+
+    body {
+      margin: 0; padding: 0; overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      width: 100vw; height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .sequence-container {
+      position: relative; width: 100vw; height: 100vh;
+    }
+
+    .scene {
+      position: absolute; width: 100vw; height: 100vh;
+      box-sizing: border-box; 
+      visibility: hidden; overflow: hidden; z-index: 1;
+      animation: sceneFadeIn 0.1s linear 0s both;
+    }
+
+    @keyframes sceneFadeIn {
+      0% { visibility: hidden; }
+      100% { visibility: visible; }
+    }
+
+    .center-anchor {
+      position: absolute;
+      top: 50%; left: 50%;
+      perspective: 2500px;
+      transform-style: preserve-3d;
+    }
+
+    .position-wrapper {
+      transform-style: preserve-3d;
+      animation: 
+        slideIn 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both,
+        slideOut 1.2s cubic-bezier(0.7, 0, 0.3, 1) 6s forwards;
+    }
+
+    .tilt-wrapper {
+      transform-style: preserve-3d;
+      /* Overlap the start, using ease-in-out so momentum transfers seamlessly from sliding to rotating */
+      animation: flatten 1.8s cubic-bezier(0.4, 0, 0.2, 1) 1.4s both;
+    }
+
+    .video-card {
+      position: absolute;
+      width: 80vw;
+      height: calc(80vw * 16 / 9);
+      transform-style: preserve-3d;
+      transform: translate(-50%, -50%);
+    }
+
+    .thickness-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #2a2a30;
+      border-radius: 6vw;
+      transform: translateZ(var(--z));
+    }
+    
+    .shadow-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border-radius: 6vw;
+      transform: translateZ(-9px);
+      /* Reduced shadow */
+      box-shadow: 0 1vw 4vw rgba(0,0,0,0.3);
+    }
+
+    .video-inner {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border-radius: 6vw;
+      overflow: hidden;
+      background: var(--surface-2);
+      /* Gave it an outline */
+      border: 2px solid rgba(255,255,255,0.8);
+      transform: translateZ(0px);
+    }
+
+    .video-inner video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    @keyframes slideIn {
+      0% { transform: translate(120vw, 100vh); opacity: 0; }
+      1% { opacity: 1; }
+      100% { transform: translate(0, 0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      /* Go away UP */
+      100% { transform: translate(0, -100vh) scale(0.8); opacity: 0; }
+    }
+
+    @keyframes flatten {
+      0% { transform: rotateX(60deg) rotateZ(-45deg) scale(0.4); }
+      100% { transform: rotateX(0deg) rotateZ(0deg) scale(1); }
+    }
+
+    .glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 150vw; height: 150vw;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: 
+        glowFade 1.5s ease-out 1.4s both, 
+        glowOut 1s ease-in 6s forwards;
+    }
+    
+    @keyframes glowFade {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes glowOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="sequence-container">
+    <div class="scene">
+      <div class="glow"></div>
+      <div class="center-anchor">
+        <div class="position-wrapper">
+          <div class="tilt-wrapper">
+            <div class="video-card">
+              <!-- Thickness layers for solid slab effect -->
+              <div class="shadow-layer"></div>
+              <div class="thickness-layer" style="--z: -1px"></div>
+              <div class="thickness-layer" style="--z: -2px"></div>
+              <div class="thickness-layer" style="--z: -3px"></div>
+              <div class="thickness-layer" style="--z: -4px"></div>
+              <div class="thickness-layer" style="--z: -5px"></div>
+              <div class="thickness-layer" style="--z: -6px"></div>
+              <div class="thickness-layer" style="--z: -7px"></div>
+              <div class="thickness-layer" style="--z: -8px"></div>
+              
+              <!-- Front surface -->
+              <div class="video-inner">
+                <video src="/assets/meme.mp4" autoplay loop muted playsinline></video>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

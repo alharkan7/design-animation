@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">Microservices Capability Matrix</text>
+    <text x="40" y="90" font-size="16" fill="#475569">A high-level overview of tech stacks, databases, and ownership across core Inztagram domains</text>
+
+    <!-- Table Grid Lines (Background Skeleton) -->
+    <g stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,6">
+      <!-- Horizontal -->
+      <line x1="80" y1="370" x2="1120" y2="370" />
+      <line x1="80" y1="490" x2="1120" y2="490" />
+      <line x1="80" y1="610" x2="1120" y2="610" />
+      <line x1="80" y1="730" x2="1120" y2="730" />
+      <!-- Vertical -->
+      <line x1="360" y1="240" x2="360" y2="860" />
+      <line x1="600" y1="240" x2="600" y2="860" />
+      <line x1="840" y1="240" x2="840" y2="860" />
+    </g>
+
+    <!-- Column Headers -->
+    <text x="225" y="235" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle" letter-spacing="1">SERVICE DOMAIN</text>
+    <text x="480" y="235" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle" letter-spacing="1">TECH STACK</text>
+    <text x="720" y="235" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle" letter-spacing="1">PRIMARY DATASTORE</text>
+    <text x="975" y="235" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle" letter-spacing="1">TEAM &amp; ON-CALL</text>
+
+    <!-- ROW 1: User & Auth Gateway -->
+    <g>
+      <rect x="100" y="260" width="250" height="100" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+      <text x="225" y="305" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">User &amp; Auth Gateway</text>
+      <text x="225" y="325" font-size="13" fill="#64748b" text-anchor="middle">Profiles, Sessions, OAuth</text>
+
+      <rect x="370" y="260" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="420" y="294" width="120" height="32" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="1.5" />
+      <text x="480" y="315" font-size="14" font-weight="bold" fill="#0e5927" text-anchor="middle">Node.js</text>
+
+      <rect x="610" y="260" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="650" y="294" width="140" height="32" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="1.5" />
+      <text x="720" y="315" font-size="14" font-weight="bold" fill="#00477a" text-anchor="middle">PostgreSQL</text>
+
+      <rect x="850" y="260" width="250" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <text x="975" y="310" font-size="15" font-weight="bold" fill="#3b2f6b" text-anchor="middle">@team-identity</text>
+      <text x="975" y="330" font-size="13" fill="#64748b" text-anchor="middle">Tier 1 • 24/7 On-call</text>
+    </g>
+
+    <!-- ROW 2: Timeline Feed Engine -->
+    <g>
+      <rect x="100" y="380" width="250" height="100" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+      <text x="225" y="425" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Timeline Feed Engine</text>
+      <text x="225" y="445" font-size="13" fill="#64748b" text-anchor="middle">Ranking, Caching, Fan-out</text>
+
+      <rect x="370" y="380" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="430" y="414" width="100" height="32" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="1.5" />
+      <text x="480" y="435" font-size="14" font-weight="bold" fill="#00477a" text-anchor="middle">Golang</text>
+
+      <rect x="610" y="380" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="650" y="414" width="140" height="32" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="1.5" />
+      <text x="720" y="435" font-size="14" font-weight="bold" fill="#0e5927" text-anchor="middle">ScyllaDB</text>
+
+      <rect x="850" y="380" width="250" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <text x="975" y="430" font-size="15" font-weight="bold" fill="#3b2f6b" text-anchor="middle">@team-feed-core</text>
+      <text x="975" y="450" font-size="13" fill="#64748b" text-anchor="middle">Tier 1 • 24/7 On-call</text>
+    </g>
+
+    <!-- ROW 3: Media Transcoder -->
+    <g>
+      <rect x="100" y="500" width="250" height="100" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+      <text x="225" y="545" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Media Transcoder</text>
+      <text x="225" y="565" font-size="13" fill="#64748b" text-anchor="middle">Video/Image Compression</text>
+
+      <rect x="370" y="500" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="430" y="534" width="100" height="32" rx="16" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+      <text x="480" y="555" font-size="14" font-weight="bold" fill="#8f000b" text-anchor="middle">Rust</text>
+
+      <rect x="610" y="500" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="650" y="534" width="140" height="32" rx="16" fill="#fefcf5" stroke="#f3e4c4" stroke-width="1.5" />
+      <text x="720" y="555" font-size="14" font-weight="bold" fill="#7a5900" text-anchor="middle">Amazon S3</text>
+
+      <rect x="850" y="500" width="250" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <text x="975" y="550" font-size="15" font-weight="bold" fill="#3b2f6b" text-anchor="middle">@team-media</text>
+      <text x="975" y="570" font-size="13" fill="#64748b" text-anchor="middle">Tier 2 • Business Hours</text>
+    </g>
+
+    <!-- ROW 4: Push Notifications -->
+    <g>
+      <rect x="100" y="620" width="250" height="100" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+      <text x="225" y="665" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Push Notifications</text>
+      <text x="225" y="685" font-size="13" fill="#64748b" text-anchor="middle">APNs, FCM, WebPush</text>
+
+      <rect x="370" y="620" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="430" y="654" width="100" height="32" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="1.5" />
+      <text x="480" y="675" font-size="14" font-weight="bold" fill="#00477a" text-anchor="middle">Golang</text>
+
+      <rect x="610" y="620" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="650" y="654" width="140" height="32" rx="16" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+      <text x="720" y="675" font-size="14" font-weight="bold" fill="#8f000b" text-anchor="middle">Redis Cluster</text>
+
+      <rect x="850" y="620" width="250" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <text x="975" y="670" font-size="15" font-weight="bold" fill="#3b2f6b" text-anchor="middle">@team-growth</text>
+      <text x="975" y="690" font-size="13" fill="#64748b" text-anchor="middle">Tier 2 • Business Hours</text>
+    </g>
+
+    <!-- ROW 5: Realtime Messaging -->
+    <g>
+      <rect x="100" y="740" width="250" height="100" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+      <text x="225" y="785" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">Realtime Messaging</text>
+      <text x="225" y="805" font-size="13" fill="#64748b" text-anchor="middle">WebSockets, Presence Sync</text>
+
+      <rect x="370" y="740" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="420" y="774" width="120" height="32" rx="16" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="1.5" />
+      <text x="480" y="795" font-size="14" font-weight="bold" fill="#3b2f6b" text-anchor="middle">Elixir/Erlang</text>
+
+      <rect x="610" y="740" width="220" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <rect x="650" y="774" width="140" height="32" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="1.5" />
+      <text x="720" y="795" font-size="14" font-weight="bold" fill="#0e5927" text-anchor="middle">Cassandra</text>
+
+      <rect x="850" y="740" width="250" height="100" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)" />
+      <text x="975" y="790" font-size="15" font-weight="bold" fill="#3b2f6b" text-anchor="middle">@team-chat</text>
+      <text x="975" y="810" font-size="13" fill="#64748b" text-anchor="middle">Tier 1 • 24/7 On-call</text>
+    </g>
+  </g>
+</svg>

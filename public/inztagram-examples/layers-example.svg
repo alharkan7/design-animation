@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#cbd5e1" />
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">System Architecture Layers</text>
+    <text x="40" y="90" font-size="16" fill="#475569">The "Onion" Architecture mapping client requests down to physical storage</text>
+
+    <!-- Connectors -->
+    <g fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)">
+      <!-- L1 to L2 -->
+      <path d="M 450 265 L 450 288" />
+      <path d="M 600 265 L 600 288" />
+      <path d="M 750 265 L 750 288" />
+      
+      <!-- L2 to L3 -->
+      <path d="M 450 405 L 450 428" />
+      <path d="M 600 405 L 600 428" />
+      <path d="M 750 405 L 750 428" />
+
+      <!-- L3 to L4 -->
+      <path d="M 450 545 L 450 568" />
+      <path d="M 600 545 L 600 568" />
+      <path d="M 750 545 L 750 568" />
+
+      <!-- L4 to L5 -->
+      <path d="M 450 685 L 450 708" />
+      <path d="M 600 685 L 600 708" />
+      <path d="M 750 685 L 750 708" />
+    </g>
+
+    <!-- Layer 5: Infrastructure -->
+    <text x="150" y="705" font-size="14" font-weight="bold" fill="#334155" letter-spacing="1">5. INFRASTRUCTURE &amp; STORAGE</text>
+    <g filter="url(#shadow)">
+      <rect x="150" y="720" width="900" height="100" rx="20" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" />
+    </g>
+    <g fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5">
+      <rect x="180" y="745" width="180" height="50" rx="12" />
+      <rect x="400" y="745" width="180" height="50" rx="12" />
+      <rect x="620" y="745" width="180" height="50" rx="12" />
+      <rect x="840" y="745" width="180" height="50" rx="12" />
+    </g>
+    <g font-size="14" font-weight="bold" fill="#334155" text-anchor="middle">
+      <text x="270" y="775">PostgreSQL Clusters</text>
+      <text x="490" y="775">Cassandra Ring</text>
+      <text x="710" y="775">Amazon S3</text>
+      <text x="930" y="775">Apache Kafka</text>
+    </g>
+
+    <!-- Layer 4: Data Access -->
+    <text x="175" y="565" font-size="14" font-weight="bold" fill="#7a5900" letter-spacing="1">4. DATA ACCESS LAYER</text>
+    <g filter="url(#shadow)">
+      <rect x="175" y="580" width="850" height="100" rx="20" fill="#fefcf5" stroke="#f3e4c4" stroke-width="2" />
+    </g>
+    <g fill="#ffffff" stroke="#f3e4c4" stroke-width="1.5">
+      <rect x="260" y="605" width="200" height="50" rx="12" />
+      <rect x="500" y="605" width="200" height="50" rx="12" />
+      <rect x="740" y="605" width="200" height="50" rx="12" />
+    </g>
+    <g font-size="14" font-weight="bold" fill="#7a5900" text-anchor="middle">
+      <text x="360" y="635">Data Models (ORM)</text>
+      <text x="600" y="635">Redis Caching</text>
+      <text x="840" y="635">Connection Pooling</text>
+    </g>
+
+    <!-- Layer 3: Business Logic -->
+    <text x="200" y="425" font-size="14" font-weight="bold" fill="#0e5927" letter-spacing="1">3. BUSINESS LOGIC (MICROSERVICES)</text>
+    <g filter="url(#shadow)">
+      <rect x="200" y="440" width="800" height="100" rx="20" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+    </g>
+    <g fill="#ffffff" stroke="#b2e3c6" stroke-width="1.5">
+      <rect x="235" y="465" width="160" height="50" rx="12" />
+      <rect x="425" y="465" width="160" height="50" rx="12" />
+      <rect x="615" y="465" width="160" height="50" rx="12" />
+      <rect x="805" y="465" width="160" height="50" rx="12" />
+    </g>
+    <g font-size="14" font-weight="bold" fill="#0e5927" text-anchor="middle">
+      <text x="315" y="495">User Service</text>
+      <text x="505" y="495">Feed Engine</text>
+      <text x="695" y="495">Media Service</text>
+      <text x="885" y="495">Push Service</text>
+    </g>
+
+    <!-- Layer 2: API & Routing -->
+    <text x="225" y="285" font-size="14" font-weight="bold" fill="#00477a" letter-spacing="1">2. EDGE &amp; ROUTING LAYER</text>
+    <g filter="url(#shadow)">
+      <rect x="225" y="300" width="750" height="100" rx="20" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+    </g>
+    <g fill="#ffffff" stroke="#d4e4f7" stroke-width="1.5">
+      <rect x="280" y="325" width="180" height="50" rx="12" />
+      <rect x="490" y="325" width="220" height="50" rx="12" />
+      <rect x="740" y="325" width="180" height="50" rx="12" />
+    </g>
+    <g font-size="14" font-weight="bold" fill="#00477a" text-anchor="middle">
+      <text x="370" y="355">NGINX Proxy</text>
+      <text x="600" y="355">GraphQL API Gateway</text>
+      <text x="830" y="355">Rate Limiting</text>
+    </g>
+
+    <!-- Layer 1: Presentation -->
+    <text x="250" y="145" font-size="14" font-weight="bold" fill="#3b2f6b" letter-spacing="1">1. PRESENTATION LAYER</text>
+    <g filter="url(#shadow)">
+      <rect x="250" y="160" width="700" height="100" rx="20" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="2" />
+    </g>
+    <g fill="#ffffff" stroke="#e2e0f0" stroke-width="1.5">
+      <rect x="320" y="185" width="220" height="50" rx="12" />
+      <rect x="660" y="185" width="220" height="50" rx="12" />
+    </g>
+    <g font-size="14" font-weight="bold" fill="#3b2f6b" text-anchor="middle">
+      <text x="430" y="215">iOS &amp; Android App</text>
+      <text x="770" y="215">Next.js Web Client</text>
+    </g>
+  </g>
+</svg>

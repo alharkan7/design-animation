@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horizontal SVG Marquee</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f4f5; 
+      --surface: #ffffff; 
+      --text: #09090b;
+      --border: #e4e4e7;
+      --shadow: rgba(0,0,0,0.05);
+    }
+
+    body {
+      margin: 0; padding: 0; overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      width: 100vw; height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .sequence-container {
+      position: relative; width: 100vw; height: 100vh;
+    }
+
+    .scene {
+      position: absolute; width: 100vw; height: 100vh;
+      box-sizing: border-box; 
+      visibility: hidden; overflow: hidden; z-index: 1;
+      animation: sceneFadeIn 1s ease-out 0.2s both, sceneFadeOut 1s ease-in 14s forwards;
+    }
+
+    @keyframes sceneFadeIn {
+      0% { opacity: 0; visibility: hidden; transform: scale(0.95); }
+      1% { visibility: visible; }
+      100% { opacity: 1; visibility: visible; transform: scale(1); }
+    }
+    @keyframes sceneFadeOut {
+      0% { opacity: 1; visibility: visible; transform: scale(1); }
+      100% { opacity: 0; visibility: hidden; transform: scale(1.05); }
+    }
+
+    .marquee-container {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; gap: 6vw;
+    }
+
+    .marquee-row {
+      display: flex; flex-direction: row; gap: 6vw;
+    }
+
+    .svg-card {
+      width: 60vw; 
+      height: 45vw;
+      background: var(--surface); 
+      border-radius: 3vw;
+      padding: 2.5vw;
+      box-sizing: border-box; 
+      flex-shrink: 0; 
+      box-shadow: 0 2vw 6vw var(--shadow);
+      border: 1px solid var(--border);
+      display: flex; justify-content: center; align-items: center;
+    }
+
+    .svg-card img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* Animations */
+    .marquee-left { animation: scrollLeft 15s linear 0s forwards; }
+    .marquee-right { animation: scrollRight 15s linear 0s forwards; }
+
+    @keyframes scrollLeft { 
+      0% { transform: translateX(0); } 
+      100% { transform: translateX(-330vw); } /* 5 * (60vw + 6vw) */
+    }
+    @keyframes scrollRight { 
+      0% { transform: translateX(-330vw); } 
+      100% { transform: translateX(0); } 
+    }
+    
+    .stagger-left {
+      margin-left: -33vw;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sequence-container">
+    <div class="scene">
+      <div class="marquee-container">
+        
+        <!-- Row 1: Moves Left -->
+        <div class="marquee-row marquee-left stagger-left">
+          <div class="svg-card"><img src="/inztagram-examples/comparison-example.svg" alt="Comparison" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/flow-example.svg" alt="Flow" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/grid-example.svg" alt="Grid" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/radial-example.svg" alt="Radial" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/comparison-example.svg" alt="Comparison" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/flow-example.svg" alt="Flow" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/grid-example.svg" alt="Grid" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/radial-example.svg" alt="Radial" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/comparison-example.svg" alt="Comparison" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/flow-example.svg" alt="Flow" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/grid-example.svg" alt="Grid" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/radial-example.svg" alt="Radial" /></div>
+        </div>
+
+        <!-- Row 2: Moves Right -->
+        <div class="marquee-row marquee-right">
+          <div class="svg-card"><img src="/inztagram-examples/cycle-example.svg" alt="Cycle" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/funnel-example.svg" alt="Funnel" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/hierarchy-example.svg" alt="Hierarchy" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/sequence-example.svg" alt="Sequence" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/cycle-example.svg" alt="Cycle" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/funnel-example.svg" alt="Funnel" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/hierarchy-example.svg" alt="Hierarchy" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/sequence-example.svg" alt="Sequence" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/cycle-example.svg" alt="Cycle" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/funnel-example.svg" alt="Funnel" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/hierarchy-example.svg" alt="Hierarchy" /></div>
+          <div class="svg-card"><img src="/inztagram-examples/sequence-example.svg" alt="Sequence" /></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

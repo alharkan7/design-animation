@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">Data Strategy Comparison</text>
+    <text x="40" y="90" font-size="16" fill="#475569">Evaluating storage technologies (SQL vs NoSQL) for Inztagram's core domains</text>
+    
+    <!-- Background Columns -->
+    <rect x="80" y="120" width="500" height="700" rx="32" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10,10" />
+    <rect x="620" y="120" width="500" height="700" rx="32" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10,10" />
+
+    <!-- Column Headers -->
+    <g filter="url(#shadow)">
+      <rect x="100" y="140" width="460" height="80" rx="20" fill="#d1e9ff" stroke="#aecdec" stroke-width="2" />
+      <rect x="640" y="140" width="460" height="80" rx="20" fill="#cbf1d8" stroke="#a9daba" stroke-width="2" />
+    </g>
+    
+    <text x="330" y="188" font-size="24" font-weight="bold" fill="#00477a" text-anchor="middle">PostgreSQL Cluster</text>
+    <text x="870" y="188" font-size="24" font-weight="bold" fill="#0e5927" text-anchor="middle">Cassandra / ScyllaDB</text>
+
+    <!-- Row Connector Lines -->
+    <g stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4,4">
+      <line x1="560" y1="310" x2="640" y2="310" />
+      <line x1="560" y1="450" x2="640" y2="450" />
+      <line x1="560" y1="590" x2="640" y2="590" />
+      <line x1="560" y1="730" x2="640" y2="730" />
+    </g>
+
+    <!-- LEFT COLUMN CARDS (PostgreSQL) -->
+    <g>
+      <!-- Row 1: Use Case -->
+      <rect x="100" y="260" width="460" height="100" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <text x="330" y="295" font-size="14" font-weight="bold" fill="#0060a6" text-anchor="middle" letter-spacing="1">PRIMARY USE CASE</text>
+      <text x="330" y="325" font-size="16" font-weight="bold" fill="#00477a" text-anchor="middle">User Profiles &amp; Social Graph</text>
+      <text x="330" y="345" font-size="13" fill="#33709e" text-anchor="middle">Followers, Auth, App Metadata</text>
+
+      <!-- Row 2: Scaling -->
+      <rect x="100" y="400" width="460" height="100" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <text x="330" y="435" font-size="14" font-weight="bold" fill="#0060a6" text-anchor="middle" letter-spacing="1">SCALING STRATEGY</text>
+      <text x="330" y="465" font-size="16" font-weight="bold" fill="#00477a" text-anchor="middle">Vertical Scaling + Read Replicas</text>
+      <text x="330" y="485" font-size="13" fill="#33709e" text-anchor="middle">Strong primary writer with multi-region reads</text>
+
+      <!-- Row 3: Data Model -->
+      <rect x="100" y="540" width="460" height="100" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <text x="330" y="575" font-size="14" font-weight="bold" fill="#0060a6" text-anchor="middle" letter-spacing="1">DATA MODEL</text>
+      <text x="330" y="605" font-size="16" font-weight="bold" fill="#00477a" text-anchor="middle">Strict Relational (ACID)</text>
+      <text x="330" y="625" font-size="13" fill="#33709e" text-anchor="middle">Normalized tables with foreign key integrity</text>
+
+      <!-- Row 4: Trade-offs -->
+      <rect x="100" y="680" width="460" height="100" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <text x="330" y="715" font-size="14" font-weight="bold" fill="#0060a6" text-anchor="middle" letter-spacing="1">CAP THEOREM FOCUS</text>
+      <text x="330" y="745" font-size="16" font-weight="bold" fill="#00477a" text-anchor="middle">Consistency (CP)</text>
+      <text x="330" y="765" font-size="13" fill="#33709e" text-anchor="middle">Guarantees accurate follower counts &amp; billing</text>
+    </g>
+
+    <!-- RIGHT COLUMN CARDS (Cassandra) -->
+    <g>
+      <!-- Row 1: Use Case -->
+      <rect x="640" y="260" width="460" height="100" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <text x="870" y="295" font-size="14" font-weight="bold" fill="#168039" text-anchor="middle" letter-spacing="1">PRIMARY USE CASE</text>
+      <text x="870" y="325" font-size="16" font-weight="bold" fill="#0e5927" text-anchor="middle">Home Feeds &amp; Activity Logs</text>
+      <text x="870" y="345" font-size="13" fill="#2d874b" text-anchor="middle">High-throughput events, likes, timelines</text>
+
+      <!-- Row 2: Scaling -->
+      <rect x="640" y="400" width="460" height="100" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <text x="870" y="435" font-size="14" font-weight="bold" fill="#168039" text-anchor="middle" letter-spacing="1">SCALING STRATEGY</text>
+      <text x="870" y="465" font-size="16" font-weight="bold" fill="#0e5927" text-anchor="middle">Linear Horizontal Scaling</text>
+      <text x="870" y="485" font-size="13" fill="#2d874b" text-anchor="middle">Masterless ring topology, add nodes seamlessly</text>
+
+      <!-- Row 3: Data Model -->
+      <rect x="640" y="540" width="460" height="100" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <text x="870" y="575" font-size="14" font-weight="bold" fill="#168039" text-anchor="middle" letter-spacing="1">DATA MODEL</text>
+      <text x="870" y="605" font-size="16" font-weight="bold" fill="#0e5927" text-anchor="middle">Wide-Column (Denormalized)</text>
+      <text x="870" y="625" font-size="13" fill="#2d874b" text-anchor="middle">Query-driven design, no joins permitted</text>
+
+      <!-- Row 4: Trade-offs -->
+      <rect x="640" y="680" width="460" height="100" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <text x="870" y="715" font-size="14" font-weight="bold" fill="#168039" text-anchor="middle" letter-spacing="1">CAP THEOREM FOCUS</text>
+      <text x="870" y="745" font-size="16" font-weight="bold" fill="#0e5927" text-anchor="middle">Availability (AP)</text>
+      <text x="870" y="765" font-size="13" fill="#2d874b" text-anchor="middle">Eventual consistency, zero downtime on writes</text>
+    </g>
+
+    <!-- VS Badges -->
+    <g filter="url(#shadow)">
+      <circle cx="600" cy="310" r="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+      <text x="600" y="315" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle">VS</text>
+
+      <circle cx="600" cy="450" r="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+      <text x="600" y="455" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle">VS</text>
+
+      <circle cx="600" cy="590" r="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+      <text x="600" y="595" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle">VS</text>
+
+      <circle cx="600" cy="730" r="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+      <text x="600" y="735" font-size="13" font-weight="bold" fill="#94a3b8" text-anchor="middle">VS</text>
+    </g>
+  </g>
+</svg>

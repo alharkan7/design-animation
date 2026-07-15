@@ -1,6 +1,7 @@
 [
-  {"file": "data-architecture-core.html", "name": "Reference Preview"},
+  {"file": "saas-launch-momentum.html", "name": "Reference Preview"},
   { "file": "saas-launch-momentum.html", "name": "SaaS Launch Momentum Cut" },
   { "file": "claude-mermaid-diagram.html", "name": "Claude Mermaid Diagram" },
-  { "file": "inztagram-app.html", "name": "Inztagram App Intro" }
+  { "file": "inztagram-app.html", "name": "Inztagram App Intro" },
+  { "file": "horizontal-svg-marquee.html", "name": "Horizontal SVG Marquee" }
 ]

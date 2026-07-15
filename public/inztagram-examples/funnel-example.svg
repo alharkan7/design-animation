@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">User Onboarding &amp; Conversion Funnel</text>
+    <text x="40" y="90" font-size="16" fill="#475569">Tracking user drop-off from initial app download to Daily Active User (DAU) retention</text>
+    
+    <!-- Background Funnel Polygon -->
+    <polygon points="170,180 350,780 850,780 1030,180" fill="#f8fafc" stroke="#e2e8f0" stroke-width="3" stroke-linejoin="round" />
+    
+    <!-- Connecting Arrows -->
+    <g fill="none" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow)">
+      <path d="M 600 280 L 600 310" />
+      <path d="M 600 400 L 600 430" />
+      <path d="M 600 520 L 600 550" />
+      <path d="M 600 640 L 600 670" />
+    </g>
+
+    <!-- Drop-off indicators -->
+    <g filter="url(#shadow)">
+      <rect x="630" y="288" width="70" height="24" rx="12" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+      <rect x="630" y="408" width="70" height="24" rx="12" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+      <rect x="630" y="528" width="70" height="24" rx="12" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+      <rect x="630" y="648" width="70" height="24" rx="12" fill="#fff9f9" stroke="#f6dce0" stroke-width="1.5" />
+    </g>
+    <g font-size="12" font-weight="bold" fill="#8f000b" text-anchor="middle">
+      <text x="665" y="304">-15%</text>
+      <text x="665" y="424">-15%</text>
+      <text x="665" y="544">-30%</text>
+      <text x="665" y="664">-15%</text>
+    </g>
+
+    <!-- Funnel Steps -->
+    <g filter="url(#shadow)">
+      <!-- 1. Downloads -->
+      <rect x="200" y="200" width="800" height="80" rx="40" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="2" />
+      <!-- 2. Sign Ups -->
+      <rect x="260" y="320" width="680" height="80" rx="40" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <!-- 3. Profile Completion -->
+      <rect x="320" y="440" width="560" height="80" rx="40" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <!-- 4. First Post -->
+      <rect x="350" y="560" width="500" height="80" rx="40" fill="#fefcf5" stroke="#f3e4c4" stroke-width="2" />
+      <!-- 5. DAU -->
+      <rect x="380" y="680" width="440" height="80" rx="40" fill="#fff9f9" stroke="#f6dce0" stroke-width="2" />
+    </g>
+
+    <!-- Text for Steps -->
+    <!-- R1 -->
+    <text x="600" y="247" font-size="20" font-weight="bold" fill="#3b2f6b" text-anchor="middle">1. App Downloads</text>
+    <text x="960" y="247" font-size="20" font-weight="bold" fill="#3b2f6b" text-anchor="end">100%</text>
+    <text x="240" y="247" font-size="15" font-weight="bold" fill="#6b5b9e" text-anchor="start">10M Users</text>
+
+    <!-- R2 -->
+    <text x="600" y="367" font-size="20" font-weight="bold" fill="#00477a" text-anchor="middle">2. Account Sign Ups</text>
+    <text x="900" y="367" font-size="20" font-weight="bold" fill="#00477a" text-anchor="end">85%</text>
+    <text x="300" y="367" font-size="15" font-weight="bold" fill="#33709e" text-anchor="start">8.5M Users</text>
+
+    <!-- R3 -->
+    <text x="600" y="487" font-size="20" font-weight="bold" fill="#0e5927" text-anchor="middle">3. Profile Completion</text>
+    <text x="840" y="487" font-size="20" font-weight="bold" fill="#0e5927" text-anchor="end">70%</text>
+    <text x="360" y="487" font-size="15" font-weight="bold" fill="#2d874b" text-anchor="start">7.0M Users</text>
+
+    <!-- R4 -->
+    <text x="600" y="607" font-size="20" font-weight="bold" fill="#7a5900" text-anchor="middle">4. First "Inzta" Post</text>
+    <text x="810" y="607" font-size="20" font-weight="bold" fill="#7a5900" text-anchor="end">40%</text>
+    <text x="390" y="607" font-size="15" font-weight="bold" fill="#a37c00" text-anchor="start">4.0M Users</text>
+
+    <!-- R5 -->
+    <text x="600" y="727" font-size="18" font-weight="bold" fill="#8f000b" text-anchor="middle">5. DAU Retention</text>
+    <text x="780" y="727" font-size="18" font-weight="bold" fill="#8f000b" text-anchor="end">25%</text>
+    <text x="420" y="727" font-size="15" font-weight="bold" fill="#b33641" text-anchor="start">2.5M Users</text>
+  </g>
+</svg>

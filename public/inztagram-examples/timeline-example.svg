@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">Engineering Roadmap</text>
+    <text x="40" y="90" font-size="16" fill="#475569">Timeline of key architectural milestones for the Inztagram platform</text>
+
+    <!-- Timeline Background Pill -->
+    <rect x="80" y="450" width="1040" height="60" rx="30" fill="#f8fafc" stroke="#f1f5f9" stroke-width="1" opacity="0.8" />
+
+    <!-- Timeline Axis -->
+    <!-- Future Axis -->
+    <line x1="610" y1="480" x2="1080" y2="480" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round" stroke-dasharray="12,12" />
+    <!-- Past Axis -->
+    <line x1="120" y1="480" x2="610" y2="480" stroke="#00477a" stroke-width="8" stroke-linecap="round" />
+
+    <!-- Card Connectors -->
+    <g stroke-width="2" stroke-dasharray="4,4" opacity="0.6">
+      <line x1="200" y1="480" x2="200" y2="400" stroke="#3b2f6b" />
+      <line x1="360" y1="480" x2="360" y2="560" stroke="#00477a" />
+      <line x1="520" y1="480" x2="520" y2="400" stroke="#0e5927" />
+      <line x1="680" y1="480" x2="680" y2="560" stroke="#7a5900" />
+      <line x1="840" y1="480" x2="840" y2="400" stroke="#8f000b" />
+      <line x1="1000" y1="480" x2="1000" y2="560" stroke="#3b2f6b" />
+    </g>
+
+    <!-- Today Marker -->
+    <rect x="575" y="468" width="70" height="24" rx="12" fill="#ef4444" />
+    <text x="610" y="484" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="1">TODAY</text>
+
+    <!-- Axis Points -->
+    <circle cx="200" cy="480" r="8" fill="#ffffff" stroke="#3b2f6b" stroke-width="4" />
+    <circle cx="360" cy="480" r="8" fill="#ffffff" stroke="#00477a" stroke-width="4" />
+    <circle cx="520" cy="480" r="8" fill="#ffffff" stroke="#0e5927" stroke-width="4" />
+    <circle cx="680" cy="480" r="8" fill="#ffffff" stroke="#7a5900" stroke-width="4" />
+    <circle cx="840" cy="480" r="8" fill="#ffffff" stroke="#8f000b" stroke-width="4" />
+    <circle cx="1000" cy="480" r="8" fill="#ffffff" stroke="#3b2f6b" stroke-width="4" />
+
+    <!-- Axis Dates -->
+    <g font-size="13" font-weight="bold" text-anchor="middle">
+      <text x="200" y="515" fill="#3b2f6b">Q1 2026</text>
+      <text x="360" y="455" fill="#00477a">Q2 2026</text>
+      <text x="520" y="515" fill="#0e5927">Q3 2026</text>
+      <text x="680" y="455" fill="#7a5900">Q4 2026</text>
+      <text x="840" y="515" fill="#8f000b">Q1 2027</text>
+      <text x="1000" y="455" fill="#3b2f6b">Q2 2027</text>
+    </g>
+
+    <!-- Milestone Cards -->
+    <g filter="url(#shadow)">
+      <!-- M1 -->
+      <rect x="120" y="290" width="160" height="110" rx="16" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="2" />
+      <!-- M2 -->
+      <rect x="280" y="560" width="160" height="110" rx="16" fill="#f5f9ff" stroke="#d4e4f7" stroke-width="2" />
+      <!-- M3 -->
+      <rect x="440" y="290" width="160" height="110" rx="16" fill="#f4fcf7" stroke="#b2e3c6" stroke-width="2" />
+      <!-- M4 -->
+      <rect x="600" y="560" width="160" height="110" rx="16" fill="#fefcf5" stroke="#f3e4c4" stroke-width="2" />
+      <!-- M5 -->
+      <rect x="760" y="290" width="160" height="110" rx="16" fill="#fff9f9" stroke="#f6dce0" stroke-width="2" />
+      <!-- M6 -->
+      <rect x="920" y="560" width="160" height="110" rx="16" fill="#f8f5ff" stroke="#e2e0f0" stroke-width="2" />
+    </g>
+
+    <!-- Milestone Content -->
+    <g text-anchor="middle">
+      <!-- M1 -->
+      <text x="200" y="320" font-size="14" font-weight="bold" fill="#3b2f6b">Platform MVP</text>
+      <text x="200" y="345" font-size="11" fill="#6b5b9e">Core monolithic</text>
+      <text x="200" y="360" font-size="11" fill="#6b5b9e">architecture &amp;</text>
+      <text x="200" y="375" font-size="11" fill="#6b5b9e">basic user feed.</text>
+
+      <!-- M2 -->
+      <text x="360" y="590" font-size="14" font-weight="bold" fill="#00477a">Video Reels</text>
+      <text x="360" y="615" font-size="11" fill="#33709e">Launch short-form</text>
+      <text x="360" y="630" font-size="11" fill="#33709e">video transcoder</text>
+      <text x="360" y="645" font-size="11" fill="#33709e">&amp; playback UI.</text>
+
+      <!-- M3 -->
+      <text x="520" y="320" font-size="14" font-weight="bold" fill="#0e5927">E-commerce</text>
+      <text x="520" y="345" font-size="11" fill="#2d874b">In-app shops,</text>
+      <text x="520" y="360" font-size="11" fill="#2d874b">Stripe checkout</text>
+      <text x="520" y="375" font-size="11" fill="#2d874b">&amp; inventory API.</text>
+
+      <!-- M4 -->
+      <text x="680" y="590" font-size="14" font-weight="bold" fill="#7a5900">Global CDN</text>
+      <text x="680" y="615" font-size="11" fill="#a37c00">Edge caching via</text>
+      <text x="680" y="630" font-size="11" fill="#a37c00">Cloudflare for</text>
+      <text x="680" y="645" font-size="11" fill="#a37c00">&lt;50ms latency.</text>
+
+      <!-- M5 -->
+      <text x="840" y="320" font-size="14" font-weight="bold" fill="#8f000b">Gen-AI Filters</text>
+      <text x="840" y="345" font-size="11" fill="#b3000e">On-device ML</text>
+      <text x="840" y="360" font-size="11" fill="#b3000e">filters using</text>
+      <text x="840" y="375" font-size="11" fill="#b3000e">TensorFlow Lite.</text>
+
+      <!-- M6 -->
+      <text x="1000" y="590" font-size="14" font-weight="bold" fill="#3b2f6b">Microservices</text>
+      <text x="1000" y="615" font-size="11" fill="#6b5b9e">Break monolith</text>
+      <text x="1000" y="630" font-size="11" fill="#6b5b9e">into Go/Node.js</text>
+      <text x="1000" y="645" font-size="11" fill="#6b5b9e">service mesh.</text>
+    </g>
+  </g>
+</svg>

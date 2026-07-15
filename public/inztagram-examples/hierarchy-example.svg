@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#a0b0c0" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" />
+  
+  <g font-family="Inter, Helvetica Neue, Arial, sans-serif">
+    <!-- Header -->
+    <text x="40" y="60" font-size="28" font-weight="bold" fill="#0f172a">React Client Component Tree</text>
+    <text x="40" y="90" font-size="16" fill="#475569">Hierarchical architecture of the Inztagram mobile application UI</text>
+
+    <!-- Connectors -->
+    <g fill="none" stroke="#cbd5e1" stroke-width="2.5">
+      <!-- L0 to L1 -->
+      <path d="M 530 188 C 530 220, 250 220, 250 252" />
+      <path d="M 530 188 C 530 220, 810 220, 810 252" />
+
+      <!-- L1 to L2 -->
+      <path d="M 250 308 C 250 340, 160 340, 160 372" />
+      <path d="M 250 308 C 250 340, 340 340, 340 372" />
+
+      <path d="M 810 308 C 810 340, 530 340, 530 372" />
+      <path d="M 810 308 C 810 340, 770 340, 770 372" />
+      <path d="M 810 308 C 810 340, 930 340, 930 372" />
+      <path d="M 810 308 C 810 340, 1090 340, 1090 372" />
+
+      <!-- L2 to L3 -->
+      <path d="M 530 428 C 530 460, 450 460, 450 492" />
+      <path d="M 530 428 C 530 460, 610 460, 610 492" />
+
+      <path d="M 770 428 L 770 492" />
+      <path d="M 930 428 L 930 492" />
+      <path d="M 1090 428 L 1090 492" />
+
+      <!-- L3 to L4 -->
+      <path d="M 610 548 L 610 612" />
+
+      <!-- L4 to L5 -->
+      <path d="M 610 668 C 610 700, 450 700, 450 732" />
+      <path d="M 610 668 L 610 732" />
+      <path d="M 610 668 C 610 700, 770 700, 770 732" />
+    </g>
+
+    <!-- Nodes -->
+    <g filter="url(#shadow)">
+      <!-- Indigo Nodes (Navigators) -->
+      <g fill="#f8f5ff" stroke="#e2e0f0" stroke-width="1.5">
+        <rect x="458" y="132" width="144" height="56" rx="12" />
+        <rect x="178" y="252" width="144" height="56" rx="12" />
+        <rect x="738" y="252" width="144" height="56" rx="12" />
+      </g>
+
+      <!-- Blue Nodes (Screens) -->
+      <g fill="#f5f9ff" stroke="#d4e4f7" stroke-width="1.5">
+        <rect x="88" y="372" width="144" height="56" rx="12" />
+        <rect x="268" y="372" width="144" height="56" rx="12" />
+        <rect x="458" y="372" width="144" height="56" rx="12" />
+        <rect x="698" y="372" width="144" height="56" rx="12" />
+        <rect x="858" y="372" width="144" height="56" rx="12" />
+        <rect x="1018" y="372" width="144" height="56" rx="12" />
+      </g>
+
+      <!-- Green Nodes (Complex Components) -->
+      <g fill="#f4fcf7" stroke="#b2e3c6" stroke-width="1.5">
+        <rect x="378" y="492" width="144" height="56" rx="12" />
+        <rect x="538" y="492" width="144" height="56" rx="12" />
+        <rect x="698" y="492" width="144" height="56" rx="12" />
+        <rect x="858" y="492" width="144" height="56" rx="12" />
+        <rect x="1018" y="492" width="144" height="56" rx="12" />
+      </g>
+
+      <!-- Warm Nodes (Simple UI) -->
+      <g fill="#fefcf5" stroke="#f3e4c4" stroke-width="1.5">
+        <rect x="538" y="612" width="144" height="56" rx="12" />
+        <rect x="378" y="732" width="144" height="56" rx="12" />
+        <rect x="538" y="732" width="144" height="56" rx="12" />
+        <rect x="698" y="732" width="144" height="56" rx="12" />
+      </g>
+    </g>
+
+    <!-- Texts -->
+    <!-- Indigo Text -->
+    <g text-anchor="middle">
+      <text x="530" y="158" font-size="14" font-weight="bold" fill="#3b2f6b">AppContainer</text>
+      <text x="530" y="174" font-size="11" fill="#6b5b9e">Root Node</text>
+      
+      <text x="250" y="278" font-size="14" font-weight="bold" fill="#3b2f6b">AuthStack</text>
+      <text x="250" y="294" font-size="11" fill="#6b5b9e">Navigator</text>
+      <text x="810" y="278" font-size="14" font-weight="bold" fill="#3b2f6b">MainAppTabs</text>
+      <text x="810" y="294" font-size="11" fill="#6b5b9e">Navigator</text>
+    </g>
+
+    <!-- Blue Text -->
+    <g text-anchor="middle">
+      <text x="160" y="398" font-size="14" font-weight="bold" fill="#00477a">LoginScreen</text>
+      <text x="160" y="414" font-size="11" fill="#33709e">View</text>
+      
+      <text x="340" y="398" font-size="14" font-weight="bold" fill="#00477a">SignUpFlow</text>
+      <text x="340" y="414" font-size="11" fill="#33709e">View</text>
+      
+      <text x="530" y="398" font-size="14" font-weight="bold" fill="#00477a">HomeFeed</text>
+      <text x="530" y="414" font-size="11" fill="#33709e">Screen</text>
+      
+      <text x="770" y="398" font-size="14" font-weight="bold" fill="#00477a">Explore</text>
+      <text x="770" y="414" font-size="11" fill="#33709e">Screen</text>
+      
+      <text x="930" y="398" font-size="14" font-weight="bold" fill="#00477a">Reels</text>
+      <text x="930" y="414" font-size="11" fill="#33709e">Screen</text>
+      
+      <text x="1090" y="398" font-size="14" font-weight="bold" fill="#00477a">Profile</text>
+      <text x="1090" y="414" font-size="11" fill="#33709e">Screen</text>
+    </g>
+
+    <!-- Green Text -->
+    <g text-anchor="middle">
+      <text x="450" y="518" font-size="14" font-weight="bold" fill="#0e5927">StoryRow</text>
+      <text x="450" y="534" font-size="11" fill="#2d874b">FlatList</text>
+      
+      <text x="610" y="518" font-size="14" font-weight="bold" fill="#0e5927">PostList</text>
+      <text x="610" y="534" font-size="11" fill="#2d874b">FlatList</text>
+      
+      <text x="770" y="518" font-size="14" font-weight="bold" fill="#0e5927">SearchGrid</text>
+      <text x="770" y="534" font-size="11" fill="#2d874b">Masonry</text>
+      
+      <text x="930" y="518" font-size="14" font-weight="bold" fill="#0e5927">VideoScroller</text>
+      <text x="930" y="534" font-size="11" fill="#2d874b">Pager</text>
+      
+      <text x="1090" y="518" font-size="14" font-weight="bold" fill="#0e5927">UserHeader</text>
+      <text x="1090" y="534" font-size="11" fill="#2d874b">Component</text>
+    </g>
+
+    <!-- Warm Text -->
+    <g text-anchor="middle">
+      <text x="610" y="638" font-size="14" font-weight="bold" fill="#7a5900">PostCard</text>
+      <text x="610" y="654" font-size="11" fill="#a37c00">Component</text>
+      
+      <text x="450" y="758" font-size="14" font-weight="bold" fill="#7a5900">PostHeader</text>
+      <text x="450" y="774" font-size="11" fill="#a37c00">UI</text>
+      
+      <text x="610" y="758" font-size="14" font-weight="bold" fill="#7a5900">MediaCarousel</text>
+      <text x="610" y="774" font-size="11" fill="#a37c00">UI</text>
+      
+      <text x="770" y="758" font-size="14" font-weight="bold" fill="#7a5900">ActionButtons</text>
+      <text x="770" y="774" font-size="11" fill="#a37c00">UI</text>
+    </g>
+  </g>
+</svg>

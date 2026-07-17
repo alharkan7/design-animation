@@ -1,638 +1,710 @@
 # Mograph Studio — Development Plan
 
-Spin out the **mograph** (2D) and **threejs** (3D) apps from `design-animation` into a standalone product: one player shell, two engines, offline video export up to 4K.
+Standalone **human-directed motion graphics studio**: craft sequences one at a time (with optional agent assist), manage assets, assemble sequences into compositions with sound, and export fixed-resolution video up to 4K.
+
+Spin out **mograph** (2D) and **threejs** (3D) from `design-animation`. Use HyperFrames as **render/composition infrastructure inspiration** (and optionally libraries), not as an agent-to-final-video product flow.
 
 ---
 
-## 1. Goals
+## 1. Product positioning
 
+| This product is | This product is not |
+| --------------- | ------------------- |
+| Human-led sequence craft + human-led edit | One-shot agent film factory |
+| Asset-backed HTML/3D motion library | Timeline of stock clips only |
+| Studio that may use HyperFrames under the hood | HyperFrames Studio re-skin or Remotion rewrite |
+| Stepwise instruct → approve → compose | Script → storyboard → SFX → final autopilot |
 
-| Goal             | Detail                                                                |
-| ---------------- | --------------------------------------------------------------------- |
-| WYSIWYG export   | Video matches what the player shows (same renderer + timeline)        |
-| Fixed resolution | Export at 720p / 1080p / 2K / **4K**, independent of monitor size     |
-| Two engines      | 2D HTML/CSS sequences and 3D Three.js scenes under one app            |
-| Deployable       | Static UI on Vercel (or equivalent); heavy render off the static host |
-| Preserve catalog | Keep existing sequences and agent skills with path updates only       |
-| Clean deps       | No TTS, slides, Gemini, or other monorepo APIs                        |
+**Mental model**
 
+- **Sequence** = shot / graphic card (atomic motion piece)
+- **Composition** = edit / final cut (sequences + audio on a timeline)
+- **Asset** = reusable media from the project library
+- **Agent** = assistant scoped to the active sequence (or optional non-destructive suggestions later)
 
+---
 
+## 2. Goals
+
+| Goal | Detail |
+| ---- | ------ |
+| Human in the loop | User directs every sequence and the final composition; agent never owns the full pipeline |
+| Sequence-first craft | Create, preview, revise, and approve sequences one at a time |
+| Composition | Arrange approved sequences + SFX/music into a final video |
+| Asset management | Project library of user uploads (images first) embeddable in sequence HTML |
+| WYSIWYG export | Video matches the player (same renderer + timeline) |
+| Fixed resolution | Export 720p / 1080p / 2K / **4K**, independent of monitor size |
+| Two engines | 2D HTML/CSS (and seekable contracts over time) + 3D Three.js |
+| Deployable | UI + long-running render host (Chrome + FFmpeg); not tied to Vercel |
+| Preserve catalog | Migrate existing mograph/threejs content with path/skill updates |
+| Avoid reinventing render | Prefer HyperFrames engine/producer (or equivalent) over a custom Puppeteer stack long-term |
 
 ### Non-goals
 
-- Accounts, billing, multi-user projects
-- Rewriting sequences into Remotion / React / Rive
-- Putting Chromium export on Vercel serverless
+- Handing script, storyboard, SFX, and final video entirely to an agent
+- Accounts, billing, multi-tenant SaaS (unless added later)
+- Rewriting everything into Remotion / React for v1
 - Screen / tab recording as the primary export path
+- Pulling monorepo TTS, slides, Gemini, or unrelated apps into this product
 
 ---
 
+## 3. Core objects
 
+```text
+Project
+├── Assets/           # user uploads (images first; audio for composition)
+├── Sequences/        # one motion graphic each (HTML 2D or Three 3D)
+└── Compositions/     # timeline of sequences + audio → final video
+```
 
-## 2. Current state (source monorepo)
+| Object | Definition | User work |
+| ------ | ---------- | --------- |
+| **Project** | Container for brand/campaign work | Create, open, organize |
+| **Asset** | File in project library | Upload, tag, reuse in sequences/compositions |
+| **Sequence** | Self-contained motion graphic on a fixed stage | Instruct → preview → tweak → approve |
+| **Composition** | Timeline of sequence clips + audio tracks | Arrange, trim, layer SFX/music, export film |
 
+### Data model (sketch)
 
+```text
+Project {
+  id, name, createdAt
+}
 
-### 2.1 Apps
+Asset {
+  id, projectId, filename, mime, path, width?, height?, tags[]
+}
 
+Sequence {
+  id, projectId, name
+  engine: "css2d" | "three3d"
+  aspect, durationMs, bgPreset
+  sourcePath                 // HTML file or scene folder
+  assetRefs: AssetId[]
+  revisions: [{ id, pathOrHtml, prompt?, createdAt }]
+  status: draft | approved
+}
 
-| App        | Role               | Content                                | Player                       |
-| ---------- | ------------------ | -------------------------------------- | ---------------------------- |
-| `mograph/` | 2D player + export | ~42 HTML sequences + `manifest.json`   | Vanilla JS/CSS, iframe stage |
-| `threejs/` | 3D player + export | 13 animation folders + `manifest.json` | Near-identical shell         |
+Composition {
+  id, projectId, name, width, height, fps
+  tracks: [
+    { type: "video", clips: [
+      { sequenceId, startMs, inMs, outMs, transition? }
+    ]},
+    { type: "audio", clips: [
+      { assetId, startMs, inMs, outMs, volume }
+    ]}
+  ]
+}
+```
 
+**Asset embedding in sequences**
+
+- Stable project URLs, e.g. `/projects/{projectId}/assets/{assetId}` (or equivalent static path).
+- HTML references assets by **id or stable path**, not ephemeral blob URLs.
+- Agent generation may only use assets from the project allowlist.
+- Preview and render resolve the same URL so WYSIWYG holds.
+
+```html
+<img src="/projects/{projectId}/assets/{assetId}" data-asset-id="{assetId}" alt="" />
+```
+
+---
+
+## 4. Human-in-the-loop flows
+
+### 4.1 End-to-end
+
+```text
+1. Project
+2. Upload assets (optional)
+3. Create Sequence A   ← instruct → generate/edit → preview → approve
+4. Create Sequence B   ← same
+5. Create Sequence C   ← same
+6. Composition         ← place A/B/C + SFX/music
+7. Export              ← single sequence or full composition
+```
+
+Every step is a **user decision**. No silent multi-step agent pipeline from brief to final film.
+
+### 4.2 Sequence loop (tight HITL)
+
+```text
+User prompt for THIS sequence only
+        ↓
+Agent (optional) proposes or edits HTML / scene
+        ↓
+Preview on fixed logical stage
+        ↓
+User: accept | revise prompt | edit source | bind assets
+        ↓
+Save revision → mark draft or approved
+```
+
+**New sequence steps**
+
+1. **+ Sequence** → engine (2D / 3D), aspect, rough duration  
+2. Instruction for this sequence only  
+3. Optionally attach assets from library  
+4. Agent or template produces first version under skill rules  
+5. Preview, iterate, approve  
+6. Approved sequences appear in the composition media bin  
+
+### 4.3 Composition loop
+
+```text
+Pick approved sequences
+        ↓
+Drop on timeline (order, in/out, transitions)
+        ↓
+Add audio (SFX, music, VO files from assets)
+        ↓
+Preview full cut
+        ↓
+Export composition
+```
+
+### 4.4 Agent role
+
+| Step | Owner |
+| ---- | ----- |
+| Project goals | Human |
+| Which sequences exist | Human |
+| Prompt for sequence N | Human |
+| HTML / scene draft | Agent (optional) or human |
+| Approve sequence | Human |
+| Timeline order + SFX | Human |
+| Export | System (render) |
+
+**Agent may**
+
+- Rewrite **one** active sequence  
+- Respect asset allowlist and skill contracts  
+- Later: non-destructive composition suggestions (never auto-commit)
+
+**Agent must not**
+
+- Auto-generate the full video  
+- Own storyboard + SFX + final cut unprompted  
+- Use undeclared external assets
+
+---
+
+## 5. Application UI
+
+### 5.1 Shell
+
+Three top-level modes:
+
+1. **Sequences** — craft single graphics  
+2. **Composition** — assemble the film  
+3. **Assets** — library  
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Project: …          [Sequences] [Composition] [Assets]         │
+├──────────┬──────────────────────────────────────────────────────┤
+│ Sidebar  │              Main stage / workspace                  │
+│ list +   │                                                      │
+│ tools +  │                                                      │
+│ agent    │                                                      │
+├──────────┴──────────────────────────────────────────────────────┤
+│  Transport / timeline (context-dependent)                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Sequences mode
+
+```text
+┌────────────┬────────────────────────────┬───────────────────────┐
+│ Sequence   │   Fixed logical stage      │  Inspector            │
+│ list       │   (letterboxed preview)    │  name, aspect, dur    │
+│            │                            │  BG preset            │
+│ [+ New]    │   play / scrub             │  linked assets        │
+│            │                            │  export resolution    │
+│            │                            │  ── Agent assist ──   │
+│            │                            │  prompt → this seq    │
+└────────────┴────────────────────────────┴───────────────────────┘
+│  Optional: source panel (HTML) for power users                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.3 Composition mode
+
+```text
+┌───────────────┬──────────────────────────────────────────────────┐
+│ Media bin     │  Stage preview (follows playhead)                │
+│ sequences +   │                                                  │
+│ audio assets  │                                                  │
+└───────────────┴──────────────────────────────────────────────────┘
+│ V1  [==== Seq A ====][== Seq B ==][==== Seq C ====]              │
+│ A1       [whoosh]        [hit]                                   │
+│ A2  [=========== music bed =====================]                │
+│     playhead ─────────────────────────────────────               │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**v1 composition**
+
+- Video track: ordered/trimmed sequence clips  
+- Audio track(s): volume, simple fades  
+- Export full composition  
+
+**Later**
+
+- Transitions, multi-track video, beat markers  
+- Agent “suggest SFX placement” as proposals only  
+
+### 5.4 Assets mode
+
+- Upload images (v1); audio for composition  
+- Grid/list with metadata and “used in” sequences  
+- Optional folders/tags  
+- **Insert asset** into active sequence (`img` / CSS `url`)  
+
+---
+
+## 6. Current state (source monorepo)
+
+### 6.1 Apps
+
+| App | Role | Content | Player |
+| --- | ---- | ------- | ------ |
+| `mograph/` | 2D player + export | ~42 HTML sequences + `manifest.json` | Vanilla JS/CSS, iframe stage |
+| `threejs/` | 3D player + export | 13 animation folders + `manifest.json` | Near-identical shell |
 
 Shared UI (toolbar, sidebar, BG presets, aspect ratio) is duplicated almost line-for-line.
 
-### 2.2 Export today
+### 6.2 Export today
 
+| Engine | Method | Localhost | Typical static host |
+| ------ | ------ | --------- | ------------------- |
+| **2D** | Vite middleware + Puppeteer: WAAPI frame-step → screenshots → MediaRecorder → WebM | Yes | **No** (API never ships; long Chromium jobs unfit for classic serverless) |
+| **3D** | Client composite canvas + `captureStream` + MediaRecorder | Yes | Yes, but resolution is viewport-coupled |
 
-| Engine | Method                                                                                     | Works on localhost | Works on Vercel                                                     |
-| ------ | ------------------------------------------------------------------------------------------ | ------------------ | ------------------------------------------------------------------- |
-| **2D** | Vite middleware + Puppeteer: WAAPI frame-step → screenshots → in-page MediaRecorder → WebM | Yes                | **No** (API never ships; serverless cannot host long Chromium jobs) |
-| **3D** | Client: composite canvas + `captureStream` + MediaRecorder                                 | Yes                | Yes (static), but resolution is viewport-coupled                    |
+### 6.3 Problems to fix
 
+**2D**
 
+1. Export only exists in Vite `configureServer` / `configurePreviewServer`.  
+2. Long Chromium + encode jobs need a real host (Docker/VPS/Fly/etc.), not a static-only deploy.  
+3. Buffering **all frames as base64** OOMs at 4K (≈33MB RGBA/frame).  
 
+**3D**
 
-### 2.3 Why 2D breaks when deployed
+1. Records live preview canvas size, not a logical export size.  
+2. Realtime MediaRecorder can drop frames.  
+3. No fixed 1080p/4K offline path.  
 
-1. Export lives only in `vite.config.js` (`configureServer` / `configurePreviewServer`), not as a deployable API.
-2. Puppeteer + multi-minute encodes do not fit Vercel serverless (timeouts, binary size, memory).
-3. Current pipeline buffers **all frames as base64** then re-encodes; at 4K this OOMs (≈33MB RGBA per frame).
-
-
-
-### 2.4 Why 3D export is incomplete
-
-- Records the **live preview canvas** size, not a logical export size.
-- Realtime MediaRecorder can drop frames under GPU load.
-- No quality picker / fixed 4K path.
-
-
-
-### 2.5 Assets and skills to keep
+### 6.4 Carry over / leave behind
 
 **Carry over**
 
-- `mograph/` (player, sequences, manifest)
-- `threejs/` (player, animations, manifest)
-- `public/models`, `public/textures`, `public/draco`, `public/fonts`
-- WAAPI frame-step logic in `motionGraphicsExportPlugin` (`vite.config.js`)
-- Skills: `2d-motion-graphics`, `3d-motion-graphics`
+- `mograph/` (player, sequences, manifest)  
+- `threejs/` (player, animations, manifest)  
+- `public/models`, `textures`, `draco`, `fonts`  
+- WAAPI frame-step ideas from `motionGraphicsExportPlugin`  
+- Skills: `2d-motion-graphics`, `3d-motion-graphics` (evolve toward studio contracts)  
 
 **Leave behind**
 
-- Other apps (counter, languages, TTS, slides, citation, etc.)
-- Gemini / ElevenLabs plugins
-- `api/generate-slides.js` and monorepo-only APIs
+- Other monorepo apps (counter, languages, TTS, slides, citation, etc.)  
+- Gemini / ElevenLabs plugins as core deps  
+- `api/generate-slides.js` and unrelated APIs  
 
 ---
 
+## 7. Architecture decisions
 
-
-## 3. Product shape
-
-**One product, two engines, one export contract.**
-
-
-| Piece                   | Responsibility                                                            |
-| ----------------------- | ------------------------------------------------------------------------- |
-| **2D engine**           | HTML/CSS/WAAPI sequences (`sequences/2d/`)                                |
-| **3D engine**           | Three.js scenes (`sequences/3d/`)                                         |
-| **Shared shell**        | Toolbar, sidebar, BG presets, aspect ratio, playhead, progress, export UX |
-| **Fixed logical stage** | Design resolution for preview **and** export; monitor is only a viewer    |
-
-
-
-
-### UX outline
-
-1. **Home** — enter 2D or 3D (tabs or routes).
-2. **Shared controls** — aspect ratio, BG (solid / grid / dots / paper / transparent), play/pause/scrub, fullscreen.
-3. **Export** — resolution (720p–4K), fps, background include toggle; progress UI.
-4. **Catalog** (later) — search/filter across both manifests.
-
-Preview always **letterboxes/scales** the stage into the viewport. Aspect ratio changes the **stage**, not “whatever the window is.”
-
----
-
-
-
-## 4. Architecture decisions
-
-
-
-### 4.1 Framework: Vite (not Next.js)
-
-
-| Need                                | Vite            | Next.js                           |
-| ----------------------------------- | --------------- | --------------------------------- |
-| Static players + sequence HTML      | Excellent       | Overhead                          |
-| Three.js ES modules                 | Native          | Fine but no gain                  |
-| Client 4K WebCodecs export          | Browser-only    | No help                           |
-| Frame-perfect 2D Chromium export    | Separate worker | API routes still bad for Chromium |
-| Agent-authored plain HTML sequences | Simple          | Extra ceremony                    |
-
-
-**Decision:** Vite multi-page or light SPA for the studio. No Next.js unless product chrome (auth, billing) is added later.
-
-**UI:** Keep vanilla JS initially (or light framework later if shell complexity grows). Do not rewrite sequences into a component framework.
-
-### 4.2 Export model: offline render, not screen record
-
-Export is three problems:
-
-
-| Problem       | Wrong model                  | Correct model                     |
-| ------------- | ---------------------------- | --------------------------------- |
-| Composition   | Whatever is on the monitor   | Logical stage at fixed `W×H`      |
-| Rasterization | Film the preview panel       | Render target of size `W×H`       |
-| Encoding      | Buffer all frames, then hope | Stream-encode one frame at a time |
-
-
-**WYSIWYG** means preview and export share the same renderer and clock; only `W×H` and encode settings change.
-
-Resolution is **not** tied to the user’s screen:
+### 7.1 Product architecture
 
 ```text
-Logical stage:  3840 × 2160   ← export bitmap
-Preview:        scale(fit)    ← display only
+┌──────────────────────────────────────────────────────────────┐
+│  Mograph Studio (product)                                    │
+│  • Projects / assets / sequences / compositions              │
+│  • HITL agent scoped to active sequence                      │
+│  • Timeline composition editor                               │
+│  • Storage + manifests                                       │
+└───────────────┬──────────────────────────┬───────────────────┘
+                │                          │
+                ▼                          ▼
+┌───────────────────────────┐  ┌───────────────────────────────┐
+│  Sequence runtime         │  │  Composition runtime          │
+│  Fixed stage player       │  │  Timeline + playhead preview  │
+│  2D HTML / 3D Three       │  │  Sequence clips + audio graph │
+└─────────────┬─────────────┘  └───────────────┬───────────────┘
+              │                                │
+              └────────────┬───────────────────┘
+                           ▼
+              ┌────────────────────────────┐
+              │  Render layer              │
+              │  Prefer HyperFrames        │
+              │  engine/producer (or CLI)  │
+              │  Chrome seek + FFmpeg      │
+              │  Optional client WebCodecs │
+              │  for pure Three clips      │
+              └────────────────────────────┘
 ```
 
-- **3D:** `renderer.setSize(exportW, exportH)` (or a `WebGLRenderTarget`).
-- **2D:** stage/iframe laid out at `exportW×exportH`, previewed with `transform: scale(...)`.
+| Layer | Build in-house | Borrow |
+| ----- | -------------- | ------ |
+| Project UX, HITL, assets, composition timeline | **Yes** | — |
+| Sequence player chrome | **Yes** (evolve mograph/threejs shell) | HF player concepts later if useful |
+| Frame-accurate HTML capture + encode | Prefer **HyperFrames engine/producer** | Do not long-term reinvent Puppeteer+MediaRecorder |
+| Seekable timeline contract | Adopt HF-like rules over time | `@hyperframes/*` packages as evaluated |
+| Agent “full video factory” skills | **Do not adopt as product flow** | Craft references only |
 
+### 7.2 Framework: Vite (not Next.js / not React-required)
 
+| Need | Choice |
+| ---- | ------ |
+| Bundler / UI host | **Vite** |
+| UI framework | Vanilla first; React/Svelte only if shell complexity demands it |
+| Sequences | Static HTML / Three scenes, not a forced React rewrite |
+| Remotion | Not required for v1 |
 
-### 4.3 Rasterization: split by engine
+React is **not** used in mograph/threejs today and is **not** required to scale this product. Scale is about render compute, assets, and composition—not React.
 
+### 7.3 Export model: offline render, not screen record
 
-| Engine | Rasterizer                                  | Why                                                                                                                   |
-| ------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **3D** | WebGL canvas at export size, stepped time   | Already a bitmap source; true pixels at any res in the browser                                                        |
-| **2D** | Headless Chromium screenshots + WAAPI scrub | Free-form CSS has no silent “exact compositor pixels” web API; Chromium screenshots remain the fidelity gold standard |
+| Problem | Wrong model | Correct model |
+| ------- | ----------- | ------------- |
+| Composition | Whatever is on the monitor | Logical stage at fixed `W×H` |
+| Rasterization | Film the preview panel | Render target of size `W×H` |
+| Encoding | Buffer all frames | Stream-encode one frame at a time |
 
-
-Client DOM libraries (html2canvas / modern-screenshot) are optional **draft** only; they drift on glass, filters, and complex CSS.
-
-### 4.4 Encoding: streaming, prefer MP4
-
-
-| Encoder                                | Where         | Role                                                   |
-| -------------------------------------- | ------------- | ------------------------------------------------------ |
-| **WebCodecs + mp4-muxer / mediabunny** | Browser       | Primary for 3D (and optional 2D draft)                 |
-| **ffmpeg**                             | Worker / CLI  | Primary for 2D studio export (H.264 MP4, NLE-friendly) |
-| MediaRecorder                          | Fallback only | Weaker timing; avoid as default                        |
-
-
-**Rules**
-
-- Never buffer all frames in memory (especially 4K).
-- Prefer **MP4 (H.264)** over WebM-only for editor compatibility.
-- Offline render may be slower than realtime; quality wins over live capture.
-
-
-
-### 4.5 Chosen end-state architecture
+**WYSIWYG** = preview and export share renderer + clock; only `W×H` and encode settings change.
 
 ```text
-                    ┌──────────────────────┐
-   Preview UI  ───► │ Fixed logical stage  │◄── aspect + quality
-                    │ shared timeline t    │
-                    └──────────┬───────────┘
-           ┌───────────────────┼───────────────────┐
-           ▼                                       ▼
-   2D: Chromium screenshots                 3D: WebGL @ W×H
-   (worker / CLI)                           stepped clock (client)
-           └───────────────────┬───────────────────┘
-                               ▼
-                    Streaming encoder
-                    ffmpeg (2D) / WebCodecs (3D)
-                               ▼
-                           MP4 file
+Logical stage:  export bitmap (e.g. 3840×2160)
+Preview:        scale(fit) into UI
 ```
 
+- **3D:** `renderer.setSize(exportW, exportH)` or render target; stepped `t = frame / fps`; prefer WebCodecs → MP4.  
+- **2D:** stage at export size; Chromium screenshots + seekable timeline; ffmpeg → MP4.  
 
-| Engine | Rasterize                         | Encode           | Runs on                    |
-| ------ | --------------------------------- | ---------------- | -------------------------- |
-| 3D     | WebGL at `W×H`, `t = frame / fps` | WebCodecs → MP4  | User browser (static host) |
-| 2D     | Chromium viewport + WAAPI scrub   | ffmpeg → MP4     | Render worker or local CLI |
-| UI     | Scaled stage                      | Shared export UX | Vercel / CF Pages          |
+Never hold all frames in memory at 4K.
 
+### 7.4 HyperFrames: what to use vs ignore
 
+HyperFrames (HeyGen, open source) = HTML compositions → deterministic Chrome capture → FFmpeg. Strong fit for **render**, weak fit as **product flow** (agent-first full video pipelines).
 
+| Use / inspire | Do not adopt as product default |
+| ------------- | -------------------------------- |
+| Frame seek + capture + ffmpeg pipeline | Script → storyboard → SFX → final autopilot |
+| Fixed `width` / `height` / duration contracts | Replacing human sequence approval |
+| Lint/inspect ideas for compositions | Mandatory GSAP for every legacy sequence on day one |
+| CLI/Docker/cloud render adapters | Handing creative ownership to the agent |
+| Three seek adapter patterns (`hf-seek` style) | Dropping custom sequence/composition UX |
 
-### 4.6 Explicitly rejected
+**Existing mograph HTML is not drop-in.** Migration means adopting composition contracts (or dual pipeline: legacy WAAPI scrub + new HF-compatible sequences).
 
-- Primary export via screen/tab recording or Element Capture
-- Puppeteer inside Vite plugins as production architecture
-- All-frames-in-RAM encode path
-- Forcing Chromium jobs onto Vercel serverless
-- Full rewrite to Remotion/scene-graph in v1 (optional later only)
+**Remotion** remains optional only if the team later wants React frame-as-code at scale. It is less aligned than HyperFrames for HTML/agent-assisted sequences.
+
+### 7.5 Encoding
+
+| Encoder | Where | Role |
+| ------- | ----- | ---- |
+| WebCodecs + mp4-muxer / mediabunny | Browser | Primary for 3D (optional draft elsewhere) |
+| ffmpeg (via HF producer or worker) | Render host | Primary for 2D and composition export |
+| MediaRecorder | Fallback only | Avoid as default |
+
+Prefer **MP4 (H.264)** for NLE compatibility.
+
+### 7.6 Deploy (platform-flexible)
+
+Not strict on Vercel. Any host that can run **Chrome + FFmpeg** for multi-minute jobs is fine.
+
+| Component | Host type | Notes |
+| --------- | --------- | ----- |
+| Studio UI + API + asset storage | App platform or VPS | Projects, uploads, sequence files |
+| Preview | Same as UI | Fixed-stage player |
+| Render | Same box or sibling worker | `hyperframes render` / producer / custom worker wrapping it |
+| Scale later | HF Lambda / Cloud Run adapters or more workers | Queue concurrent jobs |
+
+Light traffic: **UI + render on one Docker host**. Split when load or isolation requires it.
+
+**Rejected**
+
+- Primary export via screen/tab recording  
+- Puppeteer inside Vite plugins as production architecture  
+- All-frames-in-RAM encode  
+- Assuming classic serverless alone can do studio export  
 
 ---
 
-
-
-## 5. Target repository layout
+## 8. Target repository layout
 
 ```text
-motion-studio/
+motion-studio/   # or mograph-studio/
 ├── package.json
 ├── apps/
-│   └── web/                          # Vite app
-│       ├── index.html                # home: 2D / 3D
-│       ├── 2d/index.html
-│       ├── 3d/index.html
+│   └── web/                          # Vite app (product UI)
+│       ├── index.html
 │       ├── src/
-│       │   ├── shell/                # shared chrome
+│       │   ├── shell/                # chrome, routing, project switcher
+│       │   ├── sequences/            # sequence list + player + agent panel
+│       │   ├── composition/          # timeline editor
+│       │   ├── assets/               # library UI + upload
 │       │   ├── engines/
-│       │   │   ├── css2d/            # 2D player
-│       │   │   └── three3d/          # 3D player
-│       │   └── export/
-│       │       ├── client/           # WebCodecs path (3D, optional 2D draft)
-│       │       └── remote/           # job client for worker
-│       ├── sequences/
-│       │   ├── 2d/                   # from mograph/sequences
-│       │   └── 3d/                   # from threejs/animations
+│       │   │   ├── css2d/
+│       │   │   └── three3d/
+│       │   └── export/               # client + remote job client
+│       ├── sequences/                # seed/migrated catalog (optional)
+│       │   ├── 2d/
+│       │   └── 3d/
 │       └── public/                   # models, textures, draco, fonts
 ├── services/
-│   └── render-worker/
-│       ├── src/
-│       │   ├── browser.ts            # Playwright pool
-│       │   ├── capture.ts            # WAAPI frame-step (from current plugin)
-│       │   ├── encode.ts             # ffmpeg stream encode
-│       │   └── server.ts             # HTTP job API
+│   ├── api/                          # projects, assets, sequence storage (if not embedded)
+│   └── render-worker/                # Chrome + FFmpeg / HyperFrames producer
 │       ├── Dockerfile
-│       └── package.json
-├── skills/                           # or .agents/skills/
-│   ├── 2d-motion-graphics/
+│       └── ...
+├── skills/
+│   ├── 2d-motion-graphics/           # sequence craft, HITL, assets allowlist
 │   └── 3d-motion-graphics/
-└── README.md
+└── docs/
+    └── mograph-studio.md
 ```
 
+### Dependencies (direction)
 
+| Package / tool | Purpose |
+| -------------- | ------- |
+| `three` | 3D engine |
+| `mp4-muxer` or `mediabunny` | Client MP4 for 3D |
+| HyperFrames engine/producer/CLI (evaluate pin) | HTML frame capture + ffmpeg |
+| Playwright/Puppeteer only if interim before HF | Legacy bridge |
+| Object storage or local disk | Project assets |
 
-### Dependencies
-
-
-| Package                     | App    | Purpose              |
-| --------------------------- | ------ | -------------------- |
-| `three`                     | web    | 3D runtime           |
-| `mp4-muxer` or `mediabunny` | web    | Client MP4 mux       |
-| `playwright` (or puppeteer) | worker | Chromium screenshots |
-| system / image `ffmpeg`     | worker | Stream encode to MP4 |
-
-
-Do not pull monorepo deps (Gemini, ElevenLabs, pptx, etc.) into this repo.
+Do not pull monorepo Gemini/ElevenLabs/pptx into the core studio unless a later feature needs them.
 
 ---
 
+## 9. Export pipelines
 
+### 9.1 Shared player contract
 
-## 6. Export pipelines (implementation targets)
+- Stage has design resolution (e.g. 1920×1080 for 16:9).  
+- Export sets absolute `W×H` from quality + aspect.  
+- Duration from WAAPI / seekable timeline / 3D timing dummy.  
+- Background applied the same in preview and export.  
 
+### 9.2 Sequence export (2D)
 
+Prefer HyperFrames-style seek + screenshot + ffmpeg stream. Interim: port current WAAPI scrub, but **stream frames** (no full base64 array).
 
-### 6.1 Shared player contract
-
-- Stage has a base design size (e.g. 1920×1080 for 16:9).
-- Export multiplies or sets absolute `W×H` from quality + aspect.
-- Duration comes from WAAPI `getAnimations()` (2D) or timing dummy + animations (3D skill contract).
-- Background (solid / preset / transparent) applied the same way in preview and export.
-
-
-
-### 6.2 3D export (client)
+### 9.3 Sequence export (3D)
 
 ```text
 setSize(exportW, exportH)
 for i in 0..totalFrames:
   setTime(i / fps)
-  renderer.render(scene, camera)
-  videoEncoder.encode(canvasFrame)
-  free frame
-mux → download motion-3d-{res}.mp4
+  render()
+  videoEncoder.encode(frame)
+mux → MP4
 ```
 
-Requirements on scenes (existing skill, keep):
+Skill contract: `preserveDrawingBuffer`, transparent clear, bare `three` imports, finite duration.
 
-- `WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true })`
-- Transparent clear; player owns background
-- Bare `three` imports (no CDN)
-- Finite duration via WAAPI dummy when pure rAF math loops
+### 9.4 Composition export
 
+1. Resolve timeline to a single render graph (stitched sequence renders + audio mix), **or**  
+2. One HTML/composition document that references sequence subclips (longer-term, HF-like).  
 
+v1 may **pre-render approved sequences** then concatenate/mux with ffmpeg (simpler). Later: single-pass composition render.
 
-### 6.3 2D export (worker / CLI)
+### 9.5 Job API (render host)
 
 ```text
-browser.setViewport(exportW, exportH)
-page.setContent(sequenceHtml)  # or load by sequence id
-inject bg if requested
-pause all WAAPI animations
-for i in 0..totalFrames:
-  set currentTime = i / fps
-  force compositor sample (play/pause + rAF pattern as today)
-  screenshot → pipe to ffmpeg stdin (or temp frame file)
-ffmpeg → motion-2d-{res}.mp4
+POST /export  → { jobId }
+GET  /export/:id → progress | download
 ```
 
-Port from `motionGraphicsExportPlugin`, then change:
-
-1. Stream frames (no full base64 array).
-2. Replace second-page MediaRecorder with **ffmpeg**.
-3. Prefer sequence **id + params** over raw HTML from the client in production.
-4. Job API: `POST /export` → `{ jobId }` → poll `GET /export/:id` → download.
-
-Worker ops:
-
-- Memory ≥ 2GB
-- Concurrency 1–2 pages per instance; queue the rest
-- Timeouts 5–15 minutes for 4K
-- Optional API key so the worker is not an open Chromium farm
-
-
-
-### 6.4 Optional local CLI
-
-```bash
-npx motion-export sequences/2d/kinetic-typography.html --out out.mp4 --res 4k
-```
-
-Same capture/encode as the worker. Strong fit for agent workflows without paying for cloud render.
+Inputs: project id, sequence or composition id, `W`, `H`, fps, bg. Prefer ids over raw HTML in production.
 
 ---
 
+## 10. Skills updates
 
+| Skill | Changes |
+| ----- | ------- |
+| `2d-motion-graphics` | Paths under project sequences; **HITL** (one sequence); asset allowlist; fixed stage; export notes; no full-film agent pipeline |
+| `3d-motion-graphics` | Same project paths; assets under project/public; stepped export; `preserveDrawingBuffer` |
 
-## 7. Deployment
+**Unchanged craft rules (initial)**
 
+- **2D:** Prefer CSS/WAAPI (or documented seekable runtime); no infinite loops; fill-mode discipline.  
+- **3D:** Transparent clear; bare imports; timing dummy when needed.  
 
-| Component                   | Host                               | Notes                        |
-| --------------------------- | ---------------------------------- | ---------------------------- |
-| Web UI + sequences + models | Vercel / Cloudflare Pages          | Static CDN only              |
-| 3D export                   | Browser                            | Free; no server              |
-| 2D studio export            | Fly.io / Railway / Cloud Run / VPS | Docker + Playwright + ffmpeg |
-| Job artifacts (if needed)   | R2 / S3, short TTL                 | Large 4K files               |
+Evolve toward HyperFrames seek contracts as new sequences are authored that way.
 
-
-**Do not** host multi-minute Chromium jobs on Vercel serverless. Vercel is for the player; the worker is for batch render.
-
-### Worker Docker (sketch)
-
-```dockerfile
-FROM mcr.microsoft.com/playwright:v1.49.0-jammy
-# install ffmpeg if not present
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-ENV PORT=8080
-CMD ["node", "src/server.js"]
-```
+Ship skills inside the studio repo.
 
 ---
 
+## 11. Migration from monorepo
 
+| Source | Destination |
+| ------ | ----------- |
+| `mograph/sequences/*` | Project seed or `sequences/2d/` |
+| `threejs/animations/*` | `sequences/3d/` |
+| Players `app.js` / `style.css` | `engines/*` + `shell` |
+| `public/models`, `textures`, `draco`, `fonts` | `apps/web/public/` |
+| `motionGraphicsExportPlugin` capture loop | Interim worker or replaced by HF producer |
 
-## 8. Phased development plan
-
-
-
-### Phase 0 — Scaffold and migrate (foundation)
-
-**Outcome:** Standalone Vite app with both catalogs playable; no monorepo cruft.
-
-1. Create `motion-studio` repo / package (Vite).
-2. Routes or pages: `/`, `/2d`, `/3d`.
-3. Lift sequences, manifests, public 3D assets.
-4. Deduplicate shell into `src/shell/`.
-5. Wire new base paths for manifests and assets.
-6. Drop unrelated monorepo APIs and dependencies.
-7. Copy skills into-repo; update paths only.
-8. Deploy static UI to Vercel (preview/playback only is enough).
-
-**Exit criteria**
-
-- [ ] Both catalogs load from manifests
-- [ ] Playback, aspect ratio, BG presets work for 2D and 3D
-- [ ] `vite build` succeeds; static deploy serves sequences and models
+Path rewrites: `/mograph/sequences/` → project/sequence URLs; `/threejs/animations/` → same pattern.
 
 ---
 
+## 12. Phased development
 
+### Phase 0 — Scaffold and migrate
 
-### Phase 1 — Fixed stage + 3D offline export
+**Outcome:** Standalone app plays 2D + 3D catalogs on a fixed stage.
 
-**Outcome:** Prove resolution-independent export; 3D can ship 4K from the browser.
+1. Vite app shell; project concept (even single default project).  
+2. Lift sequences, manifests, 3D public assets.  
+3. Deduplicate player chrome.  
+4. Deploy UI on chosen platform (render optional).  
 
-1. Introduce logical stage sizing (base res + letterbox preview).
-2. Export UI: resolution, fps (even if 2D still incomplete).
-3. Implement stepped 3D timeline (`t = frameIndex / fps`).
-4. Client WebCodecs encoder + MP4 muxer.
-5. Auto-stop using duration from WAAPI / skill timing dummy.
-6. Composite background into export frames (same presets as preview).
+**Exit**
 
-**Exit criteria**
+- [ ] Both catalogs load and play  
+- [ ] Fixed stage + aspect + BG presets  
+- [ ] No monorepo-only API deps  
 
-- [ ] Export 1080p and 4K from a small laptop display
-- [ ] Frame count ≈ `duration * fps` (no realtime dependency)
-- [ ] Output plays in Chrome and imports into a common NLE (or at least QuickTime/VLC)
-- [ ] Memory stays flat during long exports (no full-frame buffer)
+### Phase 1 — Assets + HITL sequence craft
 
----
+**Outcome:** Project asset library; sequence instruct/revise/approve loop.
 
+1. Asset upload + storage + stable URLs.  
+2. Insert/bind assets into active sequence.  
+3. Agent panel scoped to one sequence + allowlist.  
+4. Revisions + draft/approved status.  
+5. Skills path + HITL wording updates.  
 
+**Exit**
 
-### Phase 2 — 2D studio export worker
+- [ ] Upload image → embed in sequence → preview shows it  
+- [ ] Agent cannot reference non-allowlisted files  
+- [ ] Approved sequences listed for composition (even if composition is stub)  
 
-**Outcome:** Frame-perfect 2D at fixed resolution, deployable separately from the UI.
+### Phase 2 — Fixed-stage export (sequence)
 
-1. Extract WAAPI scrub + screenshot loop from `motionGraphicsExportPlugin`.
-2. Stream frames into ffmpeg (H.264 MP4).
-3. Job API + progress polling (replace in-memory Vite progress map with worker job store).
-4. Wire web UI “Export” for 2D to the worker (sequence id, `W`, `H`, fps, bg).
-5. Docker deploy to Fly/Railway/etc.; document env and API key.
-6. Smoke: short sequence @ 1080p and 4K.
+**Outcome:** 1080p/4K sequence export independent of monitor.
 
-**Exit criteria**
+1. Logical stage export sizing.  
+2. 3D stepped WebCodecs path.  
+3. 2D render host (HF producer preferred; interim stream capture OK).  
+4. Progress UI + download.  
 
-- [ ] 2D export matches localhost mograph quality (or better)
-- [ ] No Vite plugin required for production export
-- [ ] Worker survives concurrent queueing (1–2 active jobs)
-- [ ] Static UI remains deployable without the worker (clear error if worker down)
+**Exit**
 
----
+- [ ] 3D 1080p and 4K from a non-4K display  
+- [ ] 2D export matches preview fidelity  
+- [ ] Memory stable (no full-frame buffer)  
 
+### Phase 3 — Composition + audio
 
+**Outcome:** Timeline of sequences + SFX/music → export film.
 
-### Phase 3 — Polish and agent workflow
+1. Composition editor (video + audio tracks).  
+2. Trim, order, volume, simple fades.  
+3. Composition export (stitch/mux v1).  
+4. Audio assets in library.  
 
-**Outcome:** Production-usable studio + agent-friendly export.
+**Exit**
 
-1. Unified progress UX for client (3D) and remote (2D) jobs.
-2. Optional local CLI sharing worker capture/encode code.
-3. Skill docs: fixed stage, export resolutions, 2D worker vs 3D client.
-4. CI: build web; build/push worker image; basic export smoke if secrets allow.
-5. Optional: catalog search, last-export settings persistence.
+- [ ] Multi-sequence cut with SFX exports  
+- [ ] Only approved (or explicitly allowed draft) sequences on timeline  
 
-**Exit criteria**
+### Phase 4 — Render maturity + polish
 
-- [ ] README covers local dev, Vercel deploy, worker deploy, CLI
-- [ ] Skills produce sequences that export cleanly under the new paths
-- [ ] Documented limits (max duration, concurrency, Safari WebCodecs caveats)
+**Outcome:** Production-grade render path and ops.
 
----
+1. Prefer HyperFrames engine/producer fully; drop interim Puppeteer hacks.  
+2. Dual format policy: legacy sequences vs HF-compatible new ones (or migrate).  
+3. Queue, API key, max duration, concurrency.  
+4. Optional CLI for local/agent render of a single sequence.  
+5. CI smoke exports.  
 
+**Exit**
 
+- [ ] Documented deploy (UI + render)  
+- [ ] Chrome-first export notes; Safari caveats if any  
+- [ ] README + skills match product flow  
 
-### Phase 4 — Optional later
+### Phase 5 — Optional later
 
-Only if product direction demands it:
-
-
-| Idea                                                  | When                                                  |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| Client 2D “draft export” (screenshot lib)             | Want offline 2D without worker; accept fidelity drift |
-| Auth / project library                                | Multi-user product                                    |
-| Scene-graph authoring (Remotion, Motion Canvas, Rive) | Willing to migrate off free-form HTML                 |
-| Single search catalog across 2D+3D                    | Catalog grows large                                   |
-
-
----
-
-
-
-## 9. Skills updates
-
-Keep contracts; update paths and export notes.
-
-
-| Skill                | Changes                                                                                               |
-| -------------------- | ----------------------------------------------------------------------------------------------------- |
-| `2d-motion-graphics` | Sequences → `sequences/2d/`; document studio export via Chromium worker/CLI; fixed stage rules        |
-| `3d-motion-graphics` | Animations → `sequences/3d/`; assets under `public/`; stepped client export + `preserveDrawingBuffer` |
-
-
-**Unchanged contracts**
-
-- **2D:** CSS/WAAPI only; no infinite loops; fill-mode rules; no rAF timing for primary motion.
-- **3D:** transparent clear; bare `three` imports; timing dummy for finite duration when needed.
-
-Ship skills inside the new repo (e.g. `.agents/skills/` or `skills/`).
+| Idea | When |
+| ---- | ---- |
+| Agent timeline suggestions (proposals only) | After composition v1 is solid |
+| Transitions, multi video tracks | Editorial demand |
+| Parametric sequence variables (HF-style) | Template reuse |
+| Auth / multi-user projects | Productization |
+| Remotion | Only if React frame-as-code becomes a team requirement |
 
 ---
 
+## 13. Implementation order (first slices)
 
-
-## 10. Migration checklist
-
-
-
-### From monorepo → `apps/web`
-
-
-| Source                                        | Destination                            |
-| --------------------------------------------- | -------------------------------------- |
-| `mograph/sequences/*`                         | `sequences/2d/`                        |
-| `mograph/sequences/manifest.json`             | `sequences/2d/manifest.json`           |
-| `threejs/animations/*`                        | `sequences/3d/`                        |
-| `threejs/animations/manifest.json`            | `sequences/3d/manifest.json`           |
-| `mograph/app.js` + `style.css` + `index.html` | Merge into `engines/css2d` + `shell`   |
-| `threejs/app.js` + `style.css` + `index.html` | Merge into `engines/three3d` + `shell` |
-| `public/models`, `textures`, `draco`, `fonts` | `apps/web/public/`                     |
-
-
-
-
-### From monorepo → `services/render-worker`
-
-
-| Source                                    | Destination                                    |
-| ----------------------------------------- | ---------------------------------------------- |
-| `motionGraphicsExportPlugin` capture loop | `capture.ts`                                   |
-| BG preset injection for export            | shared helper with web or duplicated carefully |
-| Progress map                              | job store with TTL                             |
-
-
-
-
-### Path rewrites
-
-- Sequence URLs: `/mograph/sequences/` → `/sequences/2d/`
-- Animation URLs: `/threejs/animations/` → `/sequences/3d/`
-- Model/texture paths remain under `/models`, `/textures`, `/draco`, `/fonts` if `public/` root is preserved
+1. Scaffold + migrate catalogs (Phase 0).  
+2. Fixed logical stage in shell.  
+3. Assets library + embed (Phase 1).  
+4. HITL sequence agent panel (Phase 1).  
+5. 3D stepped export (Phase 2).  
+6. 2D render worker / HF producer (Phase 2).  
+7. Composition timeline + audio (Phase 3).  
+8. Harden render ops (Phase 4).  
 
 ---
 
+## 14. Success criteria
 
-
-## 11. Implementation order (first slices)
-
-Build in this order so each slice de-risks a hard problem:
-
-1. **Scaffold + migrate catalogs** (Phase 0) — no export risk.
-2. **Fixed logical stage in shell** — unlocks all later export work.
-3. **3D stepped WebCodecs @ 1080p then 4K** (Phase 1) — proves resolution independence without a server.
-4. **2D worker + ffmpeg stream encode** (Phase 2) — proves fidelity + deploy split.
-5. **CLI + skills + CI** (Phase 3).
-
----
-
-
-
-## 12. Success criteria (product)
-
-- [ ] One app plays both 2D and 3D catalogs
-- [ ] Preview uses a fixed stage; UI scales it; aspect ratio is intentional
-- [ ] 3D export at 1080p and 4K from a non-4K display
-- [ ] 2D export frame-perfect via worker/CLI at 1080p and 4K
-- [ ] Exports stream-encode (stable memory)
-- [ ] Static UI deploys without Chromium
-- [ ] Worker is optional for browsing/preview
-- [ ] Agent skills work with updated paths
-- [ ] No dependency on parent monorepo APIs
+- [ ] Human creates and approves sequences one at a time  
+- [ ] Agent never auto-produces the full film without human steps  
+- [ ] Project assets embed in sequences and resolve in preview + export  
+- [ ] Composition assembles sequences + sound into one export  
+- [ ] Preview uses fixed stage; export 1080p/4K independent of monitor  
+- [ ] 2D and 3D engines live in one studio shell  
+- [ ] Render runs on a host with Chrome + FFmpeg (not “static only”)  
+- [ ] Long-term capture/encode does not depend on inventing a full private HyperFrames clone  
+- [ ] Existing catalog playable after migration  
+- [ ] Skills document HITL + assets + paths  
 
 ---
 
+## 15. Risks and mitigations
 
-
-## 13. Risks and mitigations
-
-
-| Risk                                   | Mitigation                                                                                            |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Safari weak WebCodecs                  | Document Chrome-first; MediaRecorder or worker fallback later                                         |
-| 4K GPU slow on client 3D               | Offline stepped render (OK if slower than realtime)                                                   |
-| Worker cost / abuse                    | API key, concurrency limits, max duration                                                             |
-| 2D HTML security if accepting raw HTML | Prefer sequence id from disk; sanitize if ever accepting arbitrary HTML                               |
-| Sequence CSS that breaks headless      | Keep existing skill constraints; golden-export smoke tests on a few hard sequences (glass, SVG paths) |
-| Dual shell drift during migrate        | Deduplicate shell in Phase 0 before new features                                                      |
-
+| Risk | Mitigation |
+| ---- | ---------- |
+| Rebuilding HF from scratch | Evaluate engine/producer early; interim capture only |
+| Legacy CSS sequences vs seek contracts | Dual pipeline or gradual migration |
+| Safari WebCodecs | Chrome-first for client 3D; server render for delivery |
+| 4K cost/time | Stream encode; queue; draft vs high quality |
+| Agent ignores asset allowlist | Server-side validation + skill + prompt injection of allowlist |
+| Composition export complexity | v1 stitch pre-rendered sequences + ffmpeg audio mux |
+| Scope creep into full NLE | Sequence-first; composition stays “arrange + sound” until demand |
 
 ---
 
+## 16. Summary
 
+| Decision | Choice |
+| -------- | ------ |
+| Product | Human-directed Mograph Studio: sequences → composition → export |
+| Agent | Per-sequence assist only; no autopilot film pipeline |
+| Assets | Project library; stable URLs; allowlisted embeds |
+| Engines | 2D HTML + 3D Three under one shell |
+| Stage | Fixed logical resolution; monitor is viewer only |
+| Bundler | Vite; React not required |
+| Render | Chrome + FFmpeg on a real host; prefer HyperFrames libraries |
+| HyperFrames product flow | Do not adopt; infrastructure only |
+| Remotion | Not required for v1 |
+| Deploy | Platform-flexible; UI and render may colocate or split |
+| Monorepo | Spin out mograph + threejs + assets; leave the rest |
 
-## 14. Summary
+**Core constraint**
 
-
-| Decision          | Choice                                              |
-| ----------------- | --------------------------------------------------- |
-| Product           | Single Motion Studio: 2D + 3D                       |
-| Bundler / UI host | **Vite** static app                                 |
-| Framework         | Vanilla (or light UI later); **not** Next.js for v1 |
-| Stage model       | Fixed logical resolution; preview scales            |
-| 3D export         | Client, stepped, WebCodecs → MP4, up to 4K          |
-| 2D export         | Chromium frame-step + ffmpeg on worker/CLI          |
-| Deploy            | UI → Vercel; worker → Docker host                   |
-| Catalog           | Migrate existing sequences; keep skill contracts    |
-
-
-Core constraint for every feature:
-
-> Preview and export share a logical resolution and clock. The monitor is only a viewer.
-
+> Humans own every creative gate. Sequences are the unit of craft. Compositions are the unit of delivery. Preview and export share a logical resolution and clock. Render infrastructure may be HyperFrames-class; the product experience is not an agent film factory.
